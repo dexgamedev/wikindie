@@ -1,0 +1,11 @@
+services:
+  wikindie:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      WIKINDIE_USER: "${WIKINDIE_USER:?Set WIKINDIE_USER in .env or your shell}"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env or your shell}"
+      SPACE_DIR: /space
+    volumes:
+      - ./space:/space

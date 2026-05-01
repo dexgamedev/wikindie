@@ -1,0 +1,14 @@
+node_modules/
+dist/
+packages/backend/public/
+
+space/
+packages/backend/space/
+
+.env
+.env.*
+!.env.example
+
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store

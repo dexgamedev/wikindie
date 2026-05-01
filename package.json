@@ -1,0 +1,22 @@
+{
+  "name": "wikindie",
+  "version": "0.1.0",
+  "description": "Filesystem-backed wiki for notes, docs, and lightweight planning.",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w packages/backend\" \"npm run dev -w packages/frontend\"",
+    "build": "npm run build -w packages/backend && npm run build -w packages/frontend && npm run copy:frontend",
+    "copy:frontend": "node scripts/copy-frontend.mjs",
+    "start": "npm run start -w packages/backend",
+    "typecheck": "npm run typecheck -w packages/backend && npm run typecheck -w packages/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.9.3"
+  }
+}
