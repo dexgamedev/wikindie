@@ -1,14 +1,12 @@
-import { KanbanSquare, LogOut, Search, Sparkles, X } from 'lucide-react'
+import { LogOut, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
+import { pageUrl } from '../../lib/paths'
 import { useAuthStore, useFilesStore } from '../../lib/store'
 import { Button } from '../ui/Button'
+import { PageIcon } from '../ui/PageIcon'
 import { TreeItem } from './TreeItem'
-
-function pageUrl(path: string) {
-  return `/page/${path.split('/').map(encodeURIComponent).join('/')}`
-}
 
 function flattenTree(nodes: TreeNode[]): TreeNode[] {
   const list: TreeNode[] = []
@@ -98,26 +96,19 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
           </button>
         </div>
 
-        <div className="mb-3 rounded-xl border border-border bg-surface/60 p-2">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">Workspace</span>
-            <button className="text-text-muted hover:text-text" onClick={() => setQuickFindOpen(true)} title="Quick find">
-              <Search size={15} />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button onClick={() => startCreate('page')} title="New page">
-              <Sparkles size={14} />
-              <span className="ml-1">Page</span>
-            </Button>
-            <Button onClick={() => startCreate('board')} title="New board">
-              <KanbanSquare size={14} />
-              <span className="ml-1">Board</span>
-            </Button>
-          </div>
+        <div className="mb-3 space-y-1">
+          <button
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+            onClick={() => setQuickFindOpen(true)}
+          >
+            <Search size={15} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Search pages...</span>
+          </button>
+          <ActionButton icon="page" title="New page" onClick={() => startCreate('page')} />
+          <ActionButton icon="board" title="New board" onClick={() => startCreate('board')} />
           {creating && (
             <form
-              className="mt-2 flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl bg-surface/50 p-2"
               onSubmit={(event) => {
                 event.preventDefault()
                 void createItem()
@@ -125,7 +116,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
             >
               <input
                 autoFocus
-                className="min-w-0 flex-1 rounded border border-accent bg-slate-950 px-2 py-1.5 text-sm text-text outline-none"
+                className="min-w-0 flex-1 rounded-lg border border-accent bg-slate-950 px-2 py-1.5 text-sm text-text outline-none"
                 value={createValue}
                 onChange={(event) => setCreateValue(event.target.value)}
                 onKeyDown={(event) => {
@@ -133,7 +124,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
                 }}
                 placeholder={creating === 'board' ? 'Board title' : 'Page title'}
               />
-              <button className="rounded px-2 py-1 text-sm text-accent" type="submit">Add</button>
+              <button className="rounded-lg px-2 py-1.5 text-sm text-accent hover:bg-surface-hover" type="submit">Add</button>
             </form>
           )}
         </div>
@@ -187,7 +178,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
                     onCloseMobile()
                   }}
                 >
-                  <span>{node.icon ?? '📄'}</span>
+                  <PageIcon icon={node.icon} />
                   <span className="font-medium text-text">{node.title}</span>
                   <span className="min-w-0 truncate text-xs text-text-muted">{node.path}</span>
                 </button>
@@ -198,5 +189,19 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
         </div>
       )}
     </>
+  )
+}
+
+function ActionButton({ icon, title, onClick }: { icon: string; title: string; onClick: () => void }) {
+  return (
+    <button
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-surface-hover"
+      onClick={onClick}
+    >
+      <span className="grid size-7 shrink-0 place-items-center text-lg">
+        <PageIcon icon={icon} />
+      </span>
+      <span className="min-w-0 truncate text-sm font-medium text-text">{title}</span>
+    </button>
   )
 }

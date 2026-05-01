@@ -33,6 +33,10 @@ textarea {
   line-height: 1.75;
 }
 
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+
 .markdown-preview h1,
 .markdown-preview h2,
 .markdown-preview h3,

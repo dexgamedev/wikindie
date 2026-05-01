@@ -1,12 +1,13 @@
+import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
+import { wikiIcons } from '../../lib/icons'
+import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
+import { useFilesStore } from '../../lib/store'
 import { Button } from '../ui/Button'
+import { PageIcon } from '../ui/PageIcon'
 import { MarkdownPreview } from './MarkdownPreview'
-
-function pageNameFromPath(pagePath: string) {
-  const parts = pagePath.split('/').filter(Boolean)
-  return parts.length ? parts[parts.length - 1] : 'Home'
-}
 
 function slugify(value: string) {
   return value
@@ -25,9 +26,11 @@ function isCurrentPageEvent(currentPath: string, changedFilePath?: string) {
   return false
 }
 
-const quickEmoji = ['📄', '🧠', '🚀', '🛠️', '📌', '✅', '🗂️', '🎯']
+const iconCategories = Array.from(new Set(wikiIcons.map((icon) => icon.category)))
 
 export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange: (page: PageBundle) => void }) {
+  const navigate = useNavigate()
+  const tree = useFilesStore((state) => state.tree)
   const [content, setContent] = useState(page.content)
   const [savedContent, setSavedContent] = useState(page.content)
   const [editing, setEditing] = useState(false)
@@ -50,6 +53,15 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
       icon: icon || undefined,
     }),
     [icon, page.frontmatter, title],
+  )
+
+  const childPages = useMemo(() => findTreeNode(tree, page.path)?.children ?? [], [page.path, tree])
+  const breadcrumbs = useMemo(
+    () => breadcrumbsFromPath(page.path).map((c) => ({
+      ...c,
+      label: findTreeNode(tree, c.path)?.title ?? c.label,
+    })),
+    [page.path, tree],
   )
 
   useEffect(() => {
@@ -132,16 +144,52 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
     <section className="mx-auto max-w-6xl p-4 md:p-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="mb-1 text-sm text-text-muted">{page.path}</p>
+          <div className="mb-2 flex min-w-0 items-center gap-2 text-sm text-text-muted">
+            <button
+              className="rounded-md border border-border bg-surface px-2 py-1 text-text-muted transition hover:border-accent hover:text-text"
+              onClick={() => goBack(navigate)}
+              title="Go back"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={15} />
+            </button>
+            <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="Page breadcrumbs">
+              {breadcrumbs.map((crumb, index) => (
+                <span key={crumb.path} className="flex min-w-0 items-center gap-1">
+                  {index > 0 && <span className="text-text-muted/60">/</span>}
+                  <Link className="max-w-[160px] truncate rounded px-1 py-0.5 hover:bg-surface-hover hover:text-text" to={pageUrl(crumb.path)}>
+                    {crumb.label}
+                  </Link>
+                </span>
+              ))}
+            </nav>
+          </div>
           {metaEditing ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {quickEmoji.map((item) => (
-                  <button key={item} className="rounded-md border border-border px-2 py-1 text-base hover:border-accent" onClick={() => setIcon(item)}>
-                    {item}
-                  </button>
+              <div className="space-y-3">
+                {iconCategories.map((category) => (
+                  <div key={category}>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">{category}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {wikiIcons.filter((item) => item.category === category).map((item) => (
+                        <button
+                          key={item.id}
+                          className={`grid size-8 place-items-center rounded-lg border text-lg transition hover:-translate-y-0.5 hover:border-accent hover:bg-surface-hover ${icon === item.id ? 'border-accent bg-accent/15 shadow-sm shadow-accent/20 ring-1 ring-accent/40' : 'border-border bg-slate-950/60'}`}
+                          onClick={() => setIcon(item.id)}
+                          title={`${item.label} (${item.id})`}
+                          type="button"
+                        >
+                          <PageIcon icon={item.id} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-                <input value={icon} onChange={(event) => setIcon(event.target.value)} className="w-16 rounded border border-border bg-slate-950 px-2 py-1 text-sm" placeholder="🙂" />
+              </div>
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <span>Selected:</span>
+                <PageIcon icon={icon} className="text-lg" />
+                <span>{icon || 'page'}</span>
               </div>
               <input value={title} onChange={(event) => setTitle(event.target.value)} className="w-full rounded border border-accent bg-slate-950 px-3 py-2 text-lg font-semibold text-text outline-none" />
               <div className="flex gap-2">
@@ -150,7 +198,10 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
               </div>
             </div>
           ) : (
-            <h2 className="truncate text-2xl font-semibold">{icon ? `${icon} ` : ''}{title}</h2>
+            <h2 className="flex min-w-0 items-center gap-2 text-2xl font-semibold">
+              <PageIcon icon={icon} className="size-6 shrink-0" />
+              <span className="truncate">{title}</span>
+            </h2>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
@@ -168,6 +219,30 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
       </div>
 
       {externalChange && <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">This page changed on disk while you had local edits.</div>}
+
+      {childPages.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-border bg-surface/70 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-text-muted">Pages</h3>
+            <span className="text-xs text-text-muted">{childPages.length} linked automatically</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {childPages.map((child) => (
+              <Link
+                key={child.path}
+                to={pageUrl(child.path)}
+                className="group rounded-xl border border-border bg-slate-950/60 p-3 transition hover:border-accent hover:bg-surface-hover"
+              >
+                <div className="mb-1 flex min-w-0 items-center gap-2">
+                  <PageIcon icon={child.icon} fallback={child.type === 'board' ? '▦' : '📄'} />
+                  <span className="min-w-0 truncate font-medium text-text group-hover:text-white">{child.title}</span>
+                </div>
+                <p className="truncate text-xs text-text-muted">{child.path}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {editing ? (
         <textarea

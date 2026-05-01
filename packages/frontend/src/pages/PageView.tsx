@@ -60,6 +60,15 @@ export function PageView() {
 
   if (error) return <div className="p-8 text-red-300">{error}</div>
   if (!page) return <div className="p-8"><Spinner /></div>
-  if (page.type === 'board' && page.board) return <KanbanBoard path={page.path} initial={page.board} />
+  if (page.type === 'board' && page.board) {
+    return (
+      <KanbanBoard
+        path={page.path}
+        initial={page.board}
+        title={typeof page.frontmatter.title === 'string' ? page.frontmatter.title : undefined}
+        icon={typeof page.frontmatter.icon === 'string' ? page.frontmatter.icon : undefined}
+      />
+    )
+  }
   return <Editor page={page} onPageChange={(next) => { pageCache.set(next.path, next); setPage(next) }} />
 }

@@ -1,15 +1,13 @@
-import { ChevronRight, GripVertical, KanbanSquare, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronRight, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
+import { pageUrl } from '../../lib/paths'
+import { PageIcon } from '../ui/PageIcon'
 
 interface DragPayload {
   path: string
   type: 'page' | 'board'
-}
-
-function pageUrl(path: string) {
-  return `/page/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
 function dirname(path: string) {
@@ -135,8 +133,7 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
             }}
           >
             <div className="flex min-w-0 items-center gap-2 rounded-md border-l-2 border-accent bg-surface-hover px-2 py-1.5 text-sm text-text">
-              {node.type === 'board' ? <KanbanSquare size={14} /> : <GripVertical size={14} />}
-              <span>{node.icon ?? '📄'}</span>
+              <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
               <input
                 autoFocus
                 className="w-full rounded border border-accent bg-slate-950 px-2 py-1 text-sm text-text outline-none"
@@ -157,8 +154,7 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
             }
             to={pageUrl(node.path)}
           >
-            {node.type === 'board' ? <KanbanSquare size={14} /> : <GripVertical size={14} />}
-            <span>{node.icon ?? '📄'}</span>
+            <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
             <span className="min-w-0 truncate">{node.title}</span>
           </NavLink>
         )}
@@ -178,9 +174,9 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
       {menuOpen && (
         <div className="mt-1 ml-8 w-[200px] rounded-xl border border-border bg-slate-950 p-1 shadow-xl">
           <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); setMenuOpen(false) }} />
-          <MenuButton icon={<Plus size={15} />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setMenuOpen(false); setOpen(true) }} />
-          <MenuButton icon={<KanbanSquare size={15} />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setMenuOpen(false); setOpen(true) }} />
-          <MenuButton icon={<GripVertical size={15} />} label="Move to..." onClick={() => { setMoving(true); setMenuOpen(false) }} />
+          <MenuButton icon={<PageIcon icon="page" />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setMenuOpen(false); setOpen(true) }} />
+          <MenuButton icon={<PageIcon icon="board" />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setMenuOpen(false); setOpen(true) }} />
+          <MenuButton icon={<PageIcon icon="folder" />} label="Move to..." onClick={() => { setMoving(true); setMenuOpen(false) }} />
           {confirmDelete ? (
             <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={remove}>
               <Trash2 size={15} /> Confirm delete
