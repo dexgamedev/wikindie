@@ -19,7 +19,7 @@ export function LoginPage() {
     setError('')
     try {
       const session = await api.login(username, password)
-      setSession(session.token, session.user.username)
+      setSession(session.token, session.user.username, session.user.role)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     }
@@ -29,7 +29,7 @@ export function LoginPage() {
     <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,#1e1b4b,#020617_55%)] px-4">
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-border bg-surface/90 p-6 shadow-2xl">
         <h1 className="mb-1 text-2xl font-semibold">Wikindie</h1>
-        <p className="mb-6 text-sm text-text-muted">Sign in with `WIKINDIE_USER` credentials.</p>
+        <p className="mb-6 text-sm text-text-muted">Sign in to your Wikindie account.</p>
         <div className="space-y-3">
           <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="w-full" />
           <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" className="w-full" />

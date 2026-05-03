@@ -1,27 +1,20 @@
 import { Router } from 'express'
 import { AppError } from '../lib/errors.js'
 import { signSession } from '../lib/jwt.js'
+import { findUserByUsername, verifyPassword } from '../lib/users.js'
 import { requireAuth } from '../middleware/auth.js'
 
 export const authRouter = Router()
 
-function configuredCredentials() {
-  const configured = process.env.WIKINDIE_USER
-  if (!configured) {
-    if (process.env.NODE_ENV === 'production') throw new AppError(500, 'WIKINDIE_USER is required in production')
-    return ['dev', 'dev'] as const
-  }
-
-  const separator = configured.indexOf(':')
-  if (separator <= 0) throw new AppError(500, 'WIKINDIE_USER must use username:password format')
-  return [configured.slice(0, separator), configured.slice(separator + 1)] as const
-}
-
-authRouter.post('/login', (req, res) => {
-  const [expectedUser, expectedPass] = configuredCredentials()
+authRouter.post('/login', async (req, res) => {
   const { username, password } = req.body as { username?: string; password?: string }
-  if (username !== expectedUser || password !== expectedPass) throw new AppError(401, 'Invalid credentials')
-  res.json({ token: signSession({ username }), user: { username } })
+  if (!username || !password) throw new AppError(401, 'Invalid credentials')
+
+  const user = await findUserByUsername(username)
+  if (!user || !(await verifyPassword(user, password))) throw new AppError(401, 'Invalid credentials')
+
+  const session = { id: user.id, username: user.username, role: user.role }
+  res.json({ token: signSession(session), user: session })
 })
 
 authRouter.get('/me', requireAuth, (req, res) => {

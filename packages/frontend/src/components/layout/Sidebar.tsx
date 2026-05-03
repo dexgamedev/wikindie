@@ -1,12 +1,12 @@
-import { ChevronLeft, ChevronRight, LogOut, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
 import { getPageDragPayload, hasPageDragPayload } from '../../lib/pageDrag'
 import { findTreeNode, pageUrl } from '../../lib/paths'
-import { useAuthStore, useFilesStore } from '../../lib/store'
-import { Button } from '../ui/Button'
+import { canWrite, useAuthStore, useFilesStore } from '../../lib/store'
 import { PageIcon } from '../ui/PageIcon'
+import { AccountMenu } from './AccountMenu'
 import { TreeItem } from './TreeItem'
 
 function flattenTree(nodes: TreeNode[]): TreeNode[] {
@@ -43,10 +43,11 @@ export function Sidebar({
 }) {
   const tree = useFilesStore((state) => state.tree)
   const setTree = useFilesStore((state) => state.setTree)
-  const logout = useAuthStore((state) => state.logout)
   const username = useAuthStore((state) => state.username)
+  const role = useAuthStore((state) => state.role)
   const navigate = useNavigate()
   const location = useLocation()
+  const mayWrite = canWrite(role)
 
   const [creating, setCreating] = useState<null | 'page' | 'board'>(null)
   const [createValue, setCreateValue] = useState('')
@@ -80,7 +81,7 @@ export function Sidebar({
   }
 
   const createItem = async () => {
-    if (!creating) return
+    if (!creating || !mayWrite) return
     const clean = createValue.trim()
     if (!clean) return
     const parentPath = createAtRoot ? undefined : selectedNode?.path
@@ -94,6 +95,7 @@ export function Sidebar({
 
   const dropOnRoot = async (event: React.DragEvent) => {
     event.preventDefault()
+    if (!mayWrite) return
     setRootDragOver(false)
     setPageDragging(false)
     const payload = getPageDragPayload(event.dataTransfer)
@@ -154,9 +156,13 @@ export function Sidebar({
             <Search size={15} className="shrink-0" />
             <span className={`min-w-0 flex-1 truncate ${collapsed ? 'md:hidden' : ''}`}>Search pages...</span>
           </button>
-          <ActionButton icon="page" title="New page" collapsed={collapsed} onClick={() => startCreate('page')} />
-          <ActionButton icon="board" title="New board" collapsed={collapsed} onClick={() => startCreate('board')} />
-          {creating && (
+          {mayWrite && (
+            <>
+              <ActionButton icon="page" title="New page" collapsed={collapsed} onClick={() => startCreate('page')} />
+              <ActionButton icon="board" title="New board" collapsed={collapsed} onClick={() => startCreate('board')} />
+            </>
+          )}
+          {mayWrite && creating && (
             <form
               className={`rounded-xl bg-surface/50 p-2 ${collapsed ? 'md:hidden' : ''}`}
               onSubmit={(event) => {
@@ -201,6 +207,7 @@ export function Sidebar({
         <nav
           className={`workspace-scroll mt-1 min-h-0 flex-1 overflow-auto rounded-lg ${collapsed ? 'pr-1 md:pr-0' : 'pr-1'} ${rootDragOver ? 'bg-accent/10 ring-1 ring-accent' : ''}`}
           onDragOver={(event) => {
+            if (!mayWrite) return
             if (!pageDragActive && !hasPageDragPayload(event.dataTransfer)) return
             event.preventDefault()
             event.dataTransfer.dropEffect = 'move'
@@ -213,7 +220,7 @@ export function Sidebar({
           {tree.map((node) => (
             <TreeItem key={node.path} node={node} collapsed={collapsed} onRefresh={refreshTree} onPageDragChange={setPageDragging} />
           ))}
-          {pageDragActive && (
+          {mayWrite && pageDragActive && (
             <div className={`mt-2 rounded-lg border border-dashed border-border px-3 py-2 text-center text-xs text-text-muted ${collapsed ? 'md:hidden' : ''}`}>
               Drop here to move page to workspace root
             </div>
@@ -221,10 +228,7 @@ export function Sidebar({
         </nav>
 
         <div className="mt-auto border-t border-border pt-3">
-          <Button className="w-full justify-center" onClick={logout} title={collapsed ? 'Logout' : undefined}>
-            <LogOut size={14} />
-            <span className={`ml-1 ${collapsed ? 'md:hidden' : ''}`}>Logout</span>
-          </Button>
+          <AccountMenu collapsed={collapsed} />
         </div>
       </aside>
 

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type KanbanBoard as Board } from '../../lib/api'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
-import { useFilesStore } from '../../lib/store'
+import { canWrite, useAuthStore, useFilesStore } from '../../lib/store'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
 import { KanbanColumn } from './KanbanColumn'
@@ -11,6 +11,8 @@ import { KanbanColumn } from './KanbanColumn'
 export function KanbanBoard({ path, initial, title, icon }: { path: string; initial: Board; title?: string; icon?: string }) {
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
+  const role = useAuthStore((state) => state.role)
+  const mayWrite = canWrite(role)
   const [board, setBoard] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [addingColumn, setAddingColumn] = useState(false)
@@ -26,6 +28,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
   const displayTitle = title || pageNameFromPath(path)
 
   const update = async (next: Board) => {
+    if (!mayWrite) return
     setBoard(next)
     setSaving(true)
     await api.saveKanban(path, next)
@@ -33,6 +36,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
   }
 
   const addColumn = () => {
+    if (!mayWrite) return
     const title = newColumnTitle.trim()
     if (!title) return
     void update({ columns: [...board.columns, { title, cards: [] }] })
@@ -41,6 +45,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
   }
 
   const moveCard = (fromColumn: number, fromCard: number, toColumn: number) => {
+    if (!mayWrite) return
     const next = structuredClone(board)
     const [card] = next.columns[fromColumn].cards.splice(fromCard, 1)
     next.columns[toColumn].cards.push(card)
@@ -79,11 +84,11 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
           </h2>
         </div>
         <div className="flex items-center gap-3 text-sm text-text-muted">
-          <span>{saving ? 'Saving...' : 'Saved'}</span>
-          <Button onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>
+          <span>{mayWrite ? (saving ? 'Saving...' : 'Saved') : 'Read only'}</span>
+          {mayWrite && <Button onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
         </div>
       </div>
-      {addingColumn && (
+      {mayWrite && addingColumn && (
         <form
           className="mb-4 flex max-w-md items-center gap-2"
           onSubmit={(event) => {
@@ -103,7 +108,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
       )}
       <div className="grid gap-4 lg:grid-flow-col lg:auto-cols-[minmax(280px,1fr)] lg:overflow-x-auto">
         {board.columns.map((column, columnIndex) => (
-          <KanbanColumn key={`${column.title}-${columnIndex}`} column={column} columnIndex={columnIndex} board={board} onUpdate={update} onMove={moveCard} />
+          <KanbanColumn key={`${column.title}-${columnIndex}`} column={column} columnIndex={columnIndex} board={board} editable={mayWrite} onUpdate={update} onMove={moveCard} />
         ))}
       </div>
     </section>

@@ -5,6 +5,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
 import { getPageDragPayload, hasPageDragPayload, setPageDragPayload, type PageDragPayload } from '../../lib/pageDrag'
 import { pageUrl } from '../../lib/paths'
+import { canDelete, canWrite, useAuthStore } from '../../lib/store'
 import { PageIcon } from '../ui/PageIcon'
 
 function dirname(path: string) {
@@ -66,6 +67,9 @@ export function TreeItem({
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const role = useAuthStore((state) => state.role)
+  const mayWrite = canWrite(role)
+  const mayDelete = canDelete(role)
 
   const closeMenu = () => {
     setMenuOpen(false)
@@ -103,6 +107,7 @@ export function TreeItem({
   }
 
   const submitRename = async () => {
+    if (!mayWrite) return
     const clean = renameValue.trim()
     if (!clean) return
     await api.patchPageMeta(node.path, { title: clean })
@@ -112,7 +117,7 @@ export function TreeItem({
   }
 
   const submitCreate = async () => {
-    if (!creating) return
+    if (!creating || !mayWrite) return
     const clean = createValue.trim()
     if (!clean) return
     const created = await api.createPage(clean, node.path, creating)
@@ -129,6 +134,7 @@ export function TreeItem({
   }
 
   const submitMove = async () => {
+    if (!mayWrite) return
     const parent = moveValue.trim().replace(/\/+$/, '')
     const newPath = joinPath(parent, basename(node.path))
     if (!newPath || newPath === node.path) {
@@ -143,12 +149,14 @@ export function TreeItem({
   }
 
   const remove = async () => {
+    if (!mayDelete) return
     await api.removePage(node.path)
     await onRefresh()
     navigate('/page/Home')
   }
 
   const startPageDrag = (event: React.DragEvent) => {
+    if (!mayWrite) return
     event.stopPropagation()
     setPageDragPayload(event.dataTransfer, { path: node.path, type: node.type })
     onPageDragChange(true)
@@ -161,6 +169,7 @@ export function TreeItem({
 
   const dropOnNode = async (event: React.DragEvent) => {
     event.preventDefault()
+    if (!mayWrite) return
     event.stopPropagation()
     setDragOver(false)
     onPageDragChange(false)
@@ -177,6 +186,7 @@ export function TreeItem({
     <div
       className={`${dragOver ? 'rounded-md bg-accent/10' : ''} ${depth > 0 ? 'ml-2 border-l border-slate-800' : ''}`}
       onDragOver={(event) => {
+        if (!mayWrite) return
         if (!hasPageDragPayload(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
@@ -235,8 +245,8 @@ export function TreeItem({
             }
             to={pageUrl(node.path)}
             title={collapsed ? node.title : undefined}
-            draggable
-            onDragStart={startPageDrag}
+            draggable={mayWrite}
+            onDragStart={mayWrite ? startPageDrag : undefined}
             onDragEnd={endPageDrag}
           >
             <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
@@ -244,42 +254,49 @@ export function TreeItem({
           </NavLink>
         )}
 
-        <button
-          ref={menuButtonRef}
-          className={`rounded p-1 text-text-muted opacity-100 hover:bg-surface-hover hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
-          onClick={(event) => {
-            if (menuOpen) {
-              closeMenu()
-              return
-            }
-            setMenuPosition(floatingMenuPosition(event.currentTarget))
-            setMenuOpen(true)
-            setConfirmDelete(false)
-          }}
-        >
-          <MoreHorizontal size={15} />
-        </button>
+        {(mayWrite || mayDelete) && (
+          <button
+            ref={menuButtonRef}
+            className={`rounded p-1 text-text-muted opacity-100 hover:bg-surface-hover hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
+            onClick={(event) => {
+              if (menuOpen) {
+                closeMenu()
+                return
+              }
+              setMenuPosition(floatingMenuPosition(event.currentTarget))
+              setMenuOpen(true)
+              setConfirmDelete(false)
+            }}
+          >
+            <MoreHorizontal size={15} />
+          </button>
+        )}
 
       </div>
 
       {menuOpen && menuPosition && createPortal(
         <div ref={menuRef} className="fixed z-50 w-[200px] rounded-xl border border-border bg-slate-950 p-1 shadow-2xl" style={menuPosition}>
-          <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); closeMenu() }} />
-          <MenuButton icon={<PageIcon icon="page" />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setOpen(true); closeMenu() }} />
-          <MenuButton icon={<PageIcon icon="board" />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setOpen(true); closeMenu() }} />
-          <MenuButton icon={<PageIcon icon="folder" />} label="Move to..." onClick={() => { setMoving(true); closeMenu() }} />
-          {confirmDelete ? (
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={() => void remove()}>
-              <Trash2 size={15} /> Confirm delete
-            </button>
-          ) : (
-            <MenuButton icon={<Trash2 size={15} />} label="Delete" danger onClick={() => setConfirmDelete(true)} />
+          {mayWrite && (
+            <>
+              <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); closeMenu() }} />
+              <MenuButton icon={<PageIcon icon="page" />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setOpen(true); closeMenu() }} />
+              <MenuButton icon={<PageIcon icon="board" />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setOpen(true); closeMenu() }} />
+              <MenuButton icon={<PageIcon icon="folder" />} label="Move to..." onClick={() => { setMoving(true); closeMenu() }} />
+            </>
+          )}
+          {mayDelete && (confirmDelete ? (
+              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={() => void remove()}>
+                <Trash2 size={15} /> Confirm delete
+              </button>
+            ) : (
+              <MenuButton icon={<Trash2 size={15} />} label="Delete" danger onClick={() => setConfirmDelete(true)} />
+            )
           )}
         </div>,
         document.body,
       )}
 
-      {moving && (
+      {mayWrite && moving && (
         <form
           className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'md:hidden' : ''}`}
           onSubmit={(event) => {
@@ -301,7 +318,7 @@ export function TreeItem({
         </form>
       )}
 
-      {creating && (
+      {mayWrite && creating && (
         <form
           className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'md:hidden' : ''}`}
           onSubmit={(event) => {

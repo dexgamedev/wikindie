@@ -1,4 +1,5 @@
 import { useAuthStore } from './store'
+import type { Role } from './store'
 
 export interface MarkdownFile {
   content: string
@@ -45,7 +46,7 @@ export function encodePath(path: string) {
   return path.split('/').map(encodeURIComponent).join('/')
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = useAuthStore.getState().token
   const res = await fetch(path, {
     ...init,
@@ -66,7 +67,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   login: (username: string, password: string) =>
-    request<{ token: string; user: { username: string } }>('/api/auth/login', {
+    request<{ token: string; user: { id: string; username: string; role: Role } }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),

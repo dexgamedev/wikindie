@@ -5,15 +5,18 @@ export function KanbanCard({
   cardIndex,
   columnIndex,
   board,
+  editable,
   onUpdate,
 }: {
   card: Card
   cardIndex: number
   columnIndex: number
   board: KanbanBoard
+  editable: boolean
   onUpdate: (board: KanbanBoard) => void
 }) {
   const updateTitle = () => {
+    if (!editable) return
     const title = window.prompt('Card title', card.title)
     if (!title) return
     const next = structuredClone(board)
@@ -22,6 +25,7 @@ export function KanbanCard({
   }
 
   const toggleDone = () => {
+    if (!editable) return
     const next = structuredClone(board)
     next.columns[columnIndex].cards[cardIndex].done = !card.done
     onUpdate(next)
@@ -29,13 +33,15 @@ export function KanbanCard({
 
   return (
     <article
-      draggable
-      onDragStart={(event) => event.dataTransfer.setData('text/plain', `${columnIndex}:${cardIndex}`)}
-      className="cursor-grab rounded-xl border border-border bg-slate-800 p-3 shadow-lg shadow-black/10 hover:border-accent"
+      draggable={editable}
+      onDragStart={(event) => {
+        if (editable) event.dataTransfer.setData('text/plain', `${columnIndex}:${cardIndex}`)
+      }}
+      className={`rounded-xl border border-border bg-slate-800 p-3 shadow-lg shadow-black/10 hover:border-accent ${editable ? 'cursor-grab' : ''}`}
     >
       <label className="flex items-start gap-3">
-        <input type="checkbox" checked={card.done} onChange={toggleDone} className="mt-1" />
-        <button className={`text-left text-sm ${card.done ? 'text-text-muted line-through' : 'text-text'}`} onClick={updateTitle}>
+        <input type="checkbox" checked={card.done} onChange={toggleDone} className="mt-1" disabled={!editable} />
+        <button className={`text-left text-sm disabled:cursor-default ${card.done ? 'text-text-muted line-through' : 'text-text'}`} onClick={updateTitle} disabled={!editable}>
           {card.title}
         </button>
       </label>

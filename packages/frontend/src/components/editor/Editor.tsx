@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
-import { useFilesStore } from '../../lib/store'
+import { canDelete, canWrite, useAuthStore, useFilesStore } from '../../lib/store'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
 import { MarkdownPreview } from './MarkdownPreview'
@@ -31,6 +31,9 @@ const iconCategories = Array.from(new Set(wikiIcons.map((icon) => icon.category)
 export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange: (page: PageBundle) => void }) {
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
+  const role = useAuthStore((state) => state.role)
+  const mayWrite = canWrite(role)
+  const mayDelete = canDelete(role)
   const [content, setContent] = useState(page.content)
   const [savedContent, setSavedContent] = useState(page.content)
   const [editing, setEditing] = useState(false)
@@ -80,7 +83,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
   }, [page])
 
   useEffect(() => {
-    if (status !== 'dirty') return
+    if (status !== 'dirty' || !mayWrite) return
     const timer = window.setTimeout(async () => {
       setStatus('saving')
       const updated = await api.writePage(page.path, content, frontmatter)
@@ -90,7 +93,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
       setEditing(false)
     }, 500)
     return () => window.clearTimeout(timer)
-  }, [content, frontmatter, onPageChange, page.path, status])
+  }, [content, frontmatter, mayWrite, onPageChange, page.path, status])
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -104,6 +107,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
   }, [onPageChange, page.path, status])
 
   const saveNow = async () => {
+    if (!mayWrite) return
     setStatus('saving')
     const updated = await api.writePage(page.path, content, frontmatter)
     setSavedContent(updated.content)
@@ -113,12 +117,14 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
   }
 
   const saveMeta = async () => {
+    if (!mayWrite) return
     const updated = await api.patchPageMeta(page.path, { title, icon: icon || undefined })
     onPageChange(updated)
     setMetaEditing(false)
   }
 
   const saveSection = async (section: PageSection) => {
+    if (!mayWrite) return
     const draft = sectionDrafts[section.path] ?? { title: section.title, content: section.content }
     const updated = await api.upsertSection(page.path, section.path, draft.title.trim() || section.title, draft.content)
     onPageChange(updated)
@@ -126,11 +132,13 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
   }
 
   const removeSection = async (sectionPath: string) => {
+    if (!mayDelete) return
     const updated = await api.deleteSection(page.path, sectionPath)
     onPageChange(updated)
   }
 
   const addSection = async () => {
+    if (!mayWrite) return
     const titleValue = newSectionTitle.trim()
     if (!titleValue) return
     const slug = slugify(titleValue) || 'section'
@@ -167,7 +175,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
               </nav>
             )}
           </div>
-          {metaEditing ? (
+          {mayWrite && metaEditing ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
               <div className="space-y-3">
                 {iconCategories.map((category) => (
@@ -208,15 +216,19 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-          <span>{status === 'dirty' ? 'Unsaved changes' : status === 'saving' ? 'Saving...' : 'Saved'}</span>
-          <Button onClick={() => setMetaEditing((v) => !v)}>{metaEditing ? 'Close meta' : 'Page meta'}</Button>
-          {editing ? (
+          <span>{mayWrite ? (status === 'dirty' ? 'Unsaved changes' : status === 'saving' ? 'Saving...' : 'Saved') : 'Read only'}</span>
+          {mayWrite && (
             <>
-              <Button onClick={() => setEditing(false)} disabled={status === 'saving'}>Preview</Button>
-              <Button onClick={saveNow} disabled={status === 'saving'}>Save</Button>
+              <Button onClick={() => setMetaEditing((v) => !v)}>{metaEditing ? 'Close meta' : 'Page meta'}</Button>
+              {editing ? (
+                <>
+                  <Button onClick={() => setEditing(false)} disabled={status === 'saving'}>Preview</Button>
+                  <Button onClick={saveNow} disabled={status === 'saving'}>Save</Button>
+                </>
+              ) : (
+                <Button onClick={() => setEditing(true)}>Edit</Button>
+              )}
             </>
-          ) : (
-            <Button onClick={() => setEditing(true)}>Edit</Button>
           )}
         </div>
       </div>
@@ -247,7 +259,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
         </div>
       )}
 
-      {editing ? (
+      {mayWrite && editing ? (
         <textarea
           className="min-h-[50vh] w-full resize-y rounded-2xl border border-border bg-surface p-5 font-mono text-[15px] leading-7 text-text outline-none focus:border-accent"
           value={content}
@@ -264,10 +276,10 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
       <div className="mt-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold">Sections</h3>
-          <Button onClick={() => setAddingSection((v) => !v)}>{addingSection ? 'Close' : 'Add section'}</Button>
+          {mayWrite && <Button onClick={() => setAddingSection((v) => !v)}>{addingSection ? 'Close' : 'Add section'}</Button>}
         </div>
 
-        {addingSection && (
+        {mayWrite && addingSection && (
           <form
             className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3"
             onSubmit={(event) => {
@@ -294,7 +306,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
             return (
               <article key={section.path} className="rounded-2xl border border-border bg-surface p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  {sectionEditing ? (
+                  {mayWrite && sectionEditing ? (
                     <input
                       value={draft.title}
                       onChange={(event) => setSectionDrafts((prev) => ({ ...prev, [section.path]: { ...draft, title: event.target.value } }))}
@@ -304,18 +316,18 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
                     <h4 className="font-semibold">{draft.title}</h4>
                   )}
                   <div className="flex gap-2">
-                    {sectionEditing ? (
+                    {mayWrite && sectionEditing ? (
                       <>
                         <Button onClick={() => void saveSection(section)}>Save</Button>
                         <Button onClick={() => setEditingSection(null)}>Preview</Button>
                       </>
                     ) : (
-                      <Button onClick={() => setEditingSection(section.path)}>Edit</Button>
+                      mayWrite && <Button onClick={() => setEditingSection(section.path)}>Edit</Button>
                     )}
-                    <Button onClick={() => void removeSection(section.path)}>Remove</Button>
+                    {mayDelete && <Button onClick={() => void removeSection(section.path)}>Remove</Button>}
                   </div>
                 </div>
-                {sectionEditing ? (
+                {mayWrite && sectionEditing ? (
                   <textarea
                     className="min-h-[180px] w-full resize-y rounded-xl border border-border bg-slate-950 p-3 font-mono text-sm text-text outline-none focus:border-accent"
                     value={draft.content}

@@ -8,12 +8,14 @@ export function KanbanColumn({
   column,
   columnIndex,
   board,
+  editable,
   onUpdate,
   onMove,
 }: {
   column: Column
   columnIndex: number
   board: KanbanBoard
+  editable: boolean
   onUpdate: (board: KanbanBoard) => void
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
 }) {
@@ -24,6 +26,7 @@ export function KanbanColumn({
   const [renameValue, setRenameValue] = useState(column.title)
 
   const addCard = () => {
+    if (!editable) return
     const title = newCardTitle.trim()
     if (!title) return
     const next = structuredClone(board)
@@ -34,6 +37,7 @@ export function KanbanColumn({
   }
 
   const saveRename = () => {
+    if (!editable) return
     const title = renameValue.trim()
     if (!title) return
     const next = structuredClone(board)
@@ -44,6 +48,7 @@ export function KanbanColumn({
   }
 
   const removeColumn = () => {
+    if (!editable) return
     const next = structuredClone(board)
     next.columns.splice(columnIndex, 1)
     onUpdate(next)
@@ -52,14 +57,17 @@ export function KanbanColumn({
   return (
     <div
       className="rounded-2xl border border-border bg-surface/70 p-3"
-      onDragOver={(event) => event.preventDefault()}
+      onDragOver={(event) => {
+        if (editable) event.preventDefault()
+      }}
       onDrop={(event) => {
+        if (!editable) return
         const [fromColumn, fromCard] = event.dataTransfer.getData('text/plain').split(':').map(Number)
         if (!Number.isNaN(fromColumn) && !Number.isNaN(fromCard)) onMove(fromColumn, fromCard, columnIndex)
       }}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        {renaming ? (
+        {editable && renaming ? (
           <form
             className="min-w-0 flex-1"
             onSubmit={(event) => {
@@ -77,24 +85,26 @@ export function KanbanColumn({
         ) : (
           <h3 className="font-semibold">{column.title}</h3>
         )}
-        <div className="relative flex items-center gap-1">
-          <Button onClick={() => setAddingCard((v) => !v)}>{addingCard ? 'Close' : '+'}</Button>
-          <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text" onClick={() => setMenuOpen((v) => !v)}>
-            <MoreHorizontal size={15} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-7 z-20 w-40 rounded-xl border border-border bg-slate-950 p-1 shadow-2xl">
-              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-surface-hover" onClick={() => { setRenaming(true); setMenuOpen(false) }}>
-                <Pencil size={14} /> Rename
-              </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={removeColumn}>
-                <Trash2 size={14} /> Remove
-              </button>
-            </div>
+        {editable && (
+          <div className="relative flex items-center gap-1">
+            <Button onClick={() => setAddingCard((v) => !v)}>{addingCard ? 'Close' : '+'}</Button>
+            <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text" onClick={() => setMenuOpen((v) => !v)}>
+              <MoreHorizontal size={15} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-7 z-20 w-40 rounded-xl border border-border bg-slate-950 p-1 shadow-2xl">
+                <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-surface-hover" onClick={() => { setRenaming(true); setMenuOpen(false) }}>
+                  <Pencil size={14} /> Rename
+                </button>
+                <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={removeColumn}>
+                  <Trash2 size={14} /> Remove
+                </button>
+              </div>
+            )}
+          </div>
           )}
-        </div>
       </div>
-      {addingCard && (
+      {editable && addingCard && (
         <form
           className="mb-3 flex items-center gap-2"
           onSubmit={(event) => {
@@ -114,7 +124,7 @@ export function KanbanColumn({
       )}
       <div className="space-y-3">
         {column.cards.map((card, cardIndex) => (
-          <KanbanCard key={`${card.title}-${cardIndex}`} card={card} cardIndex={cardIndex} columnIndex={columnIndex} board={board} onUpdate={onUpdate} />
+          <KanbanCard key={`${card.title}-${cardIndex}`} card={card} cardIndex={cardIndex} columnIndex={columnIndex} board={board} editable={editable} onUpdate={onUpdate} />
         ))}
       </div>
     </div>
