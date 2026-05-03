@@ -12,3 +12,6 @@ packages/backend/space/
 *.tsbuildinfo
 npm-debug.log*
 .DS_Store
+
+# AI
+.claude/

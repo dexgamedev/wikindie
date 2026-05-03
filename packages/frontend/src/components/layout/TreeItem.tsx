@@ -1,14 +1,11 @@
-import { ChevronRight, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronRight, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
+import { getPageDragPayload, hasPageDragPayload, setPageDragPayload, type PageDragPayload } from '../../lib/pageDrag'
 import { pageUrl } from '../../lib/paths'
 import { PageIcon } from '../ui/PageIcon'
-
-interface DragPayload {
-  path: string
-  type: 'page' | 'board'
-}
 
 function dirname(path: string) {
   const parts = path.split('/')
@@ -24,13 +21,37 @@ function joinPath(...parts: string[]) {
   return parts.filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
-function validMove(source: DragPayload, targetParent: string) {
+function validMove(source: PageDragPayload, targetParent: string) {
   if (source.path === targetParent) return false
   if (targetParent.startsWith(`${source.path}/`)) return false
   return joinPath(targetParent, basename(source.path)) !== source.path
 }
 
-export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth?: number; onRefresh: () => Promise<void> }) {
+function floatingMenuPosition(button: HTMLElement) {
+  const rect = button.getBoundingClientRect()
+  const gap = 8
+  const menuWidth = 200
+  const menuHeight = 240
+  const rightSide = rect.right + gap
+  const left = rightSide + menuWidth <= window.innerWidth - gap ? rightSide : Math.max(gap, rect.left - menuWidth - gap)
+  const maxTop = Math.max(gap, window.innerHeight - menuHeight - gap)
+  const top = Math.min(Math.max(gap, rect.top - 4), maxTop)
+  return { left, top }
+}
+
+export function TreeItem({
+  node,
+  depth = 0,
+  collapsed,
+  onRefresh,
+  onPageDragChange,
+}: {
+  node: TreeNode
+  depth?: number
+  collapsed: boolean
+  onRefresh: () => Promise<void>
+  onPageDragChange: (active: boolean) => void
+}) {
   const [open, setOpen] = useState(() => localStorage.getItem(`wikindie:open:${node.path}`) !== 'false')
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
@@ -41,7 +62,40 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
   const [createValue, setCreateValue] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+
+  const closeMenu = () => {
+    setMenuOpen(false)
+    setConfirmDelete(false)
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return
+      if (menuRef.current?.contains(event.target)) return
+      if (menuButtonRef.current?.contains(event.target)) return
+      closeMenu()
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeMenu()
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('resize', closeMenu)
+    window.addEventListener('scroll', closeMenu, true)
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('resize', closeMenu)
+      window.removeEventListener('scroll', closeMenu, true)
+    }
+  }, [menuOpen])
 
   const toggle = () => {
     localStorage.setItem(`wikindie:open:${node.path}`, String(!open))
@@ -69,6 +123,11 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
     setOpen(true)
   }
 
+  const cancelCreate = () => {
+    setCreating(null)
+    setCreateValue('')
+  }
+
   const submitMove = async () => {
     const parent = moveValue.trim().replace(/\/+$/, '')
     const newPath = joinPath(parent, basename(node.path))
@@ -89,11 +148,23 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
     navigate('/page/Home')
   }
 
+  const startPageDrag = (event: React.DragEvent) => {
+    event.stopPropagation()
+    setPageDragPayload(event.dataTransfer, { path: node.path, type: node.type })
+    onPageDragChange(true)
+  }
+
+  const endPageDrag = () => {
+    setDragOver(false)
+    onPageDragChange(false)
+  }
+
   const dropOnNode = async (event: React.DragEvent) => {
     event.preventDefault()
     event.stopPropagation()
     setDragOver(false)
-    const payload = JSON.parse(event.dataTransfer.getData('application/json') || 'null') as DragPayload | null
+    onPageDragChange(false)
+    const payload = getPageDragPayload(event.dataTransfer)
     if (!payload || !validMove(payload, node.path)) return
     const newPath = joinPath(node.path, basename(payload.path))
     await api.movePage(payload.path, newPath)
@@ -105,14 +176,11 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
   return (
     <div
       className={`${dragOver ? 'rounded-md bg-accent/10' : ''} ${depth > 0 ? 'ml-2 border-l border-slate-800' : ''}`}
-      draggable
-      onDragStart={(event) => {
-        event.stopPropagation()
-        event.dataTransfer.setData('application/json', JSON.stringify({ path: node.path, type: node.type }))
-      }}
       onDragOver={(event) => {
+        if (!hasPageDragPayload(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
+        event.dataTransfer.dropEffect = 'move'
         setDragOver(true)
       }}
       onDragLeave={() => setDragOver(false)}
@@ -120,49 +188,72 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
       style={{ paddingLeft: depth * 10 }}
     >
       <div className="group flex items-center gap-1 rounded-md">
-        <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text" onClick={toggle}>
+        <button className={`rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text ${collapsed ? 'md:hidden' : ''}`} onClick={toggle}>
           <ChevronRight size={14} className={`transition ${open ? 'rotate-90' : ''}`} />
         </button>
 
         {renaming ? (
-          <form
-            className="min-w-0 flex-1"
-            onSubmit={(event) => {
-              event.preventDefault()
-              void submitRename()
-            }}
-          >
-            <div className="flex min-w-0 items-center gap-2 rounded-md border-l-2 border-accent bg-surface-hover px-2 py-1.5 text-sm text-text">
+          <>
+            <form
+              className={`min-w-0 flex-1 ${collapsed ? 'md:hidden' : ''}`}
+              onSubmit={(event) => {
+                event.preventDefault()
+                void submitRename()
+              }}
+            >
+              <div className="flex min-w-0 items-center gap-2 rounded-md border-l-2 border-accent bg-surface-hover px-2 py-1.5 text-sm text-text">
+                <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
+                <input
+                  autoFocus
+                  className="w-full rounded border border-accent bg-slate-950 px-2 py-1 text-sm text-text outline-none"
+                  value={renameValue}
+                  onChange={(event) => setRenameValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') setRenaming(false)
+                  }}
+                />
+              </div>
+            </form>
+            <NavLink
+              className={({ isActive }) =>
+                `${collapsed ? 'hidden md:flex' : 'hidden'} min-w-0 flex-1 items-center justify-center rounded-md px-0 py-1.5 text-sm hover:bg-surface-hover ${
+                  isActive ? 'bg-surface-hover text-text' : 'text-text-muted'
+                }`
+              }
+              to={pageUrl(node.path)}
+              title={node.title}
+            >
               <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
-              <input
-                autoFocus
-                className="w-full rounded border border-accent bg-slate-950 px-2 py-1 text-sm text-text outline-none"
-                value={renameValue}
-                onChange={(event) => setRenameValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') setRenaming(false)
-                }}
-              />
-            </div>
-          </form>
+            </NavLink>
+          </>
         ) : (
           <NavLink
             className={({ isActive }) =>
-              `flex min-w-0 flex-1 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm hover:bg-surface-hover ${
+              `flex min-w-0 flex-1 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm hover:bg-surface-hover ${collapsed ? 'md:justify-center md:border-l-0 md:px-0' : ''} ${
                 isActive ? 'border-accent bg-surface-hover text-text' : 'border-transparent text-text-muted'
               }`
             }
             to={pageUrl(node.path)}
+            title={collapsed ? node.title : undefined}
+            draggable
+            onDragStart={startPageDrag}
+            onDragEnd={endPageDrag}
           >
             <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
-            <span className="min-w-0 truncate">{node.title}</span>
+            <span className={`min-w-0 truncate ${collapsed ? 'md:hidden' : ''}`}>{node.title}</span>
           </NavLink>
         )}
 
         <button
-          className="rounded p-1 text-text-muted opacity-100 hover:bg-surface-hover hover:text-text md:opacity-0 md:group-hover:opacity-100"
-          onClick={() => {
-            setMenuOpen((v) => !v)
+          ref={menuButtonRef}
+          className={`rounded p-1 text-text-muted opacity-100 hover:bg-surface-hover hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
+          onClick={(event) => {
+            if (menuOpen) {
+              closeMenu()
+              return
+            }
+            setMenuPosition(floatingMenuPosition(event.currentTarget))
+            setMenuOpen(true)
             setConfirmDelete(false)
           }}
         >
@@ -171,25 +262,26 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
 
       </div>
 
-      {menuOpen && (
-        <div className="mt-1 ml-8 w-[200px] rounded-xl border border-border bg-slate-950 p-1 shadow-xl">
-          <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); setMenuOpen(false) }} />
-          <MenuButton icon={<PageIcon icon="page" />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setMenuOpen(false); setOpen(true) }} />
-          <MenuButton icon={<PageIcon icon="board" />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setMenuOpen(false); setOpen(true) }} />
-          <MenuButton icon={<PageIcon icon="folder" />} label="Move to..." onClick={() => { setMoving(true); setMenuOpen(false) }} />
+      {menuOpen && menuPosition && createPortal(
+        <div ref={menuRef} className="fixed z-50 w-[200px] rounded-xl border border-border bg-slate-950 p-1 shadow-2xl" style={menuPosition}>
+          <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); closeMenu() }} />
+          <MenuButton icon={<PageIcon icon="page" />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setOpen(true); closeMenu() }} />
+          <MenuButton icon={<PageIcon icon="board" />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setOpen(true); closeMenu() }} />
+          <MenuButton icon={<PageIcon icon="folder" />} label="Move to..." onClick={() => { setMoving(true); closeMenu() }} />
           {confirmDelete ? (
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={remove}>
+            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={() => void remove()}>
               <Trash2 size={15} /> Confirm delete
             </button>
           ) : (
             <MenuButton icon={<Trash2 size={15} />} label="Delete" danger onClick={() => setConfirmDelete(true)} />
           )}
-        </div>
+        </div>,
+        document.body,
       )}
 
       {moving && (
         <form
-          className="mt-1 flex items-center gap-2 pl-8"
+          className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'md:hidden' : ''}`}
           onSubmit={(event) => {
             event.preventDefault()
             void submitMove()
@@ -211,7 +303,7 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
 
       {creating && (
         <form
-          className="mt-1 flex items-center gap-2 pl-8"
+          className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'md:hidden' : ''}`}
           onSubmit={(event) => {
             event.preventDefault()
             void submitCreate()
@@ -224,14 +316,21 @@ export function TreeItem({ node, depth = 0, onRefresh }: { node: TreeNode; depth
             onChange={(event) => setCreateValue(event.target.value)}
             placeholder={creating === 'board' ? 'Board title' : 'Page title'}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') setCreating(null)
+              if (event.key === 'Escape') cancelCreate()
             }}
           />
           <button className="rounded px-2 py-1 text-xs text-accent" type="submit">Add</button>
+          <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
+            <X size={14} />
+          </button>
         </form>
       )}
 
-      {open && node.children?.map((child) => <TreeItem key={child.path} node={child} depth={depth + 1} onRefresh={onRefresh} />)}
+      {open && (
+        <div className={collapsed ? 'md:hidden' : ''}>
+          {node.children?.map((child) => <TreeItem key={child.path} node={child} depth={depth + 1} collapsed={collapsed} onRefresh={onRefresh} onPageDragChange={onPageDragChange} />)}
+        </div>
+      )}
     </div>
   )
 }

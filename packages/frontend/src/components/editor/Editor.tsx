@@ -63,6 +63,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
     })),
     [page.path, tree],
   )
+  const showBreadcrumbs = breadcrumbs.length > 1
 
   useEffect(() => {
     setContent(page.content)
@@ -153,16 +154,18 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
             >
               <ArrowLeft size={15} />
             </button>
-            <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="Page breadcrumbs">
-              {breadcrumbs.map((crumb, index) => (
-                <span key={crumb.path} className="flex min-w-0 items-center gap-1">
-                  {index > 0 && <span className="text-text-muted/60">/</span>}
-                  <Link className="max-w-[160px] truncate rounded px-1 py-0.5 hover:bg-surface-hover hover:text-text" to={pageUrl(crumb.path)}>
-                    {crumb.label}
-                  </Link>
-                </span>
-              ))}
-            </nav>
+            {showBreadcrumbs && (
+              <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="Page breadcrumbs">
+                {breadcrumbs.map((crumb, index) => (
+                  <span key={crumb.path} className="flex min-w-0 items-center gap-1">
+                    {index > 0 && <span className="text-text-muted/60">/</span>}
+                    <Link className="max-w-[160px] truncate rounded px-1 py-0.5 hover:bg-surface-hover hover:text-text" to={pageUrl(crumb.path)}>
+                      {crumb.label}
+                    </Link>
+                  </span>
+                ))}
+              </nav>
+            )}
           </div>
           {metaEditing ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
@@ -234,7 +237,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
                 className="group rounded-xl border border-border bg-slate-950/60 p-3 transition hover:border-accent hover:bg-surface-hover"
               >
                 <div className="mb-1 flex min-w-0 items-center gap-2">
-                  <PageIcon icon={child.icon} fallback={child.type === 'board' ? '▦' : '📄'} />
+                  <PageIcon icon={child.icon} fallback={child.type === 'board' ? 'board' : 'page'} />
                   <span className="min-w-0 truncate font-medium text-text group-hover:text-white">{child.title}</span>
                 </div>
                 <p className="truncate text-xs text-text-muted">{child.path}</p>

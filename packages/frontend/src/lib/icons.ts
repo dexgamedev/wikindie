@@ -23,7 +23,7 @@ export const wikiIcons: WikiIcon[] = [
   { id: 'combat', label: 'Combat', glyph: '⚔️', category: 'Game Design', keywords: ['battle', 'fight', 'weapon'] },
   { id: 'inventory', label: 'Inventory', glyph: '🎒', category: 'Game Design', keywords: ['items', 'bag', 'loot'] },
   { id: 'devlog', label: 'Devlog', glyph: '📝', category: 'Production', keywords: ['journal', 'progress', 'log'] },
-  { id: 'board', label: 'Board', glyph: '📋', category: 'Production', keywords: ['kanban', 'tasks', 'planning'] },
+  { id: 'board', label: 'Board', glyph: '🗂️', category: 'Production', keywords: ['kanban', 'tasks', 'planning'] },
   { id: 'roadmap', label: 'Roadmap', glyph: '🛣️', category: 'Production', keywords: ['milestones', 'plan'] },
   { id: 'calendar', label: 'Calendar', glyph: '📅', category: 'Production', keywords: ['date', 'schedule'] },
   { id: 'target', label: 'Target', glyph: '🎯', category: 'Production', keywords: ['goal', 'focus'] },

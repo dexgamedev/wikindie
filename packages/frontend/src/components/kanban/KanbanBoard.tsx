@@ -22,6 +22,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
     })),
     [path, tree],
   )
+  const showBreadcrumbs = breadcrumbs.length > 1
   const displayTitle = title || pageNameFromPath(path)
 
   const update = async (next: Board) => {
@@ -59,19 +60,21 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
             >
               <ArrowLeft size={15} />
             </button>
-            <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="Page breadcrumbs">
-              {breadcrumbs.map((crumb, index) => (
-                <span key={crumb.path} className="flex min-w-0 items-center gap-1">
-                  {index > 0 && <span className="text-text-muted/60">/</span>}
-                  <Link className="max-w-[160px] truncate rounded px-1 py-0.5 hover:bg-surface-hover hover:text-text" to={pageUrl(crumb.path)}>
-                    {crumb.label}
-                  </Link>
-                </span>
-              ))}
-            </nav>
+            {showBreadcrumbs && (
+              <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="Page breadcrumbs">
+                {breadcrumbs.map((crumb, index) => (
+                  <span key={crumb.path} className="flex min-w-0 items-center gap-1">
+                    {index > 0 && <span className="text-text-muted/60">/</span>}
+                    <Link className="max-w-[160px] truncate rounded px-1 py-0.5 hover:bg-surface-hover hover:text-text" to={pageUrl(crumb.path)}>
+                      {crumb.label}
+                    </Link>
+                  </span>
+                ))}
+              </nav>
+            )}
           </div>
           <h2 className="flex min-w-0 items-center gap-2 text-2xl font-semibold">
-            <PageIcon icon={icon} fallback="▦" className="size-6 shrink-0" />
+            <PageIcon icon={icon} fallback="board" className="size-6 shrink-0" />
             <span className="truncate">{displayTitle}</span>
           </h2>
         </div>

@@ -1,8 +1,9 @@
-import { LogOut, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
-import { pageUrl } from '../../lib/paths'
+import { getPageDragPayload, hasPageDragPayload } from '../../lib/pageDrag'
+import { findTreeNode, pageUrl } from '../../lib/paths'
 import { useAuthStore, useFilesStore } from '../../lib/store'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
@@ -20,31 +21,70 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
   return list
 }
 
-export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; onCloseMobile: () => void }) {
+function pagePathFromLocation(pathname: string) {
+  if (!pathname.startsWith('/page/')) return ''
+  try {
+    return pathname.slice('/page/'.length).split('/').filter(Boolean).map(decodeURIComponent).join('/')
+  } catch {
+    return ''
+  }
+}
+
+export function Sidebar({
+  mobileOpen,
+  onCloseMobile,
+  collapsed,
+  onToggleCollapsed,
+}: {
+  mobileOpen: boolean
+  onCloseMobile: () => void
+  collapsed: boolean
+  onToggleCollapsed: () => void
+}) {
   const tree = useFilesStore((state) => state.tree)
   const setTree = useFilesStore((state) => state.setTree)
   const logout = useAuthStore((state) => state.logout)
   const username = useAuthStore((state) => state.username)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [creating, setCreating] = useState<null | 'page' | 'board'>(null)
   const [createValue, setCreateValue] = useState('')
+  const [createAtRoot, setCreateAtRoot] = useState(false)
+  const [pageDragActive, setPageDragActive] = useState(false)
   const [rootDragOver, setRootDragOver] = useState(false)
   const [quickFindOpen, setQuickFindOpen] = useState(false)
   const [query, setQuery] = useState('')
 
+  const selectedPath = useMemo(() => pagePathFromLocation(location.pathname), [location.pathname])
+  const selectedNode = useMemo(() => (selectedPath ? findTreeNode(tree, selectedPath) : undefined), [selectedPath, tree])
+
   const refreshTree = async () => setTree((await api.tree()).tree)
 
+  const setPageDragging = (active: boolean) => {
+    setPageDragActive(active)
+    if (!active) setRootDragOver(false)
+  }
+
   const startCreate = (type: 'page' | 'board') => {
+    if (collapsed) onToggleCollapsed()
     setCreating(type)
     setCreateValue('')
+    setCreateAtRoot(!selectedNode)
+  }
+
+  const cancelCreate = () => {
+    setCreating(null)
+    setCreateValue('')
+    setCreateAtRoot(false)
   }
 
   const createItem = async () => {
     if (!creating) return
     const clean = createValue.trim()
     if (!clean) return
-    const created = await api.createPage(clean, undefined, creating)
+    const parentPath = createAtRoot ? undefined : selectedNode?.path
+    const created = await api.createPage(clean, parentPath, creating)
     await refreshTree()
     navigate(pageUrl(created.path))
     setCreating(null)
@@ -55,7 +95,8 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
   const dropOnRoot = async (event: React.DragEvent) => {
     event.preventDefault()
     setRootDragOver(false)
-    const payload = JSON.parse(event.dataTransfer.getData('application/json') || 'null') as { path: string } | null
+    setPageDragging(false)
+    const payload = getPageDragPayload(event.dataTransfer)
     if (!payload) return
     const newPath = payload.path.split('/').pop() ?? payload.path
     if (newPath === payload.path) return
@@ -85,12 +126,20 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
   return (
     <>
       {mobileOpen && <button className="fixed inset-0 z-30 bg-black/45 md:hidden" onClick={onCloseMobile} aria-label="Close sidebar" />}
-      <aside className={`fixed left-0 top-0 z-40 flex h-dvh w-[300px] flex-col border-r border-border bg-sidebar p-3 transition ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
+      <aside className={`fixed left-0 top-0 z-40 flex h-dvh w-[300px] flex-col border-r border-border bg-sidebar p-3 transition-[transform,width,padding] duration-200 ${collapsed ? 'md:w-[72px] md:p-2' : 'md:w-[300px] md:p-3'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className={`mb-4 flex items-center gap-3 ${collapsed ? 'justify-between md:justify-center' : 'justify-between'}`}>
+          <div className={collapsed ? 'md:hidden' : ''}>
             <h1 className="text-lg font-semibold tracking-tight">Wikindie</h1>
             <p className="text-xs text-text-muted">{username}</p>
           </div>
+          <button
+            className="hidden rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text md:block"
+            onClick={onToggleCollapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
           <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text md:hidden" onClick={onCloseMobile} title="Close">
             <X size={18} />
           </button>
@@ -98,58 +147,83 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
 
         <div className="mb-3 space-y-1">
           <button
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+            className={`flex w-full items-center rounded-xl py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text ${collapsed ? 'gap-3 px-3 md:gap-0 md:justify-center md:px-0' : 'gap-3 px-3'}`}
             onClick={() => setQuickFindOpen(true)}
+            title={collapsed ? 'Search pages' : undefined}
           >
             <Search size={15} className="shrink-0" />
-            <span className="min-w-0 flex-1 truncate">Search pages...</span>
+            <span className={`min-w-0 flex-1 truncate ${collapsed ? 'md:hidden' : ''}`}>Search pages...</span>
           </button>
-          <ActionButton icon="page" title="New page" onClick={() => startCreate('page')} />
-          <ActionButton icon="board" title="New board" onClick={() => startCreate('board')} />
+          <ActionButton icon="page" title="New page" collapsed={collapsed} onClick={() => startCreate('page')} />
+          <ActionButton icon="board" title="New board" collapsed={collapsed} onClick={() => startCreate('board')} />
           {creating && (
             <form
-              className="flex items-center gap-2 rounded-xl bg-surface/50 p-2"
+              className={`rounded-xl bg-surface/50 p-2 ${collapsed ? 'md:hidden' : ''}`}
               onSubmit={(event) => {
                 event.preventDefault()
                 void createItem()
               }}
             >
-              <input
-                autoFocus
-                className="min-w-0 flex-1 rounded-lg border border-accent bg-slate-950 px-2 py-1.5 text-sm text-text outline-none"
-                value={createValue}
-                onChange={(event) => setCreateValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') setCreating(null)
-                }}
-                placeholder={creating === 'board' ? 'Board title' : 'Page title'}
-              />
-              <button className="rounded-lg px-2 py-1.5 text-sm text-accent hover:bg-surface-hover" type="submit">Add</button>
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  className="min-w-0 flex-1 rounded-lg border border-accent bg-slate-950 px-2 py-1.5 text-sm text-text outline-none"
+                  value={createValue}
+                  onChange={(event) => setCreateValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') cancelCreate()
+                  }}
+                  placeholder={creating === 'board' ? 'Board title' : 'Page title'}
+                />
+                <button className="rounded-lg px-2 py-1.5 text-sm text-accent hover:bg-surface-hover" type="submit">Add</button>
+                <button className="rounded-lg p-1.5 text-text-muted hover:bg-surface-hover hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
+                  <X size={15} />
+                </button>
+              </div>
+              <div className="mt-1 flex items-center gap-2 px-1 text-xs text-text-muted">
+                <span className="min-w-0 truncate">
+                  {createAtRoot || !selectedNode ? '📁 Root' : `📂 ${selectedNode.title}`}
+                </span>
+                {selectedNode && (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded border border-border px-1.5 py-0.5 text-text-muted hover:border-accent hover:text-text"
+                    onClick={() => setCreateAtRoot((v) => !v)}
+                  >
+                    {createAtRoot ? 'Set selected' : 'Set root'}
+                  </button>
+                )}
+              </div>
             </form>
           )}
         </div>
 
         <nav
-          className={`workspace-scroll mt-1 min-h-0 flex-1 overflow-auto rounded-lg pr-1 ${rootDragOver ? 'bg-accent/10 ring-1 ring-accent' : ''}`}
+          className={`workspace-scroll mt-1 min-h-0 flex-1 overflow-auto rounded-lg ${collapsed ? 'pr-1 md:pr-0' : 'pr-1'} ${rootDragOver ? 'bg-accent/10 ring-1 ring-accent' : ''}`}
           onDragOver={(event) => {
+            if (!pageDragActive && !hasPageDragPayload(event.dataTransfer)) return
             event.preventDefault()
+            event.dataTransfer.dropEffect = 'move'
+            setPageDragging(true)
             setRootDragOver(true)
           }}
           onDragLeave={() => setRootDragOver(false)}
           onDrop={dropOnRoot}
         >
           {tree.map((node) => (
-            <TreeItem key={node.path} node={node} onRefresh={refreshTree} />
+            <TreeItem key={node.path} node={node} collapsed={collapsed} onRefresh={refreshTree} onPageDragChange={setPageDragging} />
           ))}
-          <div className="mt-2 rounded-lg border border-dashed border-border px-3 py-2 text-center text-xs text-text-muted">
-            Drop here to move page to workspace root
-          </div>
+          {pageDragActive && (
+            <div className={`mt-2 rounded-lg border border-dashed border-border px-3 py-2 text-center text-xs text-text-muted ${collapsed ? 'md:hidden' : ''}`}>
+              Drop here to move page to workspace root
+            </div>
+          )}
         </nav>
 
         <div className="mt-auto border-t border-border pt-3">
-          <Button className="w-full justify-center" onClick={logout}>
+          <Button className="w-full justify-center" onClick={logout} title={collapsed ? 'Logout' : undefined}>
             <LogOut size={14} />
-            <span className="ml-1">Logout</span>
+            <span className={`ml-1 ${collapsed ? 'md:hidden' : ''}`}>Logout</span>
           </Button>
         </div>
       </aside>
@@ -178,7 +252,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
                     onCloseMobile()
                   }}
                 >
-                  <PageIcon icon={node.icon} />
+                  <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
                   <span className="font-medium text-text">{node.title}</span>
                   <span className="min-w-0 truncate text-xs text-text-muted">{node.path}</span>
                 </button>
@@ -192,16 +266,17 @@ export function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; on
   )
 }
 
-function ActionButton({ icon, title, onClick }: { icon: string; title: string; onClick: () => void }) {
+function ActionButton({ icon, title, collapsed, onClick }: { icon: string; title: string; collapsed: boolean; onClick: () => void }) {
   return (
     <button
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-surface-hover"
+      className={`flex w-full items-center rounded-xl py-2 text-left transition hover:bg-surface-hover ${collapsed ? 'gap-3 px-3 md:gap-0 md:justify-center md:px-0' : 'gap-3 px-3'}`}
       onClick={onClick}
+      title={collapsed ? title : undefined}
     >
       <span className="grid size-7 shrink-0 place-items-center text-lg">
         <PageIcon icon={icon} />
       </span>
-      <span className="min-w-0 truncate text-sm font-medium text-text">{title}</span>
+      <span className={`min-w-0 truncate text-sm font-medium text-text ${collapsed ? 'md:hidden' : ''}`}>{title}</span>
     </button>
   )
 }
