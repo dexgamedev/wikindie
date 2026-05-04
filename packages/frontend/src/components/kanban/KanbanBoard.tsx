@@ -65,7 +65,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <button
-            className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-surface/70 text-text-muted transition hover:border-accent hover:text-text"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
             onClick={() => goBack(navigate)}
             title="Go back"
             aria-label="Go back"
@@ -77,7 +77,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
             {(showBreadcrumbs ? breadcrumbs : [{ label: displayTitle, path }]).map((crumb, index) => (
               <span key={crumb.path} className="flex min-w-0 items-center gap-1">
                 {index > 0 && <span className="text-text-muted/50">/</span>}
-                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-surface-hover hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
+                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
                   {crumb.label}
                 </Link>
               </span>
@@ -85,14 +85,14 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
           </nav>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-slate-950/50 px-2.5 py-1 text-xs text-text-muted sm:flex">
-            <span className={`size-1.5 rounded-full ${saving ? 'bg-amber-300' : 'bg-emerald-400'}`} />
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-text-muted sm:flex">
+            <span className={`size-1.5 rounded-full ${saving ? 'bg-warning' : 'bg-success'}`} />
             {mayWrite ? (saving ? 'Saving...' : 'Saved') : 'Read only'}
           </span>
           {mayWrite && <Button className="hidden py-1.5 sm:inline-flex" onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
           <div ref={actions.ref} className="relative">
             <button
-              className="grid size-9 place-items-center rounded-lg border border-border bg-surface/70 text-text-muted transition hover:border-accent hover:text-text"
+              className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
               onClick={() => actions.setOpen((open) => !open)}
               title="Board actions"
               aria-label="Board actions"
@@ -101,10 +101,10 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
               <MoreHorizontal size={18} />
             </button>
             {actions.open && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-xl border border-border bg-slate-950 p-1.5 shadow-2xl shadow-black/40">
+              <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg border border-border bg-input p-1.5 shadow-2xl shadow-heavy">
                 {mayWrite ? (
                   <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text"
                     onClick={() => {
                       setAddingColumn((open) => !open)
                       actions.setOpen(false)
@@ -122,10 +122,10 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
         </div>
       </header>
 
-      <div className="workspace-scroll min-h-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.12),transparent_32rem)] p-4 md:p-6">
+      <div className="workspace-scroll min-h-0 flex-1 overflow-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-5 md:p-8">
       {mayWrite && addingColumn && (
         <form
-          className="mb-4 flex max-w-md items-center gap-2 rounded-2xl border border-border bg-slate-950/55 p-3 shadow-lg shadow-black/10"
+          className="mb-6 flex max-w-md items-center gap-3 rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow"
           onSubmit={(event) => {
             event.preventDefault()
             addColumn()
@@ -133,7 +133,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
         >
           <input
             autoFocus
-            className="min-w-0 flex-1 rounded border border-accent bg-slate-950 px-3 py-2 text-sm text-text outline-none"
+            className="min-w-0 flex-1 rounded border border-accent bg-input px-3 py-2 text-sm text-text outline-none"
             value={newColumnTitle}
             onChange={(event) => setNewColumnTitle(event.target.value)}
             placeholder="Column title"
@@ -141,7 +141,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
           <Button type="submit">Add</Button>
         </form>
       )}
-      <div className="grid gap-4 lg:grid-flow-col lg:auto-cols-[minmax(280px,1fr)] lg:overflow-x-auto">
+      <div className="grid gap-5 lg:grid-flow-col lg:auto-cols-[minmax(280px,1fr)] lg:overflow-x-auto">
         {board.columns.map((column, columnIndex) => (
           <KanbanColumn key={`${column.title}-${columnIndex}`} column={column} columnIndex={columnIndex} board={board} editable={mayWrite} onUpdate={update} onMove={moveCard} />
         ))}
@@ -156,7 +156,7 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="hidden items-center gap-1.5 sm:flex">
-            <CheckCircle2 size={13} className={saving ? 'text-text-muted' : 'text-emerald-400'} /> Kanban
+            <CheckCircle2 size={13} className={saving ? 'text-text-muted' : 'text-success'} /> Kanban
           </span>
           <span>Board View</span>
         </div>

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
@@ -86,19 +86,19 @@ export function Sidebar({
 
   return (
     <>
-      {mobileOpen && <button className="fixed inset-0 z-30 bg-black/45 md:hidden" onClick={onCloseMobile} aria-label="Close sidebar" />}
-      <aside className={`panel fixed left-0 top-0 z-40 flex h-dvh w-[300px] flex-col p-3 transition-[transform,width,padding] duration-200 md:static md:z-auto md:h-auto md:min-h-0 md:shrink-0 ${collapsed ? 'md:w-[72px] md:p-2' : 'md:w-[300px] md:p-3'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      {mobileOpen && <button className="fixed inset-0 z-30 bg-overlay md:hidden" onClick={onCloseMobile} aria-label="Close sidebar" />}
+      <aside className={`panel fixed left-0 top-0 z-40 flex h-dvh w-[300px] flex-col p-4 transition-[transform,width,padding] duration-200 md:static md:z-auto md:h-auto md:min-h-0 md:shrink-0 ${collapsed ? 'md:w-[72px] md:p-3' : 'md:w-[300px] md:p-4'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className={`mb-3 flex items-center gap-2 ${collapsed ? 'justify-between md:justify-center' : 'justify-between'}`}>
           <span className={`text-xs font-semibold uppercase tracking-wide text-text-muted ${collapsed ? 'md:hidden' : ''}`}>Workspace</span>
           <button
-            className="hidden rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text md:block"
+            className="hidden rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text md:block"
             onClick={onToggleCollapsed}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
-          <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text md:hidden" onClick={onCloseMobile} title="Close">
+          <button className="rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text md:hidden" onClick={onCloseMobile} title="Close">
             <X size={18} />
           </button>
         </div>
@@ -128,7 +128,7 @@ export function Sidebar({
         {mayWrite && (
           <div className="relative mt-3 border-t border-border pt-3">
             {newFileOpen && !creating && (
-              <div className={`absolute bottom-full mb-2 rounded-2xl border border-border bg-slate-950 p-2 shadow-2xl ${collapsed ? 'left-0 w-[220px]' : 'left-0 right-0'}`}>
+              <div className={`absolute bottom-full mb-2 rounded-lg border border-border bg-input p-2 shadow-2xl ${collapsed ? 'left-0 w-[220px]' : 'left-0 right-0'}`}>
                 <NewFileOption icon="page" title="New page" onClick={() => startCreate('page')} />
                 <NewFileOption icon="board" title="New board" onClick={() => startCreate('board')} />
               </div>
@@ -136,7 +136,7 @@ export function Sidebar({
 
             {creating && (
               <form
-                className={`mb-2 rounded-xl bg-surface/50 p-2 ${collapsed ? 'md:hidden' : ''}`}
+                className={`mb-2 rounded-lg bg-surface/50 p-2 ${collapsed ? 'md:hidden' : ''}`}
                 onSubmit={(event) => {
                   event.preventDefault()
                   void createItem()
@@ -145,7 +145,7 @@ export function Sidebar({
                 <div className="flex items-center gap-2">
                   <input
                     autoFocus
-                    className="min-w-0 flex-1 rounded-lg border border-accent bg-slate-950 px-2 py-1.5 text-sm text-text outline-none"
+                    className="min-w-0 flex-1 rounded-lg border border-accent bg-input px-2 py-1.5 text-sm text-text outline-none"
                     value={createValue}
                     onChange={(event) => setCreateValue(event.target.value)}
                     onKeyDown={(event) => {
@@ -153,8 +153,8 @@ export function Sidebar({
                     }}
                     placeholder={creating === 'board' ? 'Board title' : 'Page title'}
                   />
-                  <button className="rounded-lg px-2 py-1.5 text-sm text-accent hover:bg-surface-hover" type="submit">Add</button>
-                  <button className="rounded-lg p-1.5 text-text-muted hover:bg-surface-hover hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
+                  <button className="rounded-lg border border-control-border bg-control px-2 py-1.5 text-sm text-accent hover:bg-control-hover" type="submit">Add</button>
+                  <button className="rounded-lg p-1.5 text-text-muted hover:bg-accent/10 hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
                     <X size={15} />
                   </button>
                 </div>
@@ -165,7 +165,7 @@ export function Sidebar({
                   {selectedNode && (
                     <button
                       type="button"
-                      className="shrink-0 rounded border border-border px-1.5 py-0.5 text-text-muted hover:border-accent hover:text-text"
+                      className="shrink-0 rounded border border-control-border bg-control px-1.5 py-0.5 text-text-muted hover:border-accent hover:bg-control-hover hover:text-text"
                       onClick={() => setCreateAtRoot((v) => !v)}
                     >
                       {createAtRoot ? 'Set selected' : 'Set root'}
@@ -176,7 +176,7 @@ export function Sidebar({
             )}
 
             <button
-              className={`flex w-full items-center rounded-xl border border-border bg-surface/70 py-2 text-left text-sm font-medium text-text transition hover:border-accent hover:bg-surface-hover ${collapsed ? 'gap-3 px-3 md:justify-center md:px-0' : 'gap-3 px-3'}`}
+              className={`flex w-full items-center rounded-lg border border-control-border bg-control py-2 text-left text-sm font-medium text-text transition hover:border-accent hover:bg-control-hover ${collapsed ? 'gap-3 px-3 md:justify-center md:px-0' : 'gap-3 px-3'}`}
               onClick={() => {
                 setNewFileOpen((open) => !open)
                 if (creating) cancelCreate()
@@ -197,7 +197,7 @@ export function Sidebar({
 function NewFileOption({ icon, title, onClick }: { icon: string; title: string; onClick: () => void }) {
   return (
     <button
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-surface-hover"
+      className="flex w-full items-center gap-3 rounded-lg bg-control px-3 py-2 text-left transition hover:bg-control-hover"
       onClick={onClick}
     >
       <span className="grid size-7 shrink-0 place-items-center text-lg">

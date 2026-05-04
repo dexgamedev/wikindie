@@ -64,7 +64,7 @@ export function PageView() {
     return () => window.removeEventListener('wikindie:event', handler)
   }, [path])
 
-  if (error) return <div className="p-8 text-red-300">{error}</div>
+  if (error) return <div className="p-8 text-danger">{error}</div>
   if (!page) return <div className="p-8"><Spinner /></div>
   if (page.type === 'board' && page.board) {
     return (

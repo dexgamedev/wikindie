@@ -53,10 +53,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-dvh flex-col gap-2 bg-slate-950 p-2 text-text">
+    <div className="flex h-dvh flex-col gap-3 bg-body p-3 text-text md:p-4">
       <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
       <QuickFindModal open={quickFindOpen} onClose={closeQuickFind} />
-      <div className="flex min-h-0 flex-1 gap-2">
+      <div className="flex min-h-0 flex-1 gap-3">
         <Sidebar
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}

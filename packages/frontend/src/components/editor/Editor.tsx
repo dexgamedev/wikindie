@@ -223,7 +223,7 @@ export function Editor({
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <button
-            className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-surface/70 text-text-muted transition hover:border-accent hover:text-text"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
             onClick={() => goBack(navigate)}
             title="Go back"
             aria-label="Go back"
@@ -234,7 +234,7 @@ export function Editor({
             {(showBreadcrumbs ? breadcrumbs : [{ label: title, path: page.path }]).map((crumb, index) => (
               <span key={crumb.path} className="flex min-w-0 items-center gap-1">
                 {index > 0 && <span className="text-text-muted/50">/</span>}
-                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-surface-hover hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
+                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
                   {crumb.label}
                 </Link>
               </span>
@@ -243,21 +243,21 @@ export function Editor({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-slate-950/50 px-2.5 py-1 text-xs text-text-muted sm:flex">
-            <span className={`size-1.5 rounded-full ${status === 'saved' ? 'bg-emerald-400' : status === 'saving' ? 'bg-amber-300' : 'bg-indigo-400'}`} />
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-text-muted sm:flex">
+            <span className={`size-1.5 rounded-full ${status === 'saved' ? 'bg-success' : status === 'saving' ? 'bg-warning' : 'bg-info'}`} />
             {statusLabel}
           </span>
           {mayWrite && (
-            <div className="flex rounded-lg border border-border bg-slate-950/70 p-0.5 text-sm">
+            <div className="flex rounded-lg border border-control-border bg-control p-0.5 text-sm">
               <button
-                className={`rounded-md px-3 py-1.5 transition ${editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
+                className={`rounded-md px-3 py-1.5 transition ${editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-control-hover hover:text-text'}`}
                 onClick={() => setEditing(true)}
                 type="button"
               >
                 Edit
               </button>
               <button
-                className={`rounded-md px-3 py-1.5 transition ${!editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
+                className={`rounded-md px-3 py-1.5 transition ${!editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-control-hover hover:text-text'}`}
                 onClick={() => void showPreview()}
                 disabled={status === 'saving'}
                 type="button"
@@ -268,7 +268,7 @@ export function Editor({
           )}
           <div ref={actions.ref} className="relative">
             <button
-              className="grid size-9 place-items-center rounded-lg border border-border bg-surface/70 text-text-muted transition hover:border-accent hover:text-text"
+              className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
               onClick={() => actions.setOpen((open) => !open)}
               title="Page actions"
               aria-label="Page actions"
@@ -277,10 +277,10 @@ export function Editor({
               <MoreHorizontal size={18} />
             </button>
             {actions.open && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-xl border border-border bg-slate-950 p-1.5 shadow-2xl shadow-black/40">
+              <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-lg border border-border bg-input p-1.5 shadow-2xl shadow-heavy">
                 {mayWrite && (
                   <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text"
                     onClick={() => {
                       setMetaEditing((open) => !open)
                       actions.setOpen(false)
@@ -292,7 +292,7 @@ export function Editor({
                 )}
                 {mayWrite && (
                   <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text"
                     onClick={() => {
                       setAddingSection((open) => !open)
                       actions.setOpen(false)
@@ -304,7 +304,7 @@ export function Editor({
                 )}
                 {mayWrite && (
                   <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={() => {
                       void saveNow()
                       actions.setOpen(false)
@@ -322,12 +322,12 @@ export function Editor({
         </div>
       </header>
 
-      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.12),transparent_32rem)]">
-        <div className="mx-auto w-full max-w-5xl p-4 md:p-8">
-          {externalChange && <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">This page changed on disk while you had local edits.</div>}
+      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)]">
+        <div className="mx-auto w-full max-w-5xl p-5 md:p-10">
+          {externalChange && <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">This page changed on disk while you had local edits.</div>}
 
           {mayWrite && metaEditing && (
-            <article className="mb-5 rounded-2xl border border-border bg-slate-950/55 p-4 shadow-lg shadow-black/10">
+            <article className="mb-6 rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-text">Page meta</h3>
@@ -343,7 +343,7 @@ export function Editor({
                       {wikiIcons.filter((item) => item.category === category).map((item) => (
                         <button
                           key={item.id}
-                          className={`grid size-8 place-items-center rounded-lg border text-lg transition hover:-translate-y-0.5 hover:border-accent hover:bg-surface-hover ${icon === item.id ? 'border-accent bg-accent/15 shadow-sm shadow-accent/20 ring-1 ring-accent/40' : 'border-border bg-slate-950/60'}`}
+                          className={`grid size-8 place-items-center rounded-lg border text-lg transition hover:-translate-y-0.5 hover:border-accent hover:bg-accent/10 ${icon === item.id ? 'border-accent bg-accent/15 shadow-sm shadow-accent/20 ring-1 ring-accent/40' : 'border-transparent'}`}
                           onClick={() => setIcon(item.id)}
                           title={`${item.label} (${item.id})`}
                           type="button"
@@ -360,7 +360,7 @@ export function Editor({
                 <PageIcon icon={icon} className="text-lg" />
                 <span>{icon || 'page'}</span>
               </div>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} className="w-full rounded border border-accent bg-slate-950 px-3 py-2 text-lg font-semibold text-text outline-none" />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} className="w-full rounded border border-accent bg-input px-3 py-2 text-lg font-semibold text-text outline-none" />
               <div className="flex gap-2">
                 <Button onClick={saveMeta}>Save title</Button>
                 <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
@@ -369,21 +369,21 @@ export function Editor({
           )}
 
           {childPages.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-border bg-slate-950/55 p-4 shadow-lg shadow-black/10">
-          <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-6 rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+          <div className="mb-4 flex items-center justify-between gap-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-text-muted">Pages</h3>
             <span className="text-xs text-text-muted">{childPages.length} linked automatically</span>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {childPages.map((child) => (
               <Link
                 key={child.path}
                 to={pageUrl(child.path)}
-                className="group rounded-xl border border-border bg-slate-950/60 p-3 transition hover:border-accent hover:bg-surface-hover"
+                className="group rounded-lg border border-border bg-card p-4 transition hover:border-accent hover:bg-accent/10"
               >
                 <div className="mb-1 flex min-w-0 items-center gap-2">
                   <PageIcon icon={child.icon} fallback={child.type === 'board' ? 'board' : 'page'} />
-                  <span className="min-w-0 truncate font-medium text-text group-hover:text-white">{child.title}</span>
+                  <span className="min-w-0 truncate font-medium text-text group-hover:text-text">{child.title}</span>
                 </div>
                 <p className="truncate text-xs text-text-muted">{child.path}</p>
               </Link>
@@ -393,7 +393,7 @@ export function Editor({
           )}
 
           {mayWrite && editing ? (
-            <div className="mb-8 rounded-2xl border border-border/70 bg-slate-950/20 p-5">
+            <div className="mb-10 rounded-lg border border-border/70 bg-card p-6">
               <textarea
                 className="min-h-[52vh] w-full resize-y bg-transparent font-mono text-[15px] leading-7 text-text outline-none"
                 value={content}
@@ -405,19 +405,19 @@ export function Editor({
               />
             </div>
           ) : (
-            <div className="mb-8">
+            <div className="mb-10">
               <MarkdownPreview content={savedContent} frameless />
             </div>
           )}
 
           <div>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-semibold">Sections</h3>
         </div>
 
         {mayWrite && addingSection && (
           <form
-            className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3"
+            className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4"
             onSubmit={(event) => {
               event.preventDefault()
               void addSection()
@@ -427,26 +427,26 @@ export function Editor({
               autoFocus
               value={newSectionTitle}
               onChange={(event) => setNewSectionTitle(event.target.value)}
-              className="min-w-0 flex-1 rounded border border-accent bg-slate-950 px-3 py-2 text-sm text-text outline-none"
+              className="min-w-0 flex-1 rounded border border-accent bg-input px-3 py-2 text-sm text-text outline-none"
               placeholder="Section title"
             />
             <Button type="submit">Create</Button>
           </form>
         )}
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {page.sections.map((section) => {
             const draft = sectionDrafts[section.path] ?? { title: section.title, content: section.content }
             const sectionEditing = editingSection === section.path
 
             return (
-              <article key={section.path} className="rounded-2xl border border-border bg-slate-950/55 p-4 shadow-lg shadow-black/10">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <article key={section.path} className="rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   {mayWrite && sectionEditing ? (
                     <input
                       value={draft.title}
                       onChange={(event) => setSectionDrafts((prev) => ({ ...prev, [section.path]: { ...draft, title: event.target.value } }))}
-                      className="min-w-0 flex-1 rounded border border-accent bg-slate-950 px-2 py-1.5 text-sm text-text outline-none"
+                      className="min-w-0 flex-1 rounded border border-accent bg-input px-2 py-1.5 text-sm text-text outline-none"
                     />
                   ) : (
                     <h4 className="font-semibold">{draft.title}</h4>
@@ -465,7 +465,7 @@ export function Editor({
                 </div>
                 {mayWrite && sectionEditing ? (
                   <textarea
-                    className="min-h-[180px] w-full resize-y rounded-xl border border-border bg-slate-950 p-3 font-mono text-sm text-text outline-none focus:border-accent"
+                    className="min-h-[180px] w-full resize-y rounded-lg border border-border bg-input p-3 font-mono text-sm text-text outline-none focus:border-accent"
                     value={draft.content}
                     onChange={(event) => setSectionDrafts((prev) => ({ ...prev, [section.path]: { ...draft, content: event.target.value } }))}
                     spellCheck={false}
@@ -477,7 +477,7 @@ export function Editor({
             )
           })}
           {!page.sections.length && (
-            <div className="rounded-xl border border-dashed border-border px-3 py-4 text-sm text-text-muted xl:col-span-2">
+            <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-text-muted xl:col-span-2">
               No sections yet. Add one to split this page into modular sub-files.
             </div>
           )}
@@ -493,7 +493,7 @@ export function Editor({
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="hidden items-center gap-1.5 sm:flex">
-            <CheckCircle2 size={13} className={status === 'saved' ? 'text-emerald-400' : 'text-text-muted'} /> Markdown
+            <CheckCircle2 size={13} className={status === 'saved' ? 'text-success' : 'text-text-muted'} /> Markdown
           </span>
           <span>{editing ? 'Editing' : 'Live Preview'}</span>
         </div>

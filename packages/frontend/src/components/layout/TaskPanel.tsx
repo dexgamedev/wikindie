@@ -72,8 +72,8 @@ export function TaskPanel({ pagePath }: { pagePath: string }) {
 
   return (
     <aside className="panel hidden w-[320px] shrink-0 flex-col overflow-hidden xl:flex">
-      <div className="border-b border-border p-4">
-        <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="border-b border-border p-5">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
               <ListChecks size={14} /> Task overview
@@ -83,7 +83,7 @@ export function TaskPanel({ pagePath }: { pagePath: string }) {
           {loading && <RefreshCw size={16} className="mt-1 animate-spin text-text-muted" />}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-3 gap-3 text-center">
           <Stat label="Boards" value={boards.length} />
           <Stat label="Tasks" value={totals.totalCards} />
           <Stat label="Done" value={totals.doneCards} />
@@ -91,7 +91,7 @@ export function TaskPanel({ pagePath }: { pagePath: string }) {
 
         {boards.length > 1 && (
           <select
-            className="mt-3 w-full rounded-lg border border-border bg-slate-950 px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+            className="mt-3 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
             value={filterPath}
             onChange={(event) => setFilterPath(event.target.value)}
           >
@@ -103,23 +103,23 @@ export function TaskPanel({ pagePath }: { pagePath: string }) {
         )}
       </div>
 
-      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-4">
         {!pagePath && (
-          <div className="rounded-xl border border-dashed border-border p-4 text-sm text-text-muted">
+          <div className="rounded-lg border border-dashed border-border p-4 text-sm text-text-muted">
             Task summaries appear when a workspace page is open.
           </div>
         )}
-        {error && <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+        {error && <div className="rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm text-danger">{error}</div>}
         {!error && pagePath && !loading && boards.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border p-4 text-sm text-text-muted">
+          <div className="rounded-lg border border-dashed border-border p-4 text-sm text-text-muted">
             No child boards yet. Create board pages below this page to see their task progress here.
           </div>
         )}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {visibleBoards.map((board) => {
             const percent = completion(board.doneCards, board.totalCards)
             return (
-              <Link key={board.path} to={pageUrl(board.path)} className="block rounded-2xl border border-border bg-surface/70 p-3 transition hover:border-accent hover:bg-surface-hover">
+              <Link key={board.path} to={pageUrl(board.path)} className="block rounded-lg border border-border bg-surface p-3 transition hover:border-accent hover:bg-accent/10">
                 <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <PageIcon icon={board.icon} fallback="board" className="size-5 shrink-0" />
@@ -128,10 +128,10 @@ export function TaskPanel({ pagePath }: { pagePath: string }) {
                       <p className="truncate text-xs text-text-muted">{board.path}</p>
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border bg-slate-950 px-2 py-0.5 text-xs text-text-muted">{percent}%</span>
+                  <span className="shrink-0 rounded-full border border-border bg-input px-2 py-0.5 text-xs text-text-muted">{percent}%</span>
                 </div>
 
-                <div className="mb-3 h-2 overflow-hidden rounded-full bg-slate-950">
+                <div className="mb-3 h-2 overflow-hidden rounded-full bg-input">
                   <div className="h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
                 </div>
 
@@ -155,7 +155,7 @@ export function TaskPanel({ pagePath }: { pagePath: string }) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-border bg-slate-950/60 px-2 py-2">
+    <div className="rounded-lg border border-border bg-card px-2 py-2">
       <div className="text-base font-semibold text-text">{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
     </div>

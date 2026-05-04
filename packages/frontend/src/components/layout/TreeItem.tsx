@@ -184,7 +184,7 @@ export function TreeItem({
 
   return (
     <div
-      className={`${dragOver ? 'rounded-md bg-accent/10' : ''} ${depth > 0 ? 'ml-2 border-l border-slate-800' : ''}`}
+      className={`${dragOver ? 'rounded-md bg-accent/10' : ''} ${depth > 0 ? 'ml-2 border-l border-border' : ''}`}
       onDragOver={(event) => {
         if (!mayWrite) return
         if (!hasPageDragPayload(event.dataTransfer)) return
@@ -198,7 +198,7 @@ export function TreeItem({
       style={{ paddingLeft: depth * 10 }}
     >
       <div className="group flex items-center gap-1 rounded-md">
-        <button className={`rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text ${collapsed ? 'md:hidden' : ''}`} onClick={toggle}>
+        <button className={`rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text ${collapsed ? 'md:hidden' : ''}`} onClick={toggle}>
           <ChevronRight size={14} className={`transition ${open ? 'rotate-90' : ''}`} />
         </button>
 
@@ -215,7 +215,7 @@ export function TreeItem({
                 <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
                 <input
                   autoFocus
-                  className="w-full rounded border border-accent bg-slate-950 px-2 py-1 text-sm text-text outline-none"
+                  className="w-full rounded border border-accent bg-input px-2 py-1 text-sm text-text outline-none"
                   value={renameValue}
                   onChange={(event) => setRenameValue(event.target.value)}
                   onKeyDown={(event) => {
@@ -257,7 +257,7 @@ export function TreeItem({
         {(mayWrite || mayDelete) && (
           <button
             ref={menuButtonRef}
-            className={`rounded p-1 text-text-muted opacity-100 hover:bg-surface-hover hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
+            className={`rounded p-1 text-text-muted opacity-100 hover:bg-accent/10 hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
             onClick={(event) => {
               if (menuOpen) {
                 closeMenu()
@@ -275,7 +275,7 @@ export function TreeItem({
       </div>
 
       {menuOpen && menuPosition && createPortal(
-        <div ref={menuRef} className="fixed z-50 w-[200px] rounded-xl border border-border bg-slate-950 p-1 shadow-2xl" style={menuPosition}>
+        <div ref={menuRef} className="fixed z-50 w-[200px] rounded-lg border border-border bg-input p-1 shadow-2xl" style={menuPosition}>
           {mayWrite && (
             <>
               <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); closeMenu() }} />
@@ -285,7 +285,7 @@ export function TreeItem({
             </>
           )}
           {mayDelete && (confirmDelete ? (
-              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={() => void remove()}>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-danger hover:bg-danger/10" onClick={() => void remove()}>
                 <Trash2 size={15} /> Confirm delete
               </button>
             ) : (
@@ -306,7 +306,7 @@ export function TreeItem({
         >
           <input
             autoFocus
-            className="min-w-0 flex-1 rounded border border-accent bg-slate-950 px-2 py-1 text-sm text-text outline-none"
+            className="min-w-0 flex-1 rounded border border-accent bg-input px-2 py-1 text-sm text-text outline-none"
             value={moveValue}
             onChange={(event) => setMoveValue(event.target.value)}
             placeholder="Target parent path"
@@ -314,7 +314,7 @@ export function TreeItem({
               if (event.key === 'Escape') setMoving(false)
             }}
           />
-          <button className="rounded px-2 py-1 text-xs text-accent" type="submit">Move</button>
+          <button className="rounded border border-control-border bg-control px-2 py-1 text-xs text-accent hover:bg-control-hover" type="submit">Move</button>
         </form>
       )}
 
@@ -328,7 +328,7 @@ export function TreeItem({
         >
           <input
             autoFocus
-            className="min-w-0 flex-1 rounded border border-accent bg-slate-950 px-2 py-1 text-sm text-text outline-none"
+            className="min-w-0 flex-1 rounded border border-accent bg-input px-2 py-1 text-sm text-text outline-none"
             value={createValue}
             onChange={(event) => setCreateValue(event.target.value)}
             placeholder={creating === 'board' ? 'Board title' : 'Page title'}
@@ -336,8 +336,8 @@ export function TreeItem({
               if (event.key === 'Escape') cancelCreate()
             }}
           />
-          <button className="rounded px-2 py-1 text-xs text-accent" type="submit">Add</button>
-          <button className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
+          <button className="rounded border border-control-border bg-control px-2 py-1 text-xs text-accent hover:bg-control-hover" type="submit">Add</button>
+          <button className="rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
             <X size={14} />
           </button>
         </form>
@@ -354,7 +354,7 @@ export function TreeItem({
 
 function MenuButton({ icon, label, onClick, danger = false }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
   return (
-    <button className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-surface-hover ${danger ? 'text-red-300' : 'text-text'}`} onClick={onClick}>
+    <button className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger/10' : 'text-text hover:bg-accent/10'}`} onClick={onClick}>
       {icon}
       {label}
     </button>

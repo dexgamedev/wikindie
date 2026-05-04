@@ -26,14 +26,14 @@ export function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,#1e1b4b,#020617_55%)] px-4">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-border bg-surface/90 p-6 shadow-2xl">
+    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,var(--color-content-glow),var(--color-body)_55%)] px-4">
+      <form onSubmit={submit} className="w-full max-w-sm rounded-lg border border-border bg-surface/90 p-6 shadow-2xl">
         <h1 className="mb-1 text-2xl font-semibold">Wikindie</h1>
         <p className="mb-6 text-sm text-text-muted">Sign in to your Wikindie account.</p>
         <div className="space-y-3">
           <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="w-full" />
           <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" className="w-full" />
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <Button className="w-full justify-center bg-accent font-medium" type="submit">
             Sign in
           </Button>

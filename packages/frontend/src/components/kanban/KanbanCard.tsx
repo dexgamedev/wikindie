@@ -37,7 +37,7 @@ export function KanbanCard({
       onDragStart={(event) => {
         if (editable) event.dataTransfer.setData('text/plain', `${columnIndex}:${cardIndex}`)
       }}
-      className={`rounded-xl border border-border bg-slate-800 p-3 shadow-lg shadow-black/10 hover:border-accent ${editable ? 'cursor-grab' : ''}`}
+      className={`rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow hover:border-accent ${editable ? 'cursor-grab' : ''}`}
     >
       <label className="flex items-start gap-3">
         <input type="checkbox" checked={card.done} onChange={toggleDone} className="mt-1" disabled={!editable} />

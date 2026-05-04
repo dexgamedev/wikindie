@@ -1,13 +1,8 @@
 import { ChevronDown, ChevronUp, LogOut, Shield } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { roleBadgeClass } from '../../lib/badges'
 import { useAuthStore } from '../../lib/store'
-
-function roleBadgeClass(role: string | null) {
-  if (role === 'admin') return 'border-indigo-400/40 bg-indigo-500/15 text-indigo-200'
-  if (role === 'editor') return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
-  return 'border-slate-400/30 bg-slate-500/15 text-slate-200'
-}
 
 export function AccountMenu({ collapsed = false, direction = 'down', compact = false }: { collapsed?: boolean; direction?: 'up' | 'down'; compact?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -59,7 +54,7 @@ export function AccountMenu({ collapsed = false, direction = 'down', compact = f
   return (
     <div ref={rootRef} className="relative">
       <button
-        className={`flex w-full items-center rounded-xl border border-border bg-surface/70 py-2 text-left transition hover:border-accent hover:bg-surface-hover ${compact ? 'justify-center px-2' : collapsed ? 'gap-3 px-2 md:justify-center md:px-0' : 'gap-3 px-3'}`}
+        className={`flex w-full items-center rounded-lg py-2 text-left transition hover:bg-accent/10 ${compact ? 'justify-center px-2' : collapsed ? 'gap-3 px-2 md:justify-center md:px-0' : 'gap-3 px-3'}`}
         onClick={() => setOpen((value) => !value)}
         title={compact || collapsed ? username ?? 'Account' : undefined}
       >
@@ -74,8 +69,8 @@ export function AccountMenu({ collapsed = false, direction = 'down', compact = f
       </button>
 
       {open && (
-        <div className={`absolute ${popupPosition} ${popupAlign} z-50 rounded-2xl border border-border bg-slate-950 p-2 shadow-2xl ${popupWidth}`}>
-          <div className="mb-2 flex items-center gap-3 rounded-xl bg-surface/70 p-3">
+        <div className={`absolute ${popupPosition} ${popupAlign} z-50 rounded-lg border border-border bg-input p-2 shadow-2xl ${popupWidth}`}>
+          <div className="mb-2 flex items-center gap-3 rounded-lg bg-surface p-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-cyan-300 text-sm font-bold text-slate-950">
               {initials}
             </span>
@@ -87,7 +82,7 @@ export function AccountMenu({ collapsed = false, direction = 'down', compact = f
 
           {role === 'admin' && (
             <button
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text hover:bg-surface-hover"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
               onClick={() => {
                 setOpen(false)
                 navigate('/admin')
@@ -97,7 +92,7 @@ export function AccountMenu({ collapsed = false, direction = 'down', compact = f
             </button>
           )}
           <div className="my-1 border-t border-border" />
-          <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10" onClick={signOut}>
+          <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger/10" onClick={signOut}>
             <LogOut size={15} /> Logout
           </button>
         </div>
