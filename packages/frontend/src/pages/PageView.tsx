@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Editor } from '../components/editor/Editor'
 import { KanbanBoard } from '../components/kanban/KanbanBoard'
@@ -24,10 +24,15 @@ export function PageView() {
   const path = useMemo(() => paramToPath(params['*']), [params])
   const [page, setPage] = useState<PageBundle | null>(null)
   const [error, setError] = useState('')
+  const localEditingRef = useRef(false)
+  const setLocalEditing = useCallback((active: boolean) => {
+    localEditingRef.current = active
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     const cached = pageCache.get(path)
+    localEditingRef.current = false
     setPage(cached ?? null)
     setError('')
 
@@ -49,6 +54,7 @@ export function PageView() {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail as { type: string; path?: string }
       if (detail.type !== 'file:changed' || !isCurrentPageEvent(path, detail.path)) return
+      if (localEditingRef.current) return
       void api.page(path).then((fresh) => {
         pageCache.set(path, fresh)
         setPage(fresh)
@@ -70,5 +76,5 @@ export function PageView() {
       />
     )
   }
-  return <Editor page={page} onPageChange={(next) => { pageCache.set(next.path, next); setPage(next) }} />
+  return <Editor page={page} onEditingChange={setLocalEditing} onPageChange={(next) => { pageCache.set(next.path, next); setPage(next) }} />
 }

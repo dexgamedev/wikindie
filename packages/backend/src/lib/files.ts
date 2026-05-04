@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
+import { defaultSpaceFiles } from './defaultSpace.js'
 import { parseKanban } from './kanban.js'
 
 export const SPACE_DIR = path.resolve(process.env.SPACE_DIR ?? './space')
@@ -153,6 +154,15 @@ function parseSections(frontmatter: Record<string, unknown>): PageSection[] {
 
 export async function ensureSpace() {
   await fs.mkdir(SPACE_DIR, { recursive: true })
+  const hasWorkspacePage = (await exists('Workspace/_Index.md')) || (await exists('Workspace.md'))
+  if (hasWorkspacePage) return
+
+  await Promise.allSettled(
+    defaultSpaceFiles.map(async (file) => {
+      if (await exists(file.relativePath)) return
+      await writeMarkdownByPath(file.relativePath, file.content, file.frontmatter ?? {})
+    }),
+  )
 }
 
 export async function readMarkdown(relativePath: string): Promise<MarkdownFile> {

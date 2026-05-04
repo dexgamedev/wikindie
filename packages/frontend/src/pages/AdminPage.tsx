@@ -135,7 +135,8 @@ export function AdminPage() {
   }
 
   return (
-    <section className="mx-auto max-w-6xl p-4 md:p-8">
+    <section className="workspace-scroll h-full overflow-y-auto">
+      <div className="mx-auto max-w-6xl p-4 md:p-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-sm text-indigo-200">
@@ -279,6 +280,7 @@ export function AdminPage() {
           </form>
         </div>
       )}
+      </div>
     </section>
   )
 }

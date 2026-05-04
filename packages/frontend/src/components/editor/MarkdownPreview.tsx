@@ -7,9 +7,9 @@ function isExternalUrl(href: string) {
   return /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//')
 }
 
-export function MarkdownPreview({ content }: { content: string }) {
+export function MarkdownPreview({ content, frameless = false }: { content: string; frameless?: boolean }) {
   return (
-    <article className="markdown-preview rounded-2xl border border-border bg-surface p-5 text-text">
+    <article className={`markdown-preview text-text ${frameless ? '' : 'rounded-2xl border border-border bg-surface p-5'}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

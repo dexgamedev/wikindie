@@ -63,7 +63,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           collapsed={sidebarCollapsed}
           onToggleCollapsed={toggleSidebarCollapsed}
         />
-        <main className="panel workspace-scroll min-w-0 flex-1 overflow-y-auto">
+        <main className="panel min-w-0 flex-1 overflow-hidden">
           {children}
         </main>
         <TaskPanel pagePath={pagePath} />

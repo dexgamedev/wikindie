@@ -1,7 +1,8 @@
-import { ArrowLeft } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, CheckCircle2, MoreHorizontal, Plus, Save, Settings } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
+import { useDropdown } from '../../hooks/useDropdown'
 import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore, useFilesStore } from '../../lib/store'
@@ -18,6 +19,14 @@ function slugify(value: string) {
     .replace(/-+/g, '-')
 }
 
+function textStats(value: string) {
+  const trimmed = value.trim()
+  return {
+    words: trimmed ? trimmed.split(/\s+/).length : 0,
+    characters: value.length,
+  }
+}
+
 function isCurrentPageEvent(currentPath: string, changedFilePath?: string) {
   if (!changedFilePath) return false
   if (changedFilePath === `${currentPath}.md`) return true
@@ -28,7 +37,15 @@ function isCurrentPageEvent(currentPath: string, changedFilePath?: string) {
 
 const iconCategories = Array.from(new Set(wikiIcons.map((icon) => icon.category)))
 
-export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange: (page: PageBundle) => void }) {
+export function Editor({
+  page,
+  onEditingChange,
+  onPageChange,
+}: {
+  page: PageBundle
+  onEditingChange?: (active: boolean) => void
+  onPageChange: (page: PageBundle) => void
+}) {
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
   const role = useAuthStore((state) => state.role)
@@ -43,6 +60,8 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
   const [title, setTitle] = useState(String(page.frontmatter.title ?? pageNameFromPath(page.path)))
   const [icon, setIcon] = useState(typeof page.frontmatter.icon === 'string' ? page.frontmatter.icon : '')
   const [metaEditing, setMetaEditing] = useState(false)
+  const actions = useDropdown()
+  const localWriteEventsToIgnore = useRef(0)
 
   const [sectionDrafts, setSectionDrafts] = useState<Record<string, { title: string; content: string }>>({})
   const [editingSection, setEditingSection] = useState<string | null>(null)
@@ -67,6 +86,11 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
     [page.path, tree],
   )
   const showBreadcrumbs = breadcrumbs.length > 1
+  const stats = useMemo(() => {
+    const sectionContent = Object.values(sectionDrafts).map((section) => section.content)
+    return textStats([editing ? content : savedContent, ...sectionContent].join('\n\n'))
+  }, [content, editing, savedContent, sectionDrafts])
+  const statusLabel = mayWrite ? (status === 'dirty' ? 'Unsaved changes' : status === 'saving' ? 'Saving...' : 'Saved') : 'Read only'
 
   useEffect(() => {
     setContent(page.content)
@@ -83,58 +107,98 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
   }, [page])
 
   useEffect(() => {
+    onEditingChange?.(editing || Boolean(editingSection) || status === 'dirty' || status === 'saving')
+    return () => onEditingChange?.(false)
+  }, [editing, editingSection, onEditingChange, status])
+
+  useEffect(() => {
     if (status !== 'dirty' || !mayWrite) return
     const timer = window.setTimeout(async () => {
       setStatus('saving')
-      const updated = await api.writePage(page.path, content, frontmatter)
-      setSavedContent(updated.content)
-      onPageChange(updated)
-      setStatus('saved')
-      setEditing(false)
+      localWriteEventsToIgnore.current += 1
+      try {
+        const updated = await api.writePage(page.path, content, frontmatter)
+        setSavedContent(updated.content)
+        setStatus('saved')
+        setExternalChange(false)
+      } catch {
+        localWriteEventsToIgnore.current -= 1
+        setStatus('dirty')
+      }
     }, 500)
     return () => window.clearTimeout(timer)
-  }, [content, frontmatter, mayWrite, onPageChange, page.path, status])
+  }, [content, frontmatter, mayWrite, page.path, status])
 
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail as { type: string; path?: string }
       if (detail.type !== 'file:changed' || !isCurrentPageEvent(page.path, detail.path)) return
-      if (status === 'dirty' || status === 'saving') setExternalChange(true)
+      if (localWriteEventsToIgnore.current > 0) {
+        localWriteEventsToIgnore.current -= 1
+        return
+      }
+      if (editing || editingSection || status === 'dirty' || status === 'saving') setExternalChange(true)
       else void api.page(page.path).then(onPageChange)
     }
     window.addEventListener('wikindie:event', handler)
     return () => window.removeEventListener('wikindie:event', handler)
-  }, [onPageChange, page.path, status])
+  }, [editing, editingSection, onPageChange, page.path, status])
 
   const saveNow = async () => {
     if (!mayWrite) return
     setStatus('saving')
-    const updated = await api.writePage(page.path, content, frontmatter)
-    setSavedContent(updated.content)
-    onPageChange(updated)
-    setStatus('saved')
+    localWriteEventsToIgnore.current += 1
+    try {
+      const updated = await api.writePage(page.path, content, frontmatter)
+      setSavedContent(updated.content)
+      setStatus('saved')
+      setExternalChange(false)
+    } catch {
+      localWriteEventsToIgnore.current -= 1
+      setStatus('dirty')
+    }
+  }
+
+  const showPreview = async () => {
+    if (status === 'dirty') await saveNow()
     setEditing(false)
   }
 
   const saveMeta = async () => {
     if (!mayWrite) return
-    const updated = await api.patchPageMeta(page.path, { title, icon: icon || undefined })
-    onPageChange(updated)
-    setMetaEditing(false)
+    if (status === 'dirty') await saveNow()
+    localWriteEventsToIgnore.current += 1
+    try {
+      const updated = await api.patchPageMeta(page.path, { title, icon: icon || undefined })
+      onPageChange(updated)
+      setMetaEditing(false)
+    } catch {
+      localWriteEventsToIgnore.current -= 1
+    }
   }
 
   const saveSection = async (section: PageSection) => {
     if (!mayWrite) return
     const draft = sectionDrafts[section.path] ?? { title: section.title, content: section.content }
-    const updated = await api.upsertSection(page.path, section.path, draft.title.trim() || section.title, draft.content)
-    onPageChange(updated)
-    setEditingSection(null)
+    localWriteEventsToIgnore.current += 2
+    try {
+      const updated = await api.upsertSection(page.path, section.path, draft.title.trim() || section.title, draft.content)
+      onPageChange(updated)
+      setEditingSection(null)
+    } catch {
+      localWriteEventsToIgnore.current -= 2
+    }
   }
 
   const removeSection = async (sectionPath: string) => {
     if (!mayDelete) return
-    const updated = await api.deleteSection(page.path, sectionPath)
-    onPageChange(updated)
+    localWriteEventsToIgnore.current += 2
+    try {
+      const updated = await api.deleteSection(page.path, sectionPath)
+      onPageChange(updated)
+    } catch {
+      localWriteEventsToIgnore.current -= 2
+    }
   }
 
   const addSection = async () => {
@@ -143,40 +207,134 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
     if (!titleValue) return
     const slug = slugify(titleValue) || 'section'
     const sectionPath = `_sections/${slug}.md`
-    const updated = await api.upsertSection(page.path, sectionPath, titleValue, `# ${titleValue}\n`)
-    onPageChange(updated)
-    setAddingSection(false)
-    setNewSectionTitle('')
+    localWriteEventsToIgnore.current += 2
+    try {
+      const updated = await api.upsertSection(page.path, sectionPath, titleValue, `# ${titleValue}\n`)
+      onPageChange(updated)
+      setAddingSection(false)
+      setNewSectionTitle('')
+    } catch {
+      localWriteEventsToIgnore.current -= 2
+    }
   }
 
   return (
-    <section className="mx-auto max-w-6xl p-4 md:p-8">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex min-w-0 items-center gap-2 text-sm text-text-muted">
+    <section className="flex h-full min-h-0 flex-col">
+      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-surface/70 text-text-muted transition hover:border-accent hover:text-text"
+            onClick={() => goBack(navigate)}
+            title="Go back"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <nav className="flex min-w-0 items-center gap-1 text-sm text-text-muted" aria-label="Page breadcrumbs">
+            {(showBreadcrumbs ? breadcrumbs : [{ label: title, path: page.path }]).map((crumb, index) => (
+              <span key={crumb.path} className="flex min-w-0 items-center gap-1">
+                {index > 0 && <span className="text-text-muted/50">/</span>}
+                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-surface-hover hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
+                  {crumb.label}
+                </Link>
+              </span>
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-slate-950/50 px-2.5 py-1 text-xs text-text-muted sm:flex">
+            <span className={`size-1.5 rounded-full ${status === 'saved' ? 'bg-emerald-400' : status === 'saving' ? 'bg-amber-300' : 'bg-indigo-400'}`} />
+            {statusLabel}
+          </span>
+          {mayWrite && (
+            <div className="flex rounded-lg border border-border bg-slate-950/70 p-0.5 text-sm">
+              <button
+                className={`rounded-md px-3 py-1.5 transition ${editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
+                onClick={() => setEditing(true)}
+                type="button"
+              >
+                Edit
+              </button>
+              <button
+                className={`rounded-md px-3 py-1.5 transition ${!editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
+                onClick={() => void showPreview()}
+                disabled={status === 'saving'}
+                type="button"
+              >
+                Preview
+              </button>
+            </div>
+          )}
+          <div ref={actions.ref} className="relative">
             <button
-              className="rounded-md border border-border bg-surface px-2 py-1 text-text-muted transition hover:border-accent hover:text-text"
-              onClick={() => goBack(navigate)}
-              title="Go back"
-              aria-label="Go back"
+              className="grid size-9 place-items-center rounded-lg border border-border bg-surface/70 text-text-muted transition hover:border-accent hover:text-text"
+              onClick={() => actions.setOpen((open) => !open)}
+              title="Page actions"
+              aria-label="Page actions"
+              type="button"
             >
-              <ArrowLeft size={15} />
+              <MoreHorizontal size={18} />
             </button>
-            {showBreadcrumbs && (
-              <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label="Page breadcrumbs">
-                {breadcrumbs.map((crumb, index) => (
-                  <span key={crumb.path} className="flex min-w-0 items-center gap-1">
-                    {index > 0 && <span className="text-text-muted/60">/</span>}
-                    <Link className="max-w-[160px] truncate rounded px-1 py-0.5 hover:bg-surface-hover hover:text-text" to={pageUrl(crumb.path)}>
-                      {crumb.label}
-                    </Link>
-                  </span>
-                ))}
-              </nav>
+            {actions.open && (
+              <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-xl border border-border bg-slate-950 p-1.5 shadow-2xl shadow-black/40">
+                {mayWrite && (
+                  <button
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+                    onClick={() => {
+                      setMetaEditing((open) => !open)
+                      actions.setOpen(false)
+                    }}
+                    type="button"
+                  >
+                    <Settings size={15} /> {metaEditing ? 'Close page meta' : 'Page meta'}
+                  </button>
+                )}
+                {mayWrite && (
+                  <button
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
+                    onClick={() => {
+                      setAddingSection((open) => !open)
+                      actions.setOpen(false)
+                    }}
+                    type="button"
+                  >
+                    <Plus size={15} /> {addingSection ? 'Close section form' : 'Add section'}
+                  </button>
+                )}
+                {mayWrite && (
+                  <button
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => {
+                      void saveNow()
+                      actions.setOpen(false)
+                    }}
+                    disabled={status === 'saving'}
+                    type="button"
+                  >
+                    <Save size={15} /> Save now
+                  </button>
+                )}
+                {!mayWrite && <div className="px-3 py-2 text-sm text-text-muted">Read only</div>}
+              </div>
             )}
           </div>
-          {mayWrite && metaEditing ? (
-            <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
+        </div>
+      </header>
+
+      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.12),transparent_32rem)]">
+        <div className="mx-auto w-full max-w-5xl p-4 md:p-8">
+          {externalChange && <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">This page changed on disk while you had local edits.</div>}
+
+          {mayWrite && metaEditing && (
+            <article className="mb-5 rounded-2xl border border-border bg-slate-950/55 p-4 shadow-lg shadow-black/10">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-text">Page meta</h3>
+                  <p className="text-xs text-text-muted">Update the title and icon shown in navigation.</p>
+                </div>
+                <Button onClick={() => setMetaEditing(false)}>Close</Button>
+              </div>
               <div className="space-y-3">
                 {iconCategories.map((category) => (
                   <div key={category}>
@@ -207,36 +365,11 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
                 <Button onClick={saveMeta}>Save title</Button>
                 <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
               </div>
-            </div>
-          ) : (
-            <h2 className="flex min-w-0 items-center gap-2 text-2xl font-semibold">
-              <PageIcon icon={icon} className="size-6 shrink-0" />
-              <span className="truncate">{title}</span>
-            </h2>
+            </article>
           )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-          <span>{mayWrite ? (status === 'dirty' ? 'Unsaved changes' : status === 'saving' ? 'Saving...' : 'Saved') : 'Read only'}</span>
-          {mayWrite && (
-            <>
-              <Button onClick={() => setMetaEditing((v) => !v)}>{metaEditing ? 'Close meta' : 'Page meta'}</Button>
-              {editing ? (
-                <>
-                  <Button onClick={() => setEditing(false)} disabled={status === 'saving'}>Preview</Button>
-                  <Button onClick={saveNow} disabled={status === 'saving'}>Save</Button>
-                </>
-              ) : (
-                <Button onClick={() => setEditing(true)}>Edit</Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
 
-      {externalChange && <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">This page changed on disk while you had local edits.</div>}
-
-      {childPages.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-border bg-surface/70 p-4">
+          {childPages.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-border bg-slate-950/55 p-4 shadow-lg shadow-black/10">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-text-muted">Pages</h3>
             <span className="text-xs text-text-muted">{childPages.length} linked automatically</span>
@@ -257,26 +390,29 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
             ))}
           </div>
         </div>
-      )}
+          )}
 
-      {mayWrite && editing ? (
-        <textarea
-          className="min-h-[50vh] w-full resize-y rounded-2xl border border-border bg-surface p-5 font-mono text-[15px] leading-7 text-text outline-none focus:border-accent"
-          value={content}
-          onChange={(event) => {
-            setContent(event.target.value)
-            setStatus('dirty')
-          }}
-          spellCheck={false}
-        />
-      ) : (
-        <MarkdownPreview content={savedContent} />
-      )}
+          {mayWrite && editing ? (
+            <div className="mb-8 rounded-2xl border border-border/70 bg-slate-950/20 p-5">
+              <textarea
+                className="min-h-[52vh] w-full resize-y bg-transparent font-mono text-[15px] leading-7 text-text outline-none"
+                value={content}
+                onChange={(event) => {
+                  setContent(event.target.value)
+                  setStatus('dirty')
+                }}
+                spellCheck={false}
+              />
+            </div>
+          ) : (
+            <div className="mb-8">
+              <MarkdownPreview content={savedContent} frameless />
+            </div>
+          )}
 
-      <div className="mt-8">
+          <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold">Sections</h3>
-          {mayWrite && <Button onClick={() => setAddingSection((v) => !v)}>{addingSection ? 'Close' : 'Add section'}</Button>}
         </div>
 
         {mayWrite && addingSection && (
@@ -304,7 +440,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
             const sectionEditing = editingSection === section.path
 
             return (
-              <article key={section.path} className="rounded-2xl border border-border bg-surface p-4">
+              <article key={section.path} className="rounded-2xl border border-border bg-slate-950/55 p-4 shadow-lg shadow-black/10">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   {mayWrite && sectionEditing ? (
                     <input
@@ -335,7 +471,7 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
                     spellCheck={false}
                   />
                 ) : (
-                  <MarkdownPreview content={draft.content} />
+                  <MarkdownPreview content={draft.content} frameless />
                 )}
               </article>
             )
@@ -346,7 +482,22 @@ export function Editor({ page, onPageChange }: { page: PageBundle; onPageChange:
             </div>
           )}
         </div>
+          </div>
       </div>
+      </div>
+
+      <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel/95 px-3 text-xs text-text-muted md:px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span>{stats.words.toLocaleString()} words</span>
+          <span>{stats.characters.toLocaleString()} characters</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <CheckCircle2 size={13} className={status === 'saved' ? 'text-emerald-400' : 'text-text-muted'} /> Markdown
+          </span>
+          <span>{editing ? 'Editing' : 'Live Preview'}</span>
+        </div>
+      </footer>
     </section>
   )
 }

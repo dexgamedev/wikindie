@@ -58,6 +58,27 @@ textarea {
   font-size: 2rem;
 }
 
+.markdown-preview h1::before,
+.markdown-preview h2::before,
+.markdown-preview h3::before {
+  color: #6366f1;
+  display: inline-block;
+  font-weight: 800;
+  margin-right: 0.55rem;
+}
+
+.markdown-preview h1::before {
+  content: "#";
+}
+
+.markdown-preview h2::before {
+  content: "##";
+}
+
+.markdown-preview h3::before {
+  content: "###";
+}
+
 .markdown-preview h2 {
   border-bottom: 1px solid #1e293b;
   font-size: 1.5rem;
