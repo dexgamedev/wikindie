@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
+import { parseKanban } from './kanban.js'
 
 export const SPACE_DIR = path.resolve(process.env.SPACE_DIR ?? './space')
 
@@ -19,6 +20,21 @@ export interface PageBundle extends MarkdownFile {
   path: string
   type: 'page' | 'board'
   sections: Array<{ title: string; path: string; content: string }>
+}
+
+export interface BoardSummaryColumn {
+  title: string
+  total: number
+  done: number
+}
+
+export interface BoardSummary {
+  path: string
+  title: string
+  icon?: string
+  columns: BoardSummaryColumn[]
+  totalCards: number
+  doneCards: number
 }
 
 export function safePath(relativePath = '') {
@@ -185,6 +201,55 @@ export async function readPage(pagePath: string): Promise<PageBundle> {
     type: page.frontmatter.kanban === true ? 'board' : 'page',
     sections: loadedSections,
   }
+}
+
+function summarizeBoard(pagePath: string, file: MarkdownFile): BoardSummary | null {
+  if (file.frontmatter.kanban !== true) return null
+
+  const columns = parseKanban(file.content).columns.map((column) => {
+    const done = column.cards.filter((card) => card.done).length
+    return { title: column.title, total: column.cards.length, done }
+  })
+  const totalCards = columns.reduce((sum, column) => sum + column.total, 0)
+  const doneCards = columns.reduce((sum, column) => sum + column.done, 0)
+
+  return {
+    path: normalizePagePath(pagePath),
+    title: String(file.frontmatter.title ?? pageTitleFromPath(pagePath)),
+    icon: typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined,
+    columns,
+    totalCards,
+    doneCards,
+  }
+}
+
+export async function readChildBoards(pagePath: string): Promise<BoardSummary[]> {
+  const parent = await resolvePageStoragePath(pagePath)
+  if (!parent.index) return []
+
+  const parentDir = safePath(parent.pagePath)
+  const entries = await fs.readdir(parentDir, { withFileTypes: true })
+  const boards: BoardSummary[] = []
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === '_sections') continue
+
+    if (entry.isDirectory()) {
+      const childPath = `${parent.pagePath}/${entry.name}`.replace(/\/+/g, '/')
+      const indexPath = `${childPath}/_Index.md`
+      if (!(await exists(indexPath))) continue
+      const summary = summarizeBoard(childPath, await readMarkdownByPath(indexPath))
+      if (summary) boards.push(summary)
+      continue
+    }
+
+    if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name === '_Index.md') continue
+    const childPath = `${parent.pagePath}/${entry.name.replace(/\.md$/, '')}`.replace(/\/+/g, '/')
+    const summary = summarizeBoard(childPath, await readMarkdownByPath(`${childPath}.md`))
+    if (summary) boards.push(summary)
+  }
+
+  return boards.sort((a, b) => a.title.localeCompare(b.title))
 }
 
 export async function writePage(pagePath: string, content: string, frontmatter: Record<string, unknown> = {}) {

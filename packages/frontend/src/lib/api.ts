@@ -42,6 +42,21 @@ export interface KanbanBoard {
   columns: KanbanColumn[]
 }
 
+export interface BoardSummaryColumn {
+  title: string
+  total: number
+  done: number
+}
+
+export interface BoardSummary {
+  path: string
+  title: string
+  icon?: string
+  columns: BoardSummaryColumn[]
+  totalCards: number
+  doneCards: number
+}
+
 export function encodePath(path: string) {
   return path.split('/').map(encodeURIComponent).join('/')
 }
@@ -73,6 +88,7 @@ export const api = {
     }),
   tree: () => request<{ tree: TreeNode[] }>('/api/tree'),
   page: (path: string) => request<PageBundle>(`/api/page/${encodePath(path)}`),
+  childBoards: (path: string) => request<{ boards: BoardSummary[] }>(`/api/page/${encodePath(path)}/tasks`),
   writePage: (path: string, content: string, frontmatter: Record<string, unknown>) =>
     request<PageBundle>(`/api/page/${encodePath(path)}`, {
       method: 'PUT',

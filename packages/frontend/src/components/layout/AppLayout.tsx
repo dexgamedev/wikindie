@@ -1,16 +1,23 @@
-import { Menu } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { pagePathFromLocation } from '../../lib/paths'
 import { useFilesStore } from '../../lib/store'
 import { connectWebSocket } from '../../lib/websocket'
+import { QuickFindModal } from './QuickFindModal'
 import { Sidebar } from './Sidebar'
+import { TaskPanel } from './TaskPanel'
+import { TopBar } from './TopBar'
 
 const sidebarCollapsedKey = 'wikindie:sidebar-collapsed'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const setTree = useFilesStore((state) => state.setTree)
+  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [quickFindOpen, setQuickFindOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(sidebarCollapsedKey) === 'true')
+  const pagePath = useMemo(() => pagePathFromLocation(location.pathname), [location.pathname])
 
   const toggleSidebarCollapsed = () => {
     setSidebarCollapsed((collapsed) => {
@@ -29,19 +36,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     })
   }, [setTree])
 
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setQuickFindOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  const closeQuickFind = () => {
+    setQuickFindOpen(false)
+    setMobileOpen(false)
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-text">
-      <Sidebar mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} />
-      <main className={`min-w-0 transition-[padding] duration-200 ${sidebarCollapsed ? 'md:pl-[72px]' : 'md:pl-[300px]'}`}>
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-border px-4 py-3 text-sm text-text-muted md:hidden">
-          <button className="rounded border border-border bg-surface px-2 py-1 text-text" onClick={() => setMobileOpen(true)}>
-            <Menu size={16} />
-          </button>
-          <span className="text-center font-semibold text-text">Wikindie</span>
-          <span className="w-[34px]" aria-hidden="true" />
-        </div>
-        {children}
-      </main>
+    <div className="flex h-dvh flex-col gap-2 bg-slate-950 p-2 text-text">
+      <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
+      <QuickFindModal open={quickFindOpen} onClose={closeQuickFind} />
+      <div className="flex min-h-0 flex-1 gap-2">
+        <Sidebar
+          mobileOpen={mobileOpen}
+          onCloseMobile={() => setMobileOpen(false)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebarCollapsed}
+        />
+        <main className="panel workspace-scroll min-w-0 flex-1 overflow-y-auto">
+          {children}
+        </main>
+        <TaskPanel pagePath={pagePath} />
+      </div>
     </div>
   )
 }

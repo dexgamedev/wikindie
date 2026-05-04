@@ -7,3 +7,4 @@ dist
 npm-debug.log*
 space
 packages/backend/space
+refs

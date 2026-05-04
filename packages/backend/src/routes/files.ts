@@ -6,6 +6,7 @@ import {
   deletePage,
   deleteSection,
   movePage,
+  readChildBoards,
   readPage,
   updatePageMeta,
   upsertSection,
@@ -33,6 +34,10 @@ filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) =>
   if (!board) throw new AppError(400, 'Missing board')
   const page = await readPage(joinedPath(req.params.path))
   res.json(await writePage(page.path, serializeKanban(board), { ...page.frontmatter, kanban: true }))
+})
+
+filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res) => {
+  res.json({ boards: await readChildBoards(joinedPath(req.params.path)) })
 })
 
 filesRouter.get('/page/*path', requirePermission('read'), async (req, res) => {

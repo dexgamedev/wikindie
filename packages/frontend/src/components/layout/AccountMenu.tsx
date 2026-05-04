@@ -1,4 +1,4 @@
-import { ChevronUp, LogOut, Shield } from 'lucide-react'
+import { ChevronDown, ChevronUp, LogOut, Shield } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../lib/store'
@@ -9,7 +9,7 @@ function roleBadgeClass(role: string | null) {
   return 'border-slate-400/30 bg-slate-500/15 text-slate-200'
 }
 
-export function AccountMenu({ collapsed }: { collapsed: boolean }) {
+export function AccountMenu({ collapsed = false, direction = 'down', compact = false }: { collapsed?: boolean; direction?: 'up' | 'down'; compact?: boolean }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const username = useAuthStore((state) => state.username)
@@ -50,25 +50,31 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
     navigate('/login')
   }
 
+  const labelClass = compact ? 'hidden' : collapsed ? 'md:hidden' : ''
+  const popupPosition = direction === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'
+  const popupAlign = direction === 'down' || compact ? 'right-0' : 'left-0'
+  const popupWidth = compact || collapsed ? 'w-[260px]' : 'w-full'
+  const ChevronIcon = direction === 'down' ? ChevronDown : ChevronUp
+
   return (
     <div ref={rootRef} className="relative">
       <button
-        className={`flex w-full items-center rounded-xl border border-border bg-surface/70 py-2 text-left transition hover:border-accent hover:bg-surface-hover ${collapsed ? 'gap-3 px-2 md:justify-center md:px-0' : 'gap-3 px-3'}`}
+        className={`flex w-full items-center rounded-xl border border-border bg-surface/70 py-2 text-left transition hover:border-accent hover:bg-surface-hover ${compact ? 'justify-center px-2' : collapsed ? 'gap-3 px-2 md:justify-center md:px-0' : 'gap-3 px-3'}`}
         onClick={() => setOpen((value) => !value)}
-        title={collapsed ? username ?? 'Account' : undefined}
+        title={compact || collapsed ? username ?? 'Account' : undefined}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-cyan-300 text-sm font-bold text-slate-950">
           {initials}
         </span>
-        <span className={`min-w-0 flex-1 ${collapsed ? 'md:hidden' : ''}`}>
+        <span className={`min-w-0 flex-1 ${labelClass}`}>
           <span className="block truncate text-sm font-medium text-text">{username ?? 'Account'}</span>
           <span className="block truncate text-xs capitalize text-text-muted">{role ?? 'signed in'}</span>
         </span>
-        <ChevronUp size={15} className={`text-text-muted transition ${open ? 'rotate-180' : ''} ${collapsed ? 'md:hidden' : ''}`} />
+        <ChevronIcon size={15} className={`text-text-muted transition ${open ? 'rotate-180' : ''} ${labelClass}`} />
       </button>
 
       {open && (
-        <div className={`absolute bottom-full left-0 z-50 mb-2 rounded-2xl border border-border bg-slate-950 p-2 shadow-2xl ${collapsed ? 'w-[260px]' : 'w-full'}`}>
+        <div className={`absolute ${popupPosition} ${popupAlign} z-50 rounded-2xl border border-border bg-slate-950 p-2 shadow-2xl ${popupWidth}`}>
           <div className="mb-2 flex items-center gap-3 rounded-xl bg-surface/70 p-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-cyan-300 text-sm font-bold text-slate-950">
               {initials}

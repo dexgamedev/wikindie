@@ -4,6 +4,15 @@ export function pageUrl(path: string) {
   return `/page/${encodePath(path)}`
 }
 
+export function pagePathFromLocation(pathname: string) {
+  if (!pathname.startsWith('/page/')) return ''
+  try {
+    return pathname.slice('/page/'.length).split('/').filter(Boolean).map(decodeURIComponent).join('/')
+  } catch {
+    return ''
+  }
+}
+
 export function pageNameFromPath(pagePath: string) {
   const parts = pagePath.split('/').filter(Boolean)
   return parts.length ? parts[parts.length - 1] : 'Home'
