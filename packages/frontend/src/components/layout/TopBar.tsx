@@ -17,7 +17,7 @@ export function TopBar({ onOpenMobile, onSearchOpen }: { onOpenMobile: () => voi
         </button>
         <div className="flex min-w-0 items-center gap-2.5">
           <img src={logoUrl} alt="" className="block h-9 w-auto shrink-0 md:h-10" />
-          <span className="-translate-y-px truncate text-xl font-extrabold leading-none tracking-tight text-text md:text-2xl">Wikindie</span>
+          <span className="translate-y-0.5 truncate text-xl font-extrabold leading-none tracking-tight text-text md:text-2xl">Wikindie</span>
         </div>
       </div>
 

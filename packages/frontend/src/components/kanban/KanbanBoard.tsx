@@ -1,24 +1,51 @@
-import { ArrowLeft, CheckCircle2, MoreHorizontal, Plus } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Plus, Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, type KanbanBoard as Board } from '../../lib/api'
-import { useDropdown } from '../../hooks/useDropdown'
+import { api, type KanbanBoard as Board, type PageBundle } from '../../lib/api'
+import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canWrite, useAuthStore, useFilesStore } from '../../lib/store'
+import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
 import { KanbanColumn } from './KanbanColumn'
 
-export function KanbanBoard({ path, initial, title, icon }: { path: string; initial: Board; title?: string; icon?: string }) {
+const iconCategories = Array.from(new Set(wikiIcons.map((item) => item.category)))
+
+function defaultColumnIcon(title: string) {
+  const clean = title.trim().toLowerCase()
+  if (['todo', 'to do', 'backlog'].includes(clean)) return 'todo'
+  if (['doing', 'in progress', 'progress'].includes(clean)) return 'doing'
+  if (['done', 'complete', 'completed'].includes(clean)) return 'done'
+  if (['blocked', 'stuck'].includes(clean)) return 'blocked'
+  return undefined
+}
+
+export function KanbanBoard({
+  path,
+  initial,
+  title,
+  icon,
+  onPageChange,
+}: {
+  path: string
+  initial: Board
+  title?: string
+  icon?: string
+  onPageChange?: (page: PageBundle) => void
+}) {
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
   const role = useAuthStore((state) => state.role)
   const mayWrite = canWrite(role)
   const [board, setBoard] = useState(initial)
   const [saving, setSaving] = useState(false)
+  const [users, setUsers] = useState<string[]>([])
   const [addingColumn, setAddingColumn] = useState(false)
   const [newColumnTitle, setNewColumnTitle] = useState('')
-  const actions = useDropdown()
+  const [metaEditing, setMetaEditing] = useState(false)
+  const [metaTitle, setMetaTitle] = useState(title || pageNameFromPath(path))
+  const [metaIcon, setMetaIcon] = useState(icon || '')
   const breadcrumbs = useMemo(
     () => breadcrumbsFromPath(path).map((c) => ({
       ...c,
@@ -35,6 +62,26 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
     setBoard(initial)
   }, [initial, path])
 
+  useEffect(() => {
+    setMetaTitle(title || pageNameFromPath(path))
+    setMetaIcon(icon || '')
+    setMetaEditing(false)
+  }, [icon, path, title])
+
+  useEffect(() => {
+    let cancelled = false
+    api.users()
+      .then((result) => {
+        if (!cancelled) setUsers(result.users.map((user) => user.username))
+      })
+      .catch(() => {
+        if (!cancelled) setUsers([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const update = async (next: Board) => {
     if (!mayWrite) return
     setBoard(next)
@@ -47,9 +94,23 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
     if (!mayWrite) return
     const title = newColumnTitle.trim()
     if (!title) return
-    void update({ columns: [...board.columns, { title, cards: [] }] })
+    void update({ columns: [...board.columns, { title, icon: defaultColumnIcon(title), cards: [] }] })
     setAddingColumn(false)
     setNewColumnTitle('')
+  }
+
+  const saveMeta = async () => {
+    if (!mayWrite) return
+    const cleanTitle = metaTitle.trim()
+    if (!cleanTitle) return
+    setSaving(true)
+    try {
+      const updated = await api.patchPageMeta(path, { title: cleanTitle, icon: metaIcon || undefined })
+      onPageChange?.({ ...updated, board: updated.board ?? board })
+      setMetaEditing(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const moveCard = (fromColumn: number, fromCard: number, toColumn: number) => {
@@ -90,39 +151,73 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
             {mayWrite ? (saving ? 'Saving...' : 'Saved') : 'Read only'}
           </span>
           {mayWrite && <Button className="hidden py-1.5 sm:inline-flex" onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
-          <div ref={actions.ref} className="relative">
-            <button
-              className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
-              onClick={() => actions.setOpen((open) => !open)}
-              title="Board actions"
-              aria-label="Board actions"
-              type="button"
-            >
-              <MoreHorizontal size={18} />
-            </button>
-            {actions.open && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg border border-border bg-input p-1.5 shadow-2xl shadow-heavy">
-                {mayWrite ? (
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text"
-                    onClick={() => {
-                      setAddingColumn((open) => !open)
-                      actions.setOpen(false)
-                    }}
-                    type="button"
-                  >
+          <ActionMenu
+            buttonClassName="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+            iconSize={18}
+            label="Board actions"
+            menuClassName="w-48"
+          >
+            {({ close }) =>
+              mayWrite ? (
+                <>
+                  <ActionMenuItem onSelect={() => { setMetaEditing((open) => !open); close() }}>
+                    <Settings size={15} /> {metaEditing ? 'Close page meta' : 'Page meta'}
+                  </ActionMenuItem>
+                  <ActionMenuItem onSelect={() => { setAddingColumn((open) => !open); close() }}>
                     <Plus size={15} /> {addingColumn ? 'Close column form' : 'Add column'}
-                  </button>
-                ) : (
-                  <div className="px-3 py-2 text-sm text-text-muted">Read only</div>
-                )}
-              </div>
-            )}
-          </div>
+                  </ActionMenuItem>
+                </>
+              ) : (
+                <div className="px-3 py-2 text-sm text-text-muted">Read only</div>
+              )
+            }
+          </ActionMenu>
         </div>
       </header>
 
-      <div className="workspace-scroll min-h-0 flex-1 overflow-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-5 md:p-8">
+      <div className="board-scroll min-h-0 flex-1 overflow-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-5 md:p-8">
+      {mayWrite && metaEditing && (
+        <article className="mb-6 max-w-3xl rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="font-semibold">Board meta</h3>
+            <span className="text-xs text-text-muted">Title and sidebar icon</span>
+          </div>
+          <div className="mb-4 grid max-h-72 gap-4 overflow-y-auto rounded-lg border border-border bg-input p-3">
+            {iconCategories.map((category) => (
+              <div key={category}>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{category}</div>
+                <div className="flex flex-wrap gap-2">
+                  {wikiIcons.filter((item) => item.category === category).map((item) => (
+                    <button
+                      key={item.id}
+                      className={`grid size-9 place-items-center rounded-lg border text-lg transition ${metaIcon === item.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
+                      onClick={() => setMetaIcon(item.id)}
+                      title={`${item.label} (${item.id})`}
+                      type="button"
+                    >
+                      <PageIcon icon={item.id} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mb-4 flex items-center gap-2 text-sm text-text-muted">
+            <span>Selected:</span>
+            <PageIcon icon={metaIcon} className="text-lg" />
+            <span>{metaIcon || 'board'}</span>
+          </div>
+          <input
+            value={metaTitle}
+            onChange={(event) => setMetaTitle(event.target.value)}
+            className="mb-4 w-full rounded border border-accent bg-input px-3 py-2 text-lg font-semibold text-text outline-none"
+          />
+          <div className="flex gap-2">
+            <Button onClick={() => void saveMeta()}>Save title</Button>
+            <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
+          </div>
+        </article>
+      )}
       {mayWrite && addingColumn && (
         <form
           className="mb-6 flex max-w-md items-center gap-3 rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow"
@@ -141,9 +236,18 @@ export function KanbanBoard({ path, initial, title, icon }: { path: string; init
           <Button type="submit">Add</Button>
         </form>
       )}
-      <div className="grid gap-5 lg:grid-flow-col lg:auto-cols-[minmax(280px,1fr)] lg:overflow-x-auto">
+      <div className="board-scroll grid items-start gap-5 lg:grid-flow-col lg:auto-cols-[minmax(280px,1fr)] lg:overflow-x-auto">
         {board.columns.map((column, columnIndex) => (
-          <KanbanColumn key={`${column.title}-${columnIndex}`} column={column} columnIndex={columnIndex} board={board} editable={mayWrite} onUpdate={update} onMove={moveCard} />
+          <KanbanColumn
+            key={`${column.title}-${columnIndex}`}
+            column={column}
+            columnIndex={columnIndex}
+            board={board}
+            editable={mayWrite}
+            users={users}
+            onUpdate={update}
+            onMove={moveCard}
+          />
         ))}
       </div>
       </div>

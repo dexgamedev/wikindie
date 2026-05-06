@@ -1,11 +1,11 @@
-import { ChevronRight, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { ChevronRight, Pencil, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
 import { getPageDragPayload, hasPageDragPayload, setPageDragPayload, type PageDragPayload } from '../../lib/pageDrag'
 import { pageUrl } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore } from '../../lib/store'
+import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { PageIcon } from '../ui/PageIcon'
 
 function dirname(path: string) {
@@ -13,7 +13,6 @@ function dirname(path: string) {
   parts.pop()
   return parts.join('/')
 }
-
 function basename(path: string) {
   return path.split('/').pop() ?? path
 }
@@ -26,18 +25,6 @@ function validMove(source: PageDragPayload, targetParent: string) {
   if (source.path === targetParent) return false
   if (targetParent.startsWith(`${source.path}/`)) return false
   return joinPath(targetParent, basename(source.path)) !== source.path
-}
-
-function floatingMenuPosition(button: HTMLElement) {
-  const rect = button.getBoundingClientRect()
-  const gap = 8
-  const menuWidth = 200
-  const menuHeight = 240
-  const rightSide = rect.right + gap
-  const left = rightSide + menuWidth <= window.innerWidth - gap ? rightSide : Math.max(gap, rect.left - menuWidth - gap)
-  const maxTop = Math.max(gap, window.innerHeight - menuHeight - gap)
-  const top = Math.min(Math.max(gap, rect.top - 4), maxTop)
-  return { left, top }
 }
 
 export function TreeItem({
@@ -54,7 +41,6 @@ export function TreeItem({
   onPageDragChange: (active: boolean) => void
 }) {
   const [open, setOpen] = useState(() => localStorage.getItem(`wikindie:open:${node.path}`) !== 'false')
-  const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(node.title)
   const [moving, setMoving] = useState(false)
@@ -63,58 +49,61 @@ export function TreeItem({
   const [createValue, setCreateValue] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [dragOver, setDragOver] = useState(false)
-  const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null)
-  const menuButtonRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const renameFormRef = useRef<HTMLFormElement>(null)
   const navigate = useNavigate()
   const role = useAuthStore((state) => state.role)
   const mayWrite = canWrite(role)
   const mayDelete = canDelete(role)
 
-  const closeMenu = () => {
-    setMenuOpen(false)
-    setConfirmDelete(false)
-  }
+  const cancelRename = useCallback(() => {
+    setRenameValue(node.title)
+    setRenaming(false)
+  }, [node.title])
 
-  useEffect(() => {
-    if (!menuOpen) return
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!(event.target instanceof Node)) return
-      if (menuRef.current?.contains(event.target)) return
-      if (menuButtonRef.current?.contains(event.target)) return
-      closeMenu()
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeMenu()
-    }
-
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('resize', closeMenu)
-    window.addEventListener('scroll', closeMenu, true)
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('resize', closeMenu)
-      window.removeEventListener('scroll', closeMenu, true)
-    }
-  }, [menuOpen])
+  const startRename = useCallback(() => {
+    setRenameValue(node.title)
+    setRenaming(true)
+  }, [node.title])
 
   const toggle = () => {
     localStorage.setItem(`wikindie:open:${node.path}`, String(!open))
     setOpen(!open)
   }
 
-  const submitRename = async () => {
+  const submitRename = useCallback(async () => {
     if (!mayWrite) return
     const clean = renameValue.trim()
-    if (!clean) return
+    if (!clean) {
+      cancelRename()
+      return
+    }
     await api.patchPageMeta(node.path, { title: clean })
     await onRefresh()
     setRenaming(false)
-    setMenuOpen(false)
-  }
+  }, [cancelRename, mayWrite, node.path, onRefresh, renameValue])
+
+  useEffect(() => {
+    if (!renaming) setRenameValue(node.title)
+  }, [node.title, renaming])
+
+  useEffect(() => {
+    if (!renaming) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        cancelRename()
+      }
+      if (event.key === 'Enter') {
+        if (document.activeElement && renameFormRef.current?.contains(document.activeElement)) return
+        event.preventDefault()
+        void submitRename()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [cancelRename, renaming, submitRename])
 
   const submitCreate = async () => {
     if (!creating || !mayWrite) return
@@ -145,7 +134,6 @@ export function TreeItem({
     await onRefresh()
     navigate(pageUrl(newPath))
     setMoving(false)
-    setMenuOpen(false)
   }
 
   const remove = async () => {
@@ -205,6 +193,7 @@ export function TreeItem({
         {renaming ? (
           <>
             <form
+              ref={renameFormRef}
               className={`min-w-0 flex-1 ${collapsed ? 'md:hidden' : ''}`}
               onSubmit={(event) => {
                 event.preventDefault()
@@ -218,9 +207,6 @@ export function TreeItem({
                   className="w-full rounded border border-accent bg-input px-2 py-1 text-sm text-text outline-none"
                   value={renameValue}
                   onChange={(event) => setRenameValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape') setRenaming(false)
-                  }}
                 />
               </div>
             </form>
@@ -255,46 +241,48 @@ export function TreeItem({
         )}
 
         {(mayWrite || mayDelete) && (
-          <button
-            ref={menuButtonRef}
-            className={`rounded p-1 text-text-muted opacity-100 hover:bg-accent/10 hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
-            onClick={(event) => {
-              if (menuOpen) {
-                closeMenu()
-                return
-              }
-              setMenuPosition(floatingMenuPosition(event.currentTarget))
-              setMenuOpen(true)
-              setConfirmDelete(false)
-            }}
+          <ActionMenu
+            align="start"
+            buttonClassName={`rounded p-1 text-text-muted opacity-100 hover:bg-accent/10 hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
+            label="Page actions"
+            menuClassName="w-[200px]"
+            onClose={() => setConfirmDelete(false)}
+            onOpen={() => setConfirmDelete(false)}
           >
-            <MoreHorizontal size={15} />
-          </button>
+            {({ close }) => (
+              <>
+                {mayWrite && (
+                  <>
+                    <ActionMenuItem onSelect={() => { startRename(); close() }}>
+                      <Pencil size={15} /> Rename
+                    </ActionMenuItem>
+                    <ActionMenuItem onSelect={() => { setCreating('page'); setCreateValue(''); setOpen(true); close() }}>
+                      <PageIcon icon="page" /> New page
+                    </ActionMenuItem>
+                    <ActionMenuItem onSelect={() => { setCreating('board'); setCreateValue(''); setOpen(true); close() }}>
+                      <PageIcon icon="board" /> New board
+                    </ActionMenuItem>
+                    <ActionMenuItem onSelect={() => { setMoving(true); close() }}>
+                      <PageIcon icon="folder" /> Move to...
+                    </ActionMenuItem>
+                  </>
+                )}
+                {mayDelete &&
+                  (confirmDelete ? (
+                    <ActionMenuItem danger onSelect={() => { void remove(); close() }}>
+                      <Trash2 size={15} /> Confirm delete
+                    </ActionMenuItem>
+                  ) : (
+                    <ActionMenuItem danger onSelect={() => setConfirmDelete(true)}>
+                      <Trash2 size={15} /> Delete
+                    </ActionMenuItem>
+                  ))}
+              </>
+            )}
+          </ActionMenu>
         )}
 
       </div>
-
-      {menuOpen && menuPosition && createPortal(
-        <div ref={menuRef} className="fixed z-50 w-[200px] rounded-lg border border-border bg-input p-1 shadow-2xl" style={menuPosition}>
-          {mayWrite && (
-            <>
-              <MenuButton icon={<Pencil size={15} />} label="Rename" onClick={() => { setRenaming(true); closeMenu() }} />
-              <MenuButton icon={<PageIcon icon="page" />} label="New page" onClick={() => { setCreating('page'); setCreateValue(''); setOpen(true); closeMenu() }} />
-              <MenuButton icon={<PageIcon icon="board" />} label="New board" onClick={() => { setCreating('board'); setCreateValue(''); setOpen(true); closeMenu() }} />
-              <MenuButton icon={<PageIcon icon="folder" />} label="Move to..." onClick={() => { setMoving(true); closeMenu() }} />
-            </>
-          )}
-          {mayDelete && (confirmDelete ? (
-              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-danger hover:bg-danger/10" onClick={() => void remove()}>
-                <Trash2 size={15} /> Confirm delete
-              </button>
-            ) : (
-              <MenuButton icon={<Trash2 size={15} />} label="Delete" danger onClick={() => setConfirmDelete(true)} />
-            )
-          )}
-        </div>,
-        document.body,
-      )}
 
       {mayWrite && moving && (
         <form
@@ -349,14 +337,5 @@ export function TreeItem({
         </div>
       )}
     </div>
-  )
-}
-
-function MenuButton({ icon, label, onClick, danger = false }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
-  return (
-    <button className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger/10' : 'text-text hover:bg-accent/10'}`} onClick={onClick}>
-      {icon}
-      {label}
-    </button>
   )
 }

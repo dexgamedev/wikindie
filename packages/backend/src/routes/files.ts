@@ -6,7 +6,7 @@ import {
   deletePage,
   deleteSection,
   movePage,
-  readChildBoards,
+  readChildBoardsWithTasks,
   readPage,
   updatePageMeta,
   upsertSection,
@@ -15,6 +15,7 @@ import {
 import { parseKanban, serializeKanban } from '../lib/kanban.js'
 import { AppError } from '../lib/errors.js'
 import { requirePermission } from '../middleware/permissions.js'
+import { listUsers } from '../lib/users.js'
 
 export const filesRouter = Router()
 
@@ -22,6 +23,11 @@ const joinedPath = (value: unknown) => (Array.isArray(value) ? value.join('/') :
 
 filesRouter.get('/tree', requirePermission('read'), async (_req, res) => {
   res.json({ tree: await buildTree() })
+})
+
+filesRouter.get('/users', requirePermission('read'), async (_req, res) => {
+  const users = await listUsers()
+  res.json({ users: users.map((user) => ({ username: user.username })) })
 })
 
 filesRouter.get('/kanban/*path', requirePermission('read'), async (req, res) => {
@@ -37,7 +43,7 @@ filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) =>
 })
 
 filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res) => {
-  res.json({ boards: await readChildBoards(joinedPath(req.params.path)) })
+  res.json(await readChildBoardsWithTasks(joinedPath(req.params.path)))
 })
 
 filesRouter.get('/page/*path', requirePermission('read'), async (req, res) => {

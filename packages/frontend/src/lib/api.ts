@@ -28,13 +28,18 @@ export interface PageBundle extends MarkdownFile {
   board?: KanbanBoard
 }
 
+export type CardPriority = 'high' | 'medium' | 'low'
+
 export interface KanbanCard {
   title: string
   done: boolean
+  priority?: CardPriority
+  assignees: string[]
 }
 
 export interface KanbanColumn {
   title: string
+  icon?: string
   cards: KanbanCard[]
 }
 
@@ -44,6 +49,7 @@ export interface KanbanBoard {
 
 export interface BoardSummaryColumn {
   title: string
+  icon?: string
   total: number
   done: number
 }
@@ -55,6 +61,17 @@ export interface BoardSummary {
   columns: BoardSummaryColumn[]
   totalCards: number
   doneCards: number
+}
+
+export interface TaskInfo {
+  title: string
+  done: boolean
+  priority?: CardPriority
+  assignees: string[]
+  boardPath: string
+  boardTitle: string
+  columnTitle: string
+  columnIcon?: string
 }
 
 export function encodePath(path: string) {
@@ -87,8 +104,9 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   tree: () => request<{ tree: TreeNode[] }>('/api/tree'),
+  users: () => request<{ users: { username: string }[] }>('/api/users'),
   page: (path: string) => request<PageBundle>(`/api/page/${encodePath(path)}`),
-  childBoards: (path: string) => request<{ boards: BoardSummary[] }>(`/api/page/${encodePath(path)}/tasks`),
+  childBoards: (path: string) => request<{ boards: BoardSummary[]; tasks: TaskInfo[] }>(`/api/page/${encodePath(path)}/tasks`),
   writePage: (path: string, content: string, frontmatter: Record<string, unknown>) =>
     request<PageBundle>(`/api/page/${encodePath(path)}`, {
       method: 'PUT',

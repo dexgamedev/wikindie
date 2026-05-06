@@ -10,6 +10,7 @@ import { TaskPanel } from './TaskPanel'
 import { TopBar } from './TopBar'
 
 const sidebarCollapsedKey = 'wikindie:sidebar-collapsed'
+const taskPanelCollapsedKey = 'wikindie:task-panel-collapsed'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const setTree = useFilesStore((state) => state.setTree)
@@ -17,12 +18,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [quickFindOpen, setQuickFindOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(sidebarCollapsedKey) === 'true')
+  const [taskPanelCollapsed, setTaskPanelCollapsed] = useState(() => localStorage.getItem(taskPanelCollapsedKey) === 'true')
   const pagePath = useMemo(() => pagePathFromLocation(location.pathname), [location.pathname])
 
   const toggleSidebarCollapsed = () => {
     setSidebarCollapsed((collapsed) => {
       const next = !collapsed
       localStorage.setItem(sidebarCollapsedKey, String(next))
+      return next
+    })
+  }
+
+  const toggleTaskPanelCollapsed = () => {
+    setTaskPanelCollapsed((collapsed) => {
+      const next = !collapsed
+      localStorage.setItem(taskPanelCollapsedKey, String(next))
       return next
     })
   }
@@ -66,7 +76,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="panel min-w-0 flex-1 overflow-hidden">
           {children}
         </main>
-        <TaskPanel pagePath={pagePath} />
+        <TaskPanel collapsed={taskPanelCollapsed} onToggleCollapsed={toggleTaskPanelCollapsed} pagePath={pagePath} />
       </div>
     </div>
   )

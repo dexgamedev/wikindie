@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises'
+import type { Dirent } from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
 import { defaultSpaceFiles } from './defaultSpace.js'
-import { parseKanban } from './kanban.js'
+import { parseKanban, type CardPriority } from './kanban.js'
 
 export const SPACE_DIR = path.resolve(process.env.SPACE_DIR ?? './space')
 
@@ -25,6 +26,7 @@ export interface PageBundle extends MarkdownFile {
 
 export interface BoardSummaryColumn {
   title: string
+  icon?: string
   total: number
   done: number
 }
@@ -36,6 +38,17 @@ export interface BoardSummary {
   columns: BoardSummaryColumn[]
   totalCards: number
   doneCards: number
+}
+
+export interface TaskInfo {
+  title: string
+  done: boolean
+  priority?: CardPriority
+  assignees: string[]
+  boardPath: string
+  boardTitle: string
+  columnTitle: string
+  columnIcon?: string
 }
 
 export function safePath(relativePath = '') {
@@ -213,53 +226,99 @@ export async function readPage(pagePath: string): Promise<PageBundle> {
   }
 }
 
-function summarizeBoard(pagePath: string, file: MarkdownFile): BoardSummary | null {
+function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summary: BoardSummary; tasks: TaskInfo[] } | null {
   if (file.frontmatter.kanban !== true) return null
 
-  const columns = parseKanban(file.content).columns.map((column) => {
+  const board = parseKanban(file.content)
+  const boardPath = normalizePagePath(pagePath)
+  const boardTitle = String(file.frontmatter.title ?? pageTitleFromPath(pagePath))
+  const columns = board.columns.map((column) => {
     const done = column.cards.filter((card) => card.done).length
-    return { title: column.title, total: column.cards.length, done }
+    return { title: column.title, icon: column.icon, total: column.cards.length, done }
   })
   const totalCards = columns.reduce((sum, column) => sum + column.total, 0)
   const doneCards = columns.reduce((sum, column) => sum + column.done, 0)
+  const tasks = board.columns.flatMap((column) =>
+    column.cards.map((card) => ({
+      title: card.title,
+      done: card.done,
+      priority: card.priority,
+      assignees: [...card.assignees],
+      boardPath,
+      boardTitle,
+      columnTitle: column.title,
+      columnIcon: column.icon,
+    })),
+  )
 
   return {
-    path: normalizePagePath(pagePath),
-    title: String(file.frontmatter.title ?? pageTitleFromPath(pagePath)),
-    icon: typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined,
-    columns,
-    totalCards,
-    doneCards,
+    summary: {
+      path: boardPath,
+      title: boardTitle,
+      icon: typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined,
+      columns,
+      totalCards,
+      doneCards,
+    },
+    tasks,
   }
 }
 
-export async function readChildBoards(pagePath: string): Promise<BoardSummary[]> {
-  const parent = await resolvePageStoragePath(pagePath)
-  if (!parent.index) return []
+function joinStoragePath(base: string, child: string) {
+  return [base, child].filter(Boolean).join('/').replace(/\/+/g, '/')
+}
 
-  const parentDir = safePath(parent.pagePath)
-  const entries = await fs.readdir(parentDir, { withFileTypes: true })
-  const boards: BoardSummary[] = []
+async function collectBoardsRecursive(
+  dirPath: string,
+  boards: BoardSummary[],
+  tasks: TaskInfo[] | undefined,
+  depth: number,
+  maxDepth: number,
+) {
+  if (depth >= maxDepth) return
+
+  let entries: Dirent[]
+  try {
+    entries = await fs.readdir(safePath(dirPath), { withFileTypes: true })
+  } catch {
+    return
+  }
 
   for (const entry of entries) {
     if (entry.name.startsWith('.') || entry.name === '_sections') continue
 
     if (entry.isDirectory()) {
-      const childPath = `${parent.pagePath}/${entry.name}`.replace(/\/+/g, '/')
-      const indexPath = `${childPath}/_Index.md`
+      const childPath = joinStoragePath(dirPath, entry.name)
+      const indexPath = joinStoragePath(childPath, '_Index.md')
       if (!(await exists(indexPath))) continue
-      const summary = summarizeBoard(childPath, await readMarkdownByPath(indexPath))
-      if (summary) boards.push(summary)
+      const details = summarizeBoardWithTasks(childPath, await readMarkdownByPath(indexPath))
+      if (details) {
+        boards.push(details.summary)
+        tasks?.push(...details.tasks)
+      }
+      await collectBoardsRecursive(childPath, boards, tasks, depth + 1, maxDepth)
       continue
     }
 
     if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name === '_Index.md') continue
-    const childPath = `${parent.pagePath}/${entry.name.replace(/\.md$/, '')}`.replace(/\/+/g, '/')
-    const summary = summarizeBoard(childPath, await readMarkdownByPath(`${childPath}.md`))
-    if (summary) boards.push(summary)
+    const childPath = joinStoragePath(dirPath, entry.name.replace(/\.md$/, ''))
+    const details = summarizeBoardWithTasks(childPath, await readMarkdownByPath(`${childPath}.md`))
+    if (details) {
+      boards.push(details.summary)
+      tasks?.push(...details.tasks)
+    }
   }
+}
 
-  return boards.sort((a, b) => a.title.localeCompare(b.title))
+export async function readChildBoardsWithTasks(pagePath: string): Promise<{ boards: BoardSummary[]; tasks: TaskInfo[] }> {
+  const parent = await resolvePageStoragePath(pagePath)
+  if (!parent.index) return { boards: [], tasks: [] }
+
+  const boards: BoardSummary[] = []
+  const tasks: TaskInfo[] = []
+  await collectBoardsRecursive(parent.pagePath, boards, tasks, 0, 10)
+
+  return { boards: boards.sort((a, b) => a.title.localeCompare(b.title)), tasks }
 }
 
 export async function writePage(pagePath: string, content: string, frontmatter: Record<string, unknown> = {}) {
@@ -271,7 +330,7 @@ export async function writePage(pagePath: string, content: string, frontmatter: 
 export async function createPage(pagePath: string, kanban = false) {
   const normalized = normalizePagePath(pagePath)
   const frontmatter = kanban ? { kanban: true } : {}
-  const content = kanban ? '## To Do\n- [ ] New card\n## In Progress\n## Done\n' : `# ${pageTitleFromPath(normalized)}\n`
+  const content = kanban ? '## :todo: To Do\n- [ ] New card\n## :doing: In Progress\n## :done: Done\n' : `# ${pageTitleFromPath(normalized)}\n`
   await writeMarkdownByPath(pageToLeafPath(normalized), content, frontmatter)
   return normalized
 }
@@ -317,7 +376,7 @@ export async function createFolder(relativePath: string) {
 }
 
 export async function createFile(relativePath: string, kanban = false) {
-  const content = kanban ? '## To Do\n- [ ] New card\n## In Progress\n## Done\n' : '# Untitled\n'
+  const content = kanban ? '## :todo: To Do\n- [ ] New card\n## :doing: In Progress\n## :done: Done\n' : '# Untitled\n'
   await writeMarkdown(relativePath, content, kanban ? { kanban: true } : {})
 }
 

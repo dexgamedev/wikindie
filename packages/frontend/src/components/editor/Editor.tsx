@@ -1,11 +1,11 @@
-import { ArrowLeft, CheckCircle2, MoreHorizontal, Plus, Save, Settings } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Plus, Save, Settings } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
-import { useDropdown } from '../../hooks/useDropdown'
 import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore, useFilesStore } from '../../lib/store'
+import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
 import { MarkdownPreview } from './MarkdownPreview'
@@ -60,7 +60,6 @@ export function Editor({
   const [title, setTitle] = useState(String(page.frontmatter.title ?? pageNameFromPath(page.path)))
   const [icon, setIcon] = useState(typeof page.frontmatter.icon === 'string' ? page.frontmatter.icon : '')
   const [metaEditing, setMetaEditing] = useState(false)
-  const actions = useDropdown()
   const localWriteEventsToIgnore = useRef(0)
 
   const [sectionDrafts, setSectionDrafts] = useState<Record<string, { title: string; content: string }>>({})
@@ -266,59 +265,33 @@ export function Editor({
               </button>
             </div>
           )}
-          <div ref={actions.ref} className="relative">
-            <button
-              className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
-              onClick={() => actions.setOpen((open) => !open)}
-              title="Page actions"
-              aria-label="Page actions"
-              type="button"
-            >
-              <MoreHorizontal size={18} />
-            </button>
-            {actions.open && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-lg border border-border bg-input p-1.5 shadow-2xl shadow-heavy">
+          <ActionMenu
+            buttonClassName="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+            iconSize={18}
+            label="Page actions"
+            menuClassName="w-52"
+          >
+            {({ close }) => (
+              <>
                 {mayWrite && (
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text"
-                    onClick={() => {
-                      setMetaEditing((open) => !open)
-                      actions.setOpen(false)
-                    }}
-                    type="button"
-                  >
+                  <ActionMenuItem onSelect={() => { setMetaEditing((open) => !open); close() }}>
                     <Settings size={15} /> {metaEditing ? 'Close page meta' : 'Page meta'}
-                  </button>
+                  </ActionMenuItem>
                 )}
                 {mayWrite && (
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text"
-                    onClick={() => {
-                      setAddingSection((open) => !open)
-                      actions.setOpen(false)
-                    }}
-                    type="button"
-                  >
+                  <ActionMenuItem onSelect={() => { setAddingSection((open) => !open); close() }}>
                     <Plus size={15} /> {addingSection ? 'Close section form' : 'Add section'}
-                  </button>
+                  </ActionMenuItem>
                 )}
                 {mayWrite && (
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-muted transition hover:bg-accent/10 hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() => {
-                      void saveNow()
-                      actions.setOpen(false)
-                    }}
-                    disabled={status === 'saving'}
-                    type="button"
-                  >
+                  <ActionMenuItem disabled={status === 'saving'} onSelect={() => { void saveNow(); close() }}>
                     <Save size={15} /> Save now
-                  </button>
+                  </ActionMenuItem>
                 )}
                 {!mayWrite && <div className="px-3 py-2 text-sm text-text-muted">Read only</div>}
-              </div>
+              </>
             )}
-          </div>
+          </ActionMenu>
         </div>
       </header>
 
