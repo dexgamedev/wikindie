@@ -1,11 +1,12 @@
-import { ArrowLeft, CheckCircle2, Plus, Settings } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, CheckCircle2, ListChecks, Plus, Settings } from 'lucide-react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type KanbanBoard as Board, type KanbanCard as Card, type PageBundle } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canWrite, useAuthStore, useFilesStore, useTaskFiltersStore } from '../../lib/store'
 import { compileSearchRegex, defaultTaskFilters, hasAppliedFilters, matchesKanbanCardFilters, type TaskFilterValues } from '../../lib/taskFilters'
+import { useMobileTaskPanel } from '../layout/AppLayout'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
@@ -43,6 +44,7 @@ export function KanbanBoard({
   const assigneeFilter = useTaskFiltersStore((state) => state.assigneeFilter)
   const searchPattern = useTaskFiltersStore((state) => state.searchPattern)
   const mayWrite = canWrite(role)
+  const { openTasks } = useMobileTaskPanel()
   const [board, setBoard] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [users, setUsers] = useState<string[]>([])
@@ -154,7 +156,7 @@ export function KanbanBoard({
   return (
     <section className="flex h-full min-h-0 flex-col">
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <button
             className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
             onClick={() => goBack(navigate)}
@@ -164,23 +166,35 @@ export function KanbanBoard({
             <ArrowLeft size={16} />
           </button>
           <PageIcon icon={icon} fallback="board" className="hidden size-5 shrink-0 sm:inline-flex" />
-          <nav className="flex min-w-0 items-center gap-1 text-sm text-text-muted" aria-label="Page breadcrumbs">
+          <nav className="flex min-w-0 items-center gap-1 overflow-hidden text-sm text-text-muted" aria-label="Page breadcrumbs">
             {(showBreadcrumbs ? breadcrumbs : [{ label: displayTitle, path }]).map((crumb, index) => (
-              <span key={crumb.path} className="flex min-w-0 items-center gap-1">
-                {index > 0 && <span className="text-text-muted/50">/</span>}
-                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
-                  {crumb.label}
-                </Link>
-              </span>
+              <Fragment key={crumb.path}>
+                {showBreadcrumbs && breadcrumbs.length > 2 && index === breadcrumbs.length - 2 && <span className="shrink-0 rounded px-1 py-1 text-text-muted/70 sm:hidden">...</span>}
+                <span className={`flex min-w-0 items-center gap-1 ${showBreadcrumbs && breadcrumbs.length > 2 && index < breadcrumbs.length - 2 ? 'hidden sm:flex' : ''}`}>
+                  {index > 0 && <span className="text-text-muted/50">/</span>}
+                  <Link className="max-w-[110px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text sm:max-w-[130px] md:max-w-[180px]" to={pageUrl(crumb.path)}>
+                    {crumb.label}
+                  </Link>
+                </span>
+              </Fragment>
             ))}
           </nav>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <span className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-text-muted sm:flex">
             <span className={`size-1.5 rounded-full ${saving ? 'bg-warning' : 'bg-success'}`} />
             {mayWrite ? (saving ? 'Saving...' : 'Saved') : 'Read only'}
           </span>
           {mayWrite && <Button className="hidden py-1.5 sm:inline-flex" onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
+          <button
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
+            onClick={openTasks}
+            title="Task overview"
+            aria-label="Open task overview"
+            type="button"
+          >
+            <ListChecks size={16} />
+          </button>
           <ActionMenu
             buttonClassName="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
             iconSize={18}
@@ -205,9 +219,9 @@ export function KanbanBoard({
         </div>
       </header>
 
-      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-5 md:p-8">
+      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-3 sm:p-4 md:p-6 xl:p-8">
       {mayWrite && metaEditing && (
-        <article className="mb-6 max-w-3xl rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+        <article className="mb-4 max-w-3xl rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow sm:mb-6 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold">Board meta</h3>
             <span className="text-xs text-text-muted">Title and sidebar icon</span>
@@ -250,7 +264,7 @@ export function KanbanBoard({
       )}
       {mayWrite && addingColumn && (
         <form
-          className="mb-6 flex max-w-md items-center gap-3 rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow"
+          className="mb-4 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow sm:mb-6 sm:flex-row sm:items-center"
           onSubmit={(event) => {
             event.preventDefault()
             addColumn()
@@ -263,11 +277,11 @@ export function KanbanBoard({
             onChange={(event) => setNewColumnTitle(event.target.value)}
             placeholder="Column title"
           />
-          <Button type="submit">Add</Button>
+          <Button className="w-full justify-center sm:w-auto" type="submit">Add</Button>
         </form>
       )}
       <div className="workspace-scroll min-h-0 flex-1 overflow-x-auto overflow-y-visible pb-2">
-        <div className="grid w-max grid-flow-col auto-cols-[280px] items-start gap-4">
+        <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:w-max sm:grid-flow-col sm:auto-cols-[280px] sm:grid-cols-none sm:gap-4">
           {visibleColumns.map(({ column, columnIndex, cards }) => (
             <KanbanColumn
               key={`${column.title}-${columnIndex}`}

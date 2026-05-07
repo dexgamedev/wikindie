@@ -1,4 +1,4 @@
-import { Pencil, Settings, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Settings, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { KanbanBoard, KanbanCard as Card, KanbanColumn as Column } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
@@ -87,7 +87,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className="rounded-lg border border-border bg-surface p-4"
+      className="rounded-lg border border-border bg-surface p-3 sm:p-4"
       onDragOver={(event) => {
         if (editable) event.preventDefault()
       }}
@@ -121,7 +121,15 @@ export function KanbanColumn({
         )}
         {editable && (
           <div className="relative flex items-center gap-1">
-            <Button onClick={() => setAddingCard((v) => !v)}>{addingCard ? 'Close' : '+'}</Button>
+            <Button
+              aria-label={addingCard ? 'Close card form' : 'Add card'}
+              className="grid min-w-10 place-items-center px-3"
+              onClick={() => setAddingCard((v) => !v)}
+              title={addingCard ? 'Close card form' : 'Add card'}
+              type="button"
+            >
+              {addingCard ? 'Close' : <Plus size={15} />}
+            </Button>
             <ActionMenu label="Column actions" menuClassName="w-40">
               {({ close }) => (
                 <>
@@ -211,6 +219,7 @@ export function KanbanColumn({
             board={board}
             editable={editable}
             users={users}
+            onMove={onMove}
             onUpdate={onUpdate}
           />
         ))}

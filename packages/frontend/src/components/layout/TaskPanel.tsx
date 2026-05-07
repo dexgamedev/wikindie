@@ -42,10 +42,14 @@ function taskPreviewOrder(tasks: TaskInfo[]) {
 
 export function TaskPanel({
   collapsed,
+  mobileOpen = false,
+  onCloseMobile,
   onToggleCollapsed,
   pagePath,
 }: {
   collapsed: boolean
+  mobileOpen?: boolean
+  onCloseMobile?: () => void
   onToggleCollapsed: () => void
   pagePath: string
 }) {
@@ -204,59 +208,57 @@ export function TaskPanel({
     }
   }
 
-  if (collapsed) {
-    return (
-      <aside className="panel hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-3 transition-[width,padding] duration-200 xl:flex">
-        <button
-          className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
-          onClick={onToggleCollapsed}
-          title="Expand task panel"
-          aria-label="Expand task panel"
-          type="button"
-        >
-          <PanelRightOpen size={18} />
-        </button>
+  const collapsedPanel = (
+    <aside className="panel hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-3 transition-[width,padding] duration-200 xl:flex">
+      <button
+        className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+        onClick={onToggleCollapsed}
+        title="Expand task panel"
+        aria-label="Expand task panel"
+        type="button"
+      >
+        <PanelRightOpen size={18} />
+      </button>
 
-        <div className="mt-4 flex flex-1 flex-col items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-lg border border-border bg-card text-text-muted" title="Task overview">
-            <ListChecks size={17} />
-          </div>
-          {loading ? (
-            <div className="grid size-9 place-items-center rounded-full border border-border bg-input text-text-muted" title="Loading task overview">
-              <RefreshCw size={15} className="animate-spin" />
-            </div>
-          ) : (
-            <div className="grid size-11 place-items-center rounded-full border border-accent/40 bg-accent/10 text-xs font-bold text-text" title={`${totals.percent}% complete`}>
-              {totals.percent}%
-            </div>
-          )}
-          <div className="rounded-full border border-border bg-input px-2 py-1 text-[10px] font-semibold text-text-muted" title={isBoardScope ? 'Current board scope' : `${visibleBoards.length} visible boards`}>
-            {visibleBoards.length}
-          </div>
-          {hasFilterInput && <span className="size-2 rounded-full bg-accent" title="Filters active" />}
-          {highOpenCount > 0 && (
-            <div className="grid size-7 place-items-center rounded-full border border-danger/40 bg-danger/10 text-[10px] font-bold text-danger" title={`${highOpenCount} high-priority open cards`}>
-              {highOpenCount}
-            </div>
-          )}
+      <div className="mt-4 flex flex-1 flex-col items-center gap-3">
+        <div className="grid size-9 place-items-center rounded-lg border border-border bg-card text-text-muted" title="Task overview">
+          <ListChecks size={17} />
         </div>
-      </aside>
-    )
-  }
+        {loading ? (
+          <div className="grid size-9 place-items-center rounded-full border border-border bg-input text-text-muted" title="Loading task overview">
+            <RefreshCw size={15} className="animate-spin" />
+          </div>
+        ) : (
+          <div className="grid size-11 place-items-center rounded-full border border-accent/40 bg-accent/10 text-xs font-bold text-text" title={`${totals.percent}% complete`}>
+            {totals.percent}%
+          </div>
+        )}
+        <div className="rounded-full border border-border bg-input px-2 py-1 text-[10px] font-semibold text-text-muted" title={isBoardScope ? 'Current board scope' : `${visibleBoards.length} visible boards`}>
+          {visibleBoards.length}
+        </div>
+        {hasFilterInput && <span className="size-2 rounded-full bg-accent" title="Filters active" />}
+        {highOpenCount > 0 && (
+          <div className="grid size-7 place-items-center rounded-full border border-danger/40 bg-danger/10 text-[10px] font-bold text-danger" title={`${highOpenCount} high-priority open cards`}>
+            {highOpenCount}
+          </div>
+        )}
+      </div>
+    </aside>
+  )
 
-  return (
-    <aside className="panel hidden w-[320px] shrink-0 flex-col overflow-hidden transition-[width,padding] duration-200 xl:flex">
+  const expandedPanel = (className: string, mobile = false) => (
+    <aside className={className}>
       <div className="border-b border-border p-3">
         <div className="mb-2.5 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
             <button
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
-              onClick={onToggleCollapsed}
-              title="Collapse task panel"
-              aria-label="Collapse task panel"
+              className="grid size-9 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+              onClick={mobile ? onCloseMobile : onToggleCollapsed}
+              title={mobile ? 'Close task panel' : 'Collapse task panel'}
+              aria-label={mobile ? 'Close task panel' : 'Collapse task panel'}
               type="button"
             >
-              <PanelRightClose size={18} />
+              {mobile ? <X size={18} /> : <PanelRightClose size={18} />}
             </button>
             <div className="min-w-0">
               <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
@@ -350,6 +352,19 @@ export function TaskPanel({
         )}
       </div>
     </aside>
+
+  )
+
+  return (
+    <>
+      {mobileOpen && (
+        <>
+          <button className="fixed inset-0 z-30 bg-overlay xl:hidden" onClick={onCloseMobile ?? (() => {})} aria-label="Close task panel" type="button" />
+          {expandedPanel('panel fixed right-0 top-0 z-40 flex h-dvh w-[min(340px,calc(100vw-1.5rem))] flex-col overflow-hidden xl:hidden', true)}
+        </>
+      )}
+      {collapsed ? collapsedPanel : expandedPanel('panel hidden w-[320px] shrink-0 flex-col overflow-hidden transition-[width,padding] duration-200 xl:flex')}
+    </>
   )
 }
 

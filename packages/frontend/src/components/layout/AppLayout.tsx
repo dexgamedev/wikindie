@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { pagePathFromLocation } from '../../lib/paths'
@@ -9,6 +9,12 @@ import { Sidebar } from './Sidebar'
 import { TaskPanel } from './TaskPanel'
 import { TopBar } from './TopBar'
 
+const MobileTaskPanelContext = createContext<{ openTasks: () => void }>({ openTasks: () => {} })
+
+export function useMobileTaskPanel() {
+  return useContext(MobileTaskPanelContext)
+}
+
 const sidebarCollapsedKey = 'wikindie:sidebar-collapsed'
 const taskPanelCollapsedKey = 'wikindie:task-panel-collapsed'
 
@@ -16,6 +22,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const setTree = useFilesStore((state) => state.setTree)
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileTaskPanelOpen, setMobileTaskPanelOpen] = useState(false)
   const [quickFindOpen, setQuickFindOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(sidebarCollapsedKey) === 'true')
   const [taskPanelCollapsed, setTaskPanelCollapsed] = useState(() => localStorage.getItem(taskPanelCollapsedKey) === 'true')
@@ -60,24 +67,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const closeQuickFind = () => {
     setQuickFindOpen(false)
     setMobileOpen(false)
+    setMobileTaskPanelOpen(false)
   }
+
+  useEffect(() => {
+    setMobileOpen(false)
+    setMobileTaskPanelOpen(false)
+  }, [location.pathname])
 
   return (
     <div className="flex h-dvh flex-col gap-3 bg-body p-3 text-text md:p-4">
       <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
       <QuickFindModal open={quickFindOpen} onClose={closeQuickFind} />
-      <div className="flex min-h-0 flex-1 gap-3">
-        <Sidebar
-          mobileOpen={mobileOpen}
-          onCloseMobile={() => setMobileOpen(false)}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={toggleSidebarCollapsed}
-        />
-        <main className="panel min-w-0 flex-1 overflow-hidden">
-          {children}
-        </main>
-        <TaskPanel collapsed={taskPanelCollapsed} onToggleCollapsed={toggleTaskPanelCollapsed} pagePath={pagePath} />
-      </div>
+      <MobileTaskPanelContext.Provider value={{ openTasks: () => setMobileTaskPanelOpen(true) }}>
+        <div className="flex min-h-0 flex-1 gap-3">
+          <Sidebar
+            mobileOpen={mobileOpen}
+            onCloseMobile={() => setMobileOpen(false)}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={toggleSidebarCollapsed}
+          />
+          <main className="panel min-w-0 flex-1 overflow-hidden">
+            {children}
+          </main>
+          <TaskPanel
+            collapsed={taskPanelCollapsed}
+            mobileOpen={mobileTaskPanelOpen}
+            onCloseMobile={() => setMobileTaskPanelOpen(false)}
+            onToggleCollapsed={toggleTaskPanelCollapsed}
+            pagePath={pagePath}
+          />
+        </div>
+      </MobileTaskPanelContext.Provider>
     </div>
   )
 }

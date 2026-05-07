@@ -1,7 +1,8 @@
-import { ArrowLeft, CheckCircle2, Plus, Save, Settings } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, CheckCircle2, Eye, ListChecks, Pencil, Plus, Save, Settings } from 'lucide-react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
+import { useMobileTaskPanel } from '../layout/AppLayout'
 import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore, useFilesStore } from '../../lib/store'
@@ -51,6 +52,7 @@ export function Editor({
   const role = useAuthStore((state) => state.role)
   const mayWrite = canWrite(role)
   const mayDelete = canDelete(role)
+  const { openTasks } = useMobileTaskPanel()
   const [content, setContent] = useState(page.content)
   const [savedContent, setSavedContent] = useState(page.content)
   const [editing, setEditing] = useState(false)
@@ -220,7 +222,7 @@ export function Editor({
   return (
     <section className="flex h-full min-h-0 flex-col">
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <button
             className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
             onClick={() => goBack(navigate)}
@@ -229,25 +231,28 @@ export function Editor({
           >
             <ArrowLeft size={16} />
           </button>
-          <nav className="flex min-w-0 items-center gap-1 text-sm text-text-muted" aria-label="Page breadcrumbs">
+          <nav className="flex min-w-0 items-center gap-1 overflow-hidden text-sm text-text-muted" aria-label="Page breadcrumbs">
             {(showBreadcrumbs ? breadcrumbs : [{ label: title, path: page.path }]).map((crumb, index) => (
-              <span key={crumb.path} className="flex min-w-0 items-center gap-1">
-                {index > 0 && <span className="text-text-muted/50">/</span>}
-                <Link className="max-w-[130px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text md:max-w-[180px]" to={pageUrl(crumb.path)}>
-                  {crumb.label}
-                </Link>
-              </span>
+              <Fragment key={crumb.path}>
+                {showBreadcrumbs && breadcrumbs.length > 2 && index === breadcrumbs.length - 2 && <span className="shrink-0 rounded px-1 py-1 text-text-muted/70 sm:hidden">...</span>}
+                <span className={`flex min-w-0 items-center gap-1 ${showBreadcrumbs && breadcrumbs.length > 2 && index < breadcrumbs.length - 2 ? 'hidden sm:flex' : ''}`}>
+                  {index > 0 && <span className="text-text-muted/50">/</span>}
+                  <Link className="max-w-[110px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text sm:max-w-[130px] md:max-w-[180px]" to={pageUrl(crumb.path)}>
+                    {crumb.label}
+                  </Link>
+                </span>
+              </Fragment>
             ))}
           </nav>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <span className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-text-muted sm:flex">
             <span className={`size-1.5 rounded-full ${status === 'saved' ? 'bg-success' : status === 'saving' ? 'bg-warning' : 'bg-info'}`} />
             {statusLabel}
           </span>
           {mayWrite && (
-            <div className="flex rounded-lg border border-control-border bg-control p-0.5 text-sm">
+            <div className="hidden rounded-lg border border-control-border bg-control p-0.5 text-sm sm:flex">
               <button
                 className={`rounded-md px-3 py-1.5 transition ${editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-control-hover hover:text-text'}`}
                 onClick={() => setEditing(true)}
@@ -265,6 +270,15 @@ export function Editor({
               </button>
             </div>
           )}
+          <button
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
+            onClick={openTasks}
+            title="Task overview"
+            aria-label="Open task overview"
+            type="button"
+          >
+            <ListChecks size={16} />
+          </button>
           <ActionMenu
             buttonClassName="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
             iconSize={18}
@@ -273,6 +287,17 @@ export function Editor({
           >
             {({ close }) => (
               <>
+                {mayWrite && (
+                  <ActionMenuItem onSelect={() => { setEditing(true); close() }}>
+                    <Pencil size={15} /> Edit
+                  </ActionMenuItem>
+                )}
+                {mayWrite && (
+                  <ActionMenuItem disabled={status === 'saving'} onSelect={() => { void showPreview(); close() }}>
+                    <Eye size={15} /> Preview
+                  </ActionMenuItem>
+                )}
+                {mayWrite && <div className="my-1 border-t border-border" />}
                 {mayWrite && (
                   <ActionMenuItem onSelect={() => { setMetaEditing((open) => !open); close() }}>
                     <Settings size={15} /> {metaEditing ? 'Close page meta' : 'Page meta'}

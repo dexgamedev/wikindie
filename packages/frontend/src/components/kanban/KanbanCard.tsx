@@ -4,6 +4,7 @@ import type { CardPriority, KanbanBoard, KanbanCard as Card } from '../../lib/ap
 import { priorityColor, priorityLabel } from '../../lib/priority'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { AssigneeCorner, UserIconBadge } from '../ui/AssigneeBadges'
+import { PageIcon } from '../ui/PageIcon'
 
 const priorityOptions: Array<{ value: CardPriority | undefined; label: string }> = [
   { value: 'high', label: 'High' },
@@ -19,6 +20,7 @@ export function KanbanCard({
   board,
   editable,
   users,
+  onMove,
   onUpdate,
 }: {
   card: Card
@@ -27,6 +29,7 @@ export function KanbanCard({
   board: KanbanBoard
   editable: boolean
   users: string[]
+  onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
   onUpdate: (board: KanbanBoard) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -53,7 +56,7 @@ export function KanbanCard({
 
   const commitEdit = () => {
     if (!editable) return
-    const title = editValue.trim()
+    const title = editValue.trim().replace(/\s+/g, ' ')
     setEditing(false)
     if (!title || title === card.title) return
     updateCard({ title })
@@ -84,30 +87,50 @@ export function KanbanCard({
     onUpdate(next)
   }
 
+  const moveToColumn = (targetColumnIndex: number) => {
+    if (!editable || targetColumnIndex === columnIndex) return
+    onMove(columnIndex, cardIndex, targetColumnIndex)
+  }
+
   return (
     <article
       draggable={editable && !editing}
       onDragStart={(event) => {
         if (editable && !editing) event.dataTransfer.setData('text/plain', `${columnIndex}:${cardIndex}`)
       }}
-      className={`relative rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow hover:border-accent ${assignees.length ? 'pb-10' : ''} ${editable ? 'cursor-grab' : ''}`}
+      className={`relative rounded-lg border border-border bg-card p-3 shadow-lg shadow-shadow hover:border-accent sm:p-4 ${assignees.length ? 'pb-10' : ''} ${editable ? 'cursor-grab' : ''}`}
     >
       <div className="flex items-start gap-3">
-        <input type="checkbox" checked={card.done} onChange={toggleDone} className="mt-1" disabled={!editable} />
+        <input type="checkbox" checked={card.done} onChange={toggleDone} className="mt-0.5 size-5 accent-accent" disabled={!editable} />
         <div className="min-w-0 flex-1">
           {editing ? (
-            <input
-              autoFocus
-              className="w-full rounded border border-accent bg-input px-2 py-1 text-sm text-text outline-none"
-              value={editValue}
-              onBlur={commitEdit}
-              onChange={(event) => setEditValue(event.target.value)}
-              onFocus={(event) => event.currentTarget.select()}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') commitEdit()
-                if (event.key === 'Escape') cancelEdit()
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                commitEdit()
               }}
-            />
+            >
+              <textarea
+                autoFocus
+                className="min-h-16 w-full resize-y rounded border border-accent bg-input px-2 py-1.5 text-sm text-text outline-none"
+                rows={2}
+                value={editValue}
+                onChange={(event) => setEditValue(event.target.value)}
+                onFocus={(event) => event.currentTarget.select()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    commitEdit()
+                  }
+                  if (event.key === 'Escape') cancelEdit()
+                }}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button className="rounded-lg border border-control-border bg-control px-2.5 py-1.5 text-xs font-medium text-text hover:border-accent hover:bg-control-hover" type="submit">Save</button>
+                <button className="rounded-lg px-2.5 py-1.5 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={cancelEdit} type="button">Cancel</button>
+              </div>
+            </form>
           ) : (
             <button
               className={`flex min-w-0 items-start gap-2 text-left text-sm disabled:cursor-default ${card.done ? 'text-text-muted line-through' : 'text-text'}`}
@@ -129,6 +152,28 @@ export function KanbanCard({
                 <ActionMenuItem onSelect={() => { startEditing(); close() }}>
                   <Pencil size={14} /> Rename
                 </ActionMenuItem>
+
+                {board.columns.length > 1 && (
+                  <>
+                    <div className="my-1 border-t border-border" />
+                    <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Move to column</div>
+                    {board.columns.map((column, targetIndex) => (
+                      <button
+                        key={`${column.title}-${targetIndex}`}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-text hover:bg-accent/10 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
+                        disabled={targetIndex === columnIndex}
+                        onClick={() => { moveToColumn(targetIndex); close() }}
+                        type="button"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <PageIcon icon={column.icon} fallback="column" className="size-4 shrink-0" />
+                          <span className="min-w-0 truncate">{column.title}</span>
+                        </span>
+                        {targetIndex === columnIndex && <Check size={13} className="shrink-0 text-accent" />}
+                      </button>
+                    ))}
+                  </>
+                )}
 
                 <div className="my-1 border-t border-border" />
                 <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Set priority</div>

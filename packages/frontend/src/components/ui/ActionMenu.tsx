@@ -1,4 +1,4 @@
-import { MoreHorizontal } from 'lucide-react'
+import { MoreVertical } from 'lucide-react'
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -8,13 +8,15 @@ type MenuPosition = {
   left: number
   top: number
   maxHeight: number
+  maxWidth: number
 }
 
 function menuPosition(button: HTMLElement, menu: HTMLElement, align: 'start' | 'end'): MenuPosition {
   const buttonRect = button.getBoundingClientRect()
   const gap = 8
   const padding = 8
-  const menuWidth = Math.min(menu.offsetWidth, window.innerWidth - padding * 2)
+  const maxWidth = window.innerWidth - padding * 2
+  const menuWidth = Math.min(menu.offsetWidth, maxWidth)
   const naturalHeight = Math.min(menu.scrollHeight, window.innerHeight - padding * 2)
   const belowSpace = window.innerHeight - buttonRect.bottom - gap - padding
   const aboveSpace = buttonRect.top - gap - padding
@@ -26,14 +28,14 @@ function menuPosition(button: HTMLElement, menu: HTMLElement, align: 'start' | '
   const unclampedTop = openBelow ? buttonRect.bottom + gap : buttonRect.top - gap - maxHeight
   const top = Math.min(Math.max(padding, unclampedTop), window.innerHeight - maxHeight - padding)
 
-  return { left, top, maxHeight }
+  return { left, top, maxHeight, maxWidth }
 }
 
 export function ActionMenu({
   children,
   label = 'Actions',
   align = 'end',
-  buttonClassName = 'rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text',
+  buttonClassName = 'grid size-9 place-items-center rounded-lg text-text-muted hover:bg-accent/10 hover:text-text',
   iconSize = 15,
   menuClassName = 'w-56',
   onClose,
@@ -126,7 +128,7 @@ export function ActionMenu({
         title={label}
         type="button"
       >
-        <MoreHorizontal size={iconSize} />
+        <MoreVertical size={iconSize} />
       </button>
       {open &&
         createPortal(

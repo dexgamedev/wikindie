@@ -186,7 +186,7 @@ export function TreeItem({
       style={{ paddingLeft: depth * 10 }}
     >
       <div className="group flex items-center gap-1 rounded-md">
-        <button className={`rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text ${collapsed ? 'md:hidden' : ''}`} onClick={toggle}>
+        <button className={`rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text ${collapsed ? 'lg:hidden' : ''}`} onClick={toggle}>
           <ChevronRight size={14} className={`transition ${open ? 'rotate-90' : ''}`} />
         </button>
 
@@ -194,7 +194,7 @@ export function TreeItem({
           <>
             <form
               ref={renameFormRef}
-              className={`min-w-0 flex-1 ${collapsed ? 'md:hidden' : ''}`}
+              className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}
               onSubmit={(event) => {
                 event.preventDefault()
                 void submitRename()
@@ -212,7 +212,7 @@ export function TreeItem({
             </form>
             <NavLink
               className={({ isActive }) =>
-                `${collapsed ? 'hidden md:flex' : 'hidden'} min-w-0 flex-1 items-center justify-center rounded-md px-0 py-1.5 text-sm hover:bg-surface-hover ${
+                `${collapsed ? 'hidden lg:flex' : 'hidden'} min-w-0 flex-1 items-center justify-center rounded-md px-0 py-1.5 text-sm hover:bg-surface-hover ${
                   isActive ? 'bg-surface-hover text-text' : 'text-text-muted'
                 }`
               }
@@ -225,7 +225,7 @@ export function TreeItem({
         ) : (
           <NavLink
             className={({ isActive }) =>
-              `flex min-w-0 flex-1 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm hover:bg-surface-hover ${collapsed ? 'md:justify-center md:border-l-0 md:px-0' : ''} ${
+                `flex min-w-0 flex-1 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm hover:bg-surface-hover ${collapsed ? 'lg:justify-center lg:border-l-0 lg:px-0' : ''} ${
                 isActive ? 'border-accent bg-surface-hover text-text' : 'border-transparent text-text-muted'
               }`
             }
@@ -236,14 +236,14 @@ export function TreeItem({
             onDragEnd={endPageDrag}
           >
             <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} />
-            <span className={`min-w-0 truncate ${collapsed ? 'md:hidden' : ''}`}>{node.title}</span>
+            <span className={`min-w-0 truncate ${collapsed ? 'lg:hidden' : ''}`}>{node.title}</span>
           </NavLink>
         )}
 
         {(mayWrite || mayDelete) && (
           <ActionMenu
             align="start"
-            buttonClassName={`rounded p-1 text-text-muted opacity-100 hover:bg-accent/10 hover:text-text md:opacity-0 md:group-hover:opacity-100 ${collapsed ? 'md:hidden' : ''}`}
+            buttonClassName={`grid size-9 place-items-center rounded-lg text-text-muted opacity-100 hover:bg-accent/10 hover:text-text lg:opacity-0 lg:group-hover:opacity-100 ${collapsed ? 'lg:hidden' : ''}`}
             label="Page actions"
             menuClassName="w-[200px]"
             onClose={() => setConfirmDelete(false)}
@@ -286,7 +286,7 @@ export function TreeItem({
 
       {mayWrite && moving && (
         <form
-          className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'md:hidden' : ''}`}
+          className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'lg:hidden' : ''}`}
           onSubmit={(event) => {
             event.preventDefault()
             void submitMove()
@@ -308,7 +308,7 @@ export function TreeItem({
 
       {mayWrite && creating && (
         <form
-          className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'md:hidden' : ''}`}
+          className={`mt-1 flex items-center gap-2 pl-8 ${collapsed ? 'lg:hidden' : ''}`}
           onSubmit={(event) => {
             event.preventDefault()
             void submitCreate()
@@ -332,7 +332,7 @@ export function TreeItem({
       )}
 
       {open && (
-        <div className={collapsed ? 'md:hidden' : ''}>
+        <div className={collapsed ? 'lg:hidden' : ''}>
           {node.children?.map((child) => <TreeItem key={child.path} node={child} depth={depth + 1} collapsed={collapsed} onRefresh={onRefresh} onPageDragChange={onPageDragChange} />)}
         </div>
       )}
