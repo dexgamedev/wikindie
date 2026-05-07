@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { TreeNode } from './api'
+import { defaultTaskFilters, type TaskFilterValues, type TaskPriorityFilter } from './taskFilters'
 
 export type Role = 'admin' | 'editor' | 'readonly'
 
@@ -14,6 +15,15 @@ interface AuthState {
 interface FilesState {
   tree: TreeNode[]
   setTree: (tree: TreeNode[]) => void
+}
+
+interface TaskFiltersState extends TaskFilterValues {
+  pagePath: string
+  setTaskFilterPath: (pagePath: string) => void
+  setPriorityFilter: (priorityFilter: TaskPriorityFilter) => void
+  setAssigneeFilter: (assigneeFilter: string) => void
+  setSearchPattern: (searchPattern: string) => void
+  clearTaskFilters: () => void
 }
 
 const tokenKey = 'wikindie:token'
@@ -49,4 +59,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 export const useFilesStore = create<FilesState>((set) => ({
   tree: [],
   setTree: (tree) => set({ tree }),
+}))
+
+export const useTaskFiltersStore = create<TaskFiltersState>((set) => ({
+  pagePath: '',
+  ...defaultTaskFilters,
+  setTaskFilterPath: (pagePath) => set((state) => (state.pagePath === pagePath ? state : { pagePath, ...defaultTaskFilters })),
+  setPriorityFilter: (priorityFilter) => set({ priorityFilter }),
+  setAssigneeFilter: (assigneeFilter) => set({ assigneeFilter }),
+  setSearchPattern: (searchPattern) => set({ searchPattern }),
+  clearTaskFilters: () => set(defaultTaskFilters),
 }))

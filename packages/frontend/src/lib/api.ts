@@ -74,6 +74,14 @@ export interface TaskInfo {
   columnIcon?: string
 }
 
+export type TaskOverviewScope = 'board' | 'page'
+
+export interface TaskOverview {
+  scope: TaskOverviewScope
+  boards: BoardSummary[]
+  tasks: TaskInfo[]
+}
+
 export function encodePath(path: string) {
   return path.split('/').map(encodeURIComponent).join('/')
 }
@@ -106,7 +114,7 @@ export const api = {
   tree: () => request<{ tree: TreeNode[] }>('/api/tree'),
   users: () => request<{ users: { username: string }[] }>('/api/users'),
   page: (path: string) => request<PageBundle>(`/api/page/${encodePath(path)}`),
-  childBoards: (path: string) => request<{ boards: BoardSummary[]; tasks: TaskInfo[] }>(`/api/page/${encodePath(path)}/tasks`),
+  taskOverview: (path: string) => request<TaskOverview>(`/api/page/${encodePath(path)}/tasks`),
   writePage: (path: string, content: string, frontmatter: Record<string, unknown>) =>
     request<PageBundle>(`/api/page/${encodePath(path)}`, {
       method: 'PUT',

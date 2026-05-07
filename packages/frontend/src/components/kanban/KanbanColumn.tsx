@@ -1,6 +1,6 @@
 import { Pencil, Settings, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { KanbanBoard, KanbanColumn as Column } from '../../lib/api'
+import type { KanbanBoard, KanbanCard as Card, KanbanColumn as Column } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
@@ -14,6 +14,7 @@ export function KanbanColumn({
   columnIndex,
   board,
   editable,
+  visibleCards,
   users,
   onUpdate,
   onMove,
@@ -22,6 +23,7 @@ export function KanbanColumn({
   columnIndex: number
   board: KanbanBoard
   editable: boolean
+  visibleCards?: Array<{ card: Card; cardIndex: number }>
   users: string[]
   onUpdate: (board: KanbanBoard) => void
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
@@ -80,6 +82,8 @@ export function KanbanColumn({
     next.columns.splice(columnIndex, 1)
     onUpdate(next)
   }
+
+  const cardsToRender = visibleCards ?? column.cards.map((card, cardIndex) => ({ card, cardIndex }))
 
   return (
     <div
@@ -198,7 +202,7 @@ export function KanbanColumn({
         </form>
       )}
       <div className="space-y-4">
-        {column.cards.map((card, cardIndex) => (
+        {cardsToRender.map(({ card, cardIndex }) => (
           <KanbanCard
             key={`${card.title}-${cardIndex}`}
             card={card}

@@ -51,6 +51,14 @@ export interface TaskInfo {
   columnIcon?: string
 }
 
+export type TaskOverviewScope = 'board' | 'page'
+
+export interface TaskOverview {
+  scope: TaskOverviewScope
+  boards: BoardSummary[]
+  tasks: TaskInfo[]
+}
+
 export function safePath(relativePath = '') {
   const resolved = path.resolve(SPACE_DIR, relativePath)
   if (resolved !== SPACE_DIR && !resolved.startsWith(SPACE_DIR + path.sep)) {
@@ -310,7 +318,7 @@ async function collectBoardsRecursive(
   }
 }
 
-export async function readChildBoardsWithTasks(pagePath: string): Promise<{ boards: BoardSummary[]; tasks: TaskInfo[] }> {
+async function readChildBoardsWithTasks(pagePath: string): Promise<{ boards: BoardSummary[]; tasks: TaskInfo[] }> {
   const parent = await resolvePageStoragePath(pagePath)
   if (!parent.index) return { boards: [], tasks: [] }
 
@@ -319,6 +327,16 @@ export async function readChildBoardsWithTasks(pagePath: string): Promise<{ boar
   await collectBoardsRecursive(parent.pagePath, boards, tasks, 0, 10)
 
   return { boards: boards.sort((a, b) => a.title.localeCompare(b.title)), tasks }
+}
+
+export async function readTaskOverview(pagePath: string): Promise<TaskOverview> {
+  const page = await readPage(pagePath)
+  if (page.type === 'board') {
+    const details = summarizeBoardWithTasks(page.path, page)
+    return { scope: 'board', boards: details ? [details.summary] : [], tasks: details?.tasks ?? [] }
+  }
+
+  return { scope: 'page', ...(await readChildBoardsWithTasks(page.path)) }
 }
 
 export async function writePage(pagePath: string, content: string, frontmatter: Record<string, unknown> = {}) {

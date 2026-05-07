@@ -6,8 +6,8 @@ import {
   deletePage,
   deleteSection,
   movePage,
-  readChildBoardsWithTasks,
   readPage,
+  readTaskOverview,
   updatePageMeta,
   upsertSection,
   writePage,
@@ -43,7 +43,7 @@ filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) =>
 })
 
 filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res) => {
-  res.json(await readChildBoardsWithTasks(joinedPath(req.params.path)))
+  res.json(await readTaskOverview(joinedPath(req.params.path)))
 })
 
 filesRouter.get('/page/*path', requirePermission('read'), async (req, res) => {

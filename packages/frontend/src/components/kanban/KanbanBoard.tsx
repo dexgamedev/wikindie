@@ -1,10 +1,11 @@
 import { ArrowLeft, CheckCircle2, Plus, Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, type KanbanBoard as Board, type PageBundle } from '../../lib/api'
+import { api, type KanbanBoard as Board, type KanbanCard as Card, type PageBundle } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
-import { canWrite, useAuthStore, useFilesStore } from '../../lib/store'
+import { canWrite, useAuthStore, useFilesStore, useTaskFiltersStore } from '../../lib/store'
+import { compileSearchRegex, defaultTaskFilters, hasAppliedFilters, matchesKanbanCardFilters, type TaskFilterValues } from '../../lib/taskFilters'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
@@ -37,6 +38,10 @@ export function KanbanBoard({
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
   const role = useAuthStore((state) => state.role)
+  const filterPagePath = useTaskFiltersStore((state) => state.pagePath)
+  const priorityFilter = useTaskFiltersStore((state) => state.priorityFilter)
+  const assigneeFilter = useTaskFiltersStore((state) => state.assigneeFilter)
+  const searchPattern = useTaskFiltersStore((state) => state.searchPattern)
   const mayWrite = canWrite(role)
   const [board, setBoard] = useState(initial)
   const [saving, setSaving] = useState(false)
@@ -57,6 +62,31 @@ export function KanbanBoard({
   const displayTitle = title || pageNameFromPath(path)
   const cardCount = useMemo(() => board.columns.reduce((sum, column) => sum + column.cards.length, 0), [board])
   const doneCount = useMemo(() => board.columns.reduce((sum, column) => sum + column.cards.filter((card) => card.done).length, 0), [board])
+  const taskFilters = useMemo<TaskFilterValues>(
+    () => (filterPagePath === path ? { priorityFilter, assigneeFilter, searchPattern } : defaultTaskFilters),
+    [assigneeFilter, filterPagePath, path, priorityFilter, searchPattern],
+  )
+  const search = useMemo(() => compileSearchRegex(taskFilters.searchPattern), [taskFilters.searchPattern])
+  const filtersApplied = hasAppliedFilters(taskFilters, search.regex)
+  const cardMatchesFilter = useMemo(
+    () => (filtersApplied ? (card: Card, columnTitle: string) => matchesKanbanCardFilters(card, columnTitle, taskFilters, search.regex) : undefined),
+    [filtersApplied, search.regex, taskFilters],
+  )
+  const visibleColumns = useMemo(
+    () => board.columns
+      .map((column, columnIndex) => ({
+        column,
+        columnIndex,
+        cards: column.cards
+          .map((card, cardIndex) => ({ card, cardIndex }))
+          .filter(({ card }) => !cardMatchesFilter || cardMatchesFilter(card, column.title)),
+      })),
+    [board.columns, cardMatchesFilter],
+  )
+  const shownCardCount = useMemo(
+    () => (filtersApplied ? visibleColumns.reduce((sum, column) => sum + column.cards.length, 0) : cardCount),
+    [cardCount, filtersApplied, visibleColumns],
+  )
 
   useEffect(() => {
     setBoard(initial)
@@ -175,7 +205,7 @@ export function KanbanBoard({
         </div>
       </header>
 
-      <div className="board-scroll min-h-0 flex-1 overflow-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-5 md:p-8">
+      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-5 md:p-8">
       {mayWrite && metaEditing && (
         <article className="mb-6 max-w-3xl rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -236,26 +266,34 @@ export function KanbanBoard({
           <Button type="submit">Add</Button>
         </form>
       )}
-      <div className="board-scroll grid items-start gap-5 lg:grid-flow-col lg:auto-cols-[minmax(280px,1fr)] lg:overflow-x-auto">
-        {board.columns.map((column, columnIndex) => (
-          <KanbanColumn
-            key={`${column.title}-${columnIndex}`}
-            column={column}
-            columnIndex={columnIndex}
-            board={board}
-            editable={mayWrite}
-            users={users}
-            onUpdate={update}
-            onMove={moveCard}
-          />
-        ))}
+      <div className="workspace-scroll min-h-0 flex-1 overflow-x-auto overflow-y-visible pb-2">
+        <div className="grid w-max grid-flow-col auto-cols-[280px] items-start gap-4">
+          {visibleColumns.map(({ column, columnIndex, cards }) => (
+            <KanbanColumn
+              key={`${column.title}-${columnIndex}`}
+              column={column}
+              columnIndex={columnIndex}
+              board={board}
+              editable={mayWrite}
+              visibleCards={cards}
+              users={users}
+              onUpdate={update}
+              onMove={moveCard}
+            />
+          ))}
+        </div>
       </div>
+      {filtersApplied && shownCardCount === 0 && (
+        <div className="mt-5 rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-text-muted">
+          No cards match the current task filters.
+        </div>
+      )}
       </div>
 
       <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel/95 px-3 text-xs text-text-muted md:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <span>{board.columns.length.toLocaleString()} columns</span>
-          <span>{cardCount.toLocaleString()} cards</span>
+          <span>{filtersApplied ? `${shownCardCount.toLocaleString()}/${cardCount.toLocaleString()} shown` : `${cardCount.toLocaleString()} cards`}</span>
           <span>{doneCount.toLocaleString()} done</span>
         </div>
         <div className="flex shrink-0 items-center gap-3">
