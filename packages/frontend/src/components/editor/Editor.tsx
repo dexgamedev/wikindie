@@ -28,6 +28,18 @@ function textStats(value: string) {
   }
 }
 
+function formatDiskSize(bytes: number) {
+  if (bytes < 1024) return `${bytes.toLocaleString()} B`
+  const units = ['KB', 'MB', 'GB']
+  let value = bytes / 1024
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex++
+  }
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
+}
+
 function isCurrentPageEvent(currentPath: string, changedFilePath?: string) {
   if (!changedFilePath) return false
   if (changedFilePath === `${currentPath}.md`) return true
@@ -488,6 +500,7 @@ export function Editor({
         <div className="flex min-w-0 items-center gap-3">
           <span>{stats.words.toLocaleString()} words</span>
           <span>{stats.characters.toLocaleString()} characters</span>
+          <span>{formatDiskSize(page.diskSizeBytes)} disk</span>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="hidden items-center gap-1.5 sm:flex">

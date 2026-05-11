@@ -52,6 +52,14 @@ server.on('upgrade', (req, socket, head) => {
 
 startWatcher(wss)
 
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Stop the existing process or start Wikindie with a different PORT.`)
+    process.exit(1)
+  }
+  throw error
+})
+
 server.listen(port, () => {
   console.log(`Wikindie listening on http://localhost:${port}`)
 })

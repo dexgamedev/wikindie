@@ -21,6 +21,7 @@ export interface PageSection {
 export interface PageBundle extends MarkdownFile {
   path: string
   type: 'page' | 'board'
+  diskSizeBytes: number
   sections: Array<{ title: string; path: string; content: string }>
 }
 
@@ -110,6 +111,11 @@ async function writeMarkdownByPath(relativePath: string, content: string, frontm
   await fs.mkdir(path.dirname(fullPath), { recursive: true })
   const body = Object.keys(frontmatter).length ? matter.stringify(content, frontmatter) : content
   await fs.writeFile(fullPath, body.trimEnd() + '\n', 'utf8')
+}
+
+async function markdownFileSize(relativePath: string) {
+  const stat = await fs.stat(safePath(normalizeFilePath(relativePath)))
+  return stat.size
 }
 
 export async function resolvePageStoragePath(pagePath: string, forWrite = false) {
@@ -212,25 +218,28 @@ export async function readPage(pagePath: string): Promise<PageBundle> {
   const resolved = await resolvePageStoragePath(pagePath)
   const page = await readMarkdownByPath(resolved.relativePath)
   const sections = parseSections(page.frontmatter)
+  const pageDiskSizeBytes = await markdownFileSize(resolved.relativePath)
 
   const loadedSections = await Promise.all(
     sections.map(async (section) => {
       const relativeSectionPath = `${resolved.pagePath}/${section.path}`.replace(/\/+/g, '/')
       try {
         const file = await readMarkdown(relativeSectionPath)
-        return { ...section, content: file.content }
+        return { section: { ...section, content: file.content }, diskSizeBytes: await markdownFileSize(relativeSectionPath) }
       } catch {
         await writeMarkdown(relativeSectionPath, `# ${section.title}\n`, {})
-        return { ...section, content: `# ${section.title}\n` }
+        return { section: { ...section, content: `# ${section.title}\n` }, diskSizeBytes: await markdownFileSize(relativeSectionPath) }
       }
     }),
   )
+  const sectionDiskSizeBytes = loadedSections.reduce((sum, item) => sum + item.diskSizeBytes, 0)
 
   return {
     ...page,
     path: resolved.pagePath,
     type: page.frontmatter.kanban === true ? 'board' : 'page',
-    sections: loadedSections,
+    diskSizeBytes: pageDiskSizeBytes + sectionDiskSizeBytes,
+    sections: loadedSections.map((item) => item.section),
   }
 }
 

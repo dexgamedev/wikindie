@@ -6,6 +6,7 @@ import { api } from '../../lib/api'
 import { getPageDragPayload, hasPageDragPayload } from '../../lib/pageDrag'
 import { findTreeNode, pagePathFromLocation, pageUrl } from '../../lib/paths'
 import { canWrite, useAuthStore, useFilesStore } from '../../lib/store'
+import { appVersion } from '../../lib/version'
 import { PageIcon } from '../ui/PageIcon'
 
 import { AccountMenu } from './AccountMenu'
@@ -98,7 +99,10 @@ export function Sidebar({
         <div className={`hidden items-center border-b border-border px-4 py-3 lg:flex ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
           <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
             <img src={logoUrl} alt="" className="block h-8 w-auto shrink-0" />
-            <span className={`translate-y-0.5 truncate text-lg font-bold tracking-tight text-text ${collapsed ? 'hidden' : ''}`}>Wikindie</span>
+            <span className={`min-w-0 translate-y-0.5 ${collapsed ? 'hidden' : ''}`}>
+              <span className="block truncate text-lg font-bold leading-none tracking-tight text-text">Wikindie</span>
+              <span className="block text-[10px] font-semibold leading-none tracking-wide text-text-muted">{appVersion}</span>
+            </span>
           </Link>
         </div>
 

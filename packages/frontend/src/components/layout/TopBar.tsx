@@ -1,6 +1,7 @@
 import { Menu, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import logoUrl from '../../assets/wikindie_logo.png'
+import { appVersion } from '../../lib/version'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { AccountMenu } from './AccountMenu'
 
@@ -24,7 +25,10 @@ export function TopBar({
         </button>
         <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
           <img src={logoUrl} alt="" className="block h-9 w-auto shrink-0 md:h-10" />
-          <span className="hidden translate-y-0.5 truncate text-xl font-bold leading-none tracking-tight text-text sm:block md:text-2xl">Wikindie</span>
+          <span className="hidden min-w-0 translate-y-0.5 sm:block">
+            <span className="block truncate text-xl font-bold leading-none tracking-tight text-text md:text-2xl">Wikindie</span>
+            <span className="block text-[10px] font-semibold leading-none tracking-wide text-text-muted md:text-[11px]">{appVersion}</span>
+          </span>
         </Link>
       </div>
 

@@ -24,6 +24,7 @@ export interface PageSection {
 export interface PageBundle extends MarkdownFile {
   path: string
   type: 'page' | 'board'
+  diskSizeBytes: number
   sections: PageSection[]
   board?: KanbanBoard
 }

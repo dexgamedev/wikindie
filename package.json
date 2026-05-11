@@ -1,6 +1,6 @@
 {
   "name": "wikindie",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Filesystem-backed wiki for notes, docs, and lightweight planning.",
   "license": "MIT",
   "private": true,
