@@ -206,7 +206,8 @@ textarea {
 .markdown-preview table {
   border-collapse: collapse;
   min-width: 100%;
-  width: max-content;
+  table-layout: auto;
+  width: 100%;
 }
 
 .markdown-preview .markdown-table-scroll {
@@ -227,7 +228,8 @@ textarea {
   min-width: 8rem;
   padding: 0.5rem 0.75rem;
   vertical-align: top;
-  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .markdown-preview th {
