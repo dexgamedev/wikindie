@@ -13,6 +13,7 @@ import { authenticateToken, requireAuth } from './middleware/auth.js'
 import { adminRouter } from './routes/admin.js'
 import { authRouter } from './routes/auth.js'
 import { filesRouter } from './routes/files.js'
+import { recentsRouter } from './routes/recents.js'
 
 const app = express()
 const server = http.createServer(app)
@@ -30,6 +31,7 @@ app.use(express.json({ limit: '2mb' }))
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', authRouter)
 app.use('/api/admin', requireAuth, adminRouter)
+app.use('/api/recents', requireAuth, recentsRouter)
 app.use('/api', requireAuth, filesRouter)
 app.use(express.static(publicDir))
 app.get('*splat', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')))

@@ -82,6 +82,13 @@ export interface TaskOverview {
   tasks: TaskInfo[]
 }
 
+export interface RecentPage {
+  path: string
+  title: string
+  mtime: string
+  type: 'page' | 'board'
+}
+
 export function encodePath(path: string) {
   return path.split('/').map(encodeURIComponent).join('/')
 }
@@ -149,4 +156,5 @@ export const api = {
   kanban: (path: string) => request<PageBundle & { board: KanbanBoard }>(`/api/kanban/${encodePath(path)}`),
   saveKanban: (path: string, board: KanbanBoard) =>
     request<PageBundle>(`/api/kanban/${encodePath(path)}`, { method: 'PUT', body: JSON.stringify({ board }) }),
+  recents: (limit = 10) => request<{ pages: RecentPage[] }>(`/api/recents?limit=${limit}`),
 }

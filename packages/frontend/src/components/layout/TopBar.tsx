@@ -1,4 +1,5 @@
 import { Menu, Search } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import logoUrl from '../../assets/wikindie_logo.png'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { AccountMenu } from './AccountMenu'
@@ -11,8 +12,8 @@ export function TopBar({
   onSearchOpen: () => void
 }) {
   return (
-    <header className="panel flex h-14 shrink-0 items-center justify-between gap-2 px-3 md:h-16 md:px-4">
-      <div className="flex min-w-0 shrink items-center gap-3">
+    <header className="panel relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 px-3 md:h-16 md:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
           className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text lg:hidden"
           onClick={onOpenMobile}
@@ -21,13 +22,13 @@ export function TopBar({
         >
           <Menu size={17} />
         </button>
-        <div className="flex min-w-0 items-center gap-2.5">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-lg transition hover:opacity-80">
           <img src={logoUrl} alt="" className="block h-9 w-auto shrink-0 md:h-10" />
           <span className="hidden translate-y-0.5 truncate text-xl font-extrabold leading-none tracking-tight text-text sm:block md:text-2xl">Wikindie</span>
-        </div>
+        </Link>
       </div>
 
-      <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <button
           className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text sm:hidden"
           onClick={onSearchOpen}
