@@ -155,10 +155,10 @@ export function KanbanBoard({
 
   return (
     <section className="flex h-full min-h-0 flex-col">
-      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
+      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel px-3 md:px-4">
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <button
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
             onClick={() => goBack(navigate)}
             title="Go back"
             aria-label="Go back"
@@ -187,7 +187,7 @@ export function KanbanBoard({
           </span>
           {mayWrite && <Button className="hidden py-1.5 sm:inline-flex" onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
           <button
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
             onClick={openTasks}
             title="Task overview"
             aria-label="Open task overview"
@@ -196,7 +196,7 @@ export function KanbanBoard({
             <ListChecks size={16} />
           </button>
           <ActionMenu
-            buttonClassName="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+            buttonClassName="grid size-9 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
             iconSize={18}
             label="Board actions"
             menuClassName="w-48"
@@ -219,14 +219,14 @@ export function KanbanBoard({
         </div>
       </header>
 
-      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)] p-3 sm:p-4 md:p-6 xl:p-8">
+      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content p-3 sm:p-4 md:p-6 xl:p-8">
       {mayWrite && metaEditing && (
-        <article className="mb-4 max-w-3xl rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow sm:mb-6 sm:p-5">
+        <article className="mb-4 max-w-3xl rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold">Board meta</h3>
             <span className="text-xs text-text-muted">Title and sidebar icon</span>
           </div>
-          <div className="mb-4 grid max-h-72 gap-4 overflow-y-auto rounded-lg border border-border bg-input p-3">
+          <div className="mb-4 grid max-h-72 gap-4 overflow-y-auto rounded-md border border-border bg-input p-3">
             {iconCategories.map((category) => (
               <div key={category}>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{category}</div>
@@ -234,7 +234,7 @@ export function KanbanBoard({
                   {wikiIcons.filter((item) => item.category === category).map((item) => (
                     <button
                       key={item.id}
-                      className={`grid size-9 place-items-center rounded-lg border text-lg transition ${metaIcon === item.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
+                      className={`grid size-9 place-items-center rounded-md border text-lg transition ${metaIcon === item.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
                       onClick={() => setMetaIcon(item.id)}
                       title={`${item.label} (${item.id})`}
                       type="button"
@@ -264,7 +264,7 @@ export function KanbanBoard({
       )}
       {mayWrite && addingColumn && (
         <form
-          className="mb-4 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-lg shadow-shadow sm:mb-6 sm:flex-row sm:items-center"
+          className="mb-4 flex max-w-md flex-col gap-3 rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:flex-row sm:items-center"
           onSubmit={(event) => {
             event.preventDefault()
             addColumn()
@@ -298,13 +298,13 @@ export function KanbanBoard({
         </div>
       </div>
       {filtersApplied && shownCardCount === 0 && (
-        <div className="mt-5 rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-text-muted">
+        <div className="mt-5 rounded-md border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-text-muted">
           No cards match the current task filters.
         </div>
       )}
       </div>
 
-      <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel/95 px-3 text-xs text-text-muted md:px-4">
+      <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel px-3 text-xs text-text-muted md:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <span>{board.columns.length.toLocaleString()} columns</span>
           <span>{filtersApplied ? `${shownCardCount.toLocaleString()}/${cardCount.toLocaleString()} shown` : `${cardCount.toLocaleString()} cards`}</span>

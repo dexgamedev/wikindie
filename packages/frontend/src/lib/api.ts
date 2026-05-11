@@ -82,9 +82,18 @@ export interface TaskOverview {
   tasks: TaskInfo[]
 }
 
+export interface WorkspaceStats {
+  totalPages: number
+  totalBoards: number
+  totalTasks: number
+  doneTasks: number
+  diskSizeBytes: number
+}
+
 export interface RecentPage {
   path: string
   title: string
+  icon?: string
   mtime: string
   type: 'page' | 'board'
 }
@@ -157,4 +166,5 @@ export const api = {
   saveKanban: (path: string, board: KanbanBoard) =>
     request<PageBundle>(`/api/kanban/${encodePath(path)}`, { method: 'PUT', body: JSON.stringify({ board }) }),
   recents: (limit = 10) => request<{ pages: RecentPage[] }>(`/api/recents?limit=${limit}`),
+  stats: () => request<{ stats: WorkspaceStats }>('/api/stats'),
 }

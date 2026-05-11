@@ -76,16 +76,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [location.pathname])
 
   return (
-    <div className="flex h-dvh flex-col gap-3 bg-body p-3 text-text md:p-4">
-      <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
+    <div className="flex h-dvh flex-col gap-2 bg-body p-2 text-text md:p-3">
+      <div className="lg:hidden">
+        <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
+      </div>
       <QuickFindModal open={quickFindOpen} onClose={closeQuickFind} />
       <MobileTaskPanelContext.Provider value={{ openTasks: () => setMobileTaskPanelOpen(true) }}>
-        <div className="flex min-h-0 flex-1 gap-3">
+        <div className="flex min-h-0 flex-1 gap-2">
           <Sidebar
             mobileOpen={mobileOpen}
             onCloseMobile={() => setMobileOpen(false)}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={toggleSidebarCollapsed}
+            onSearchOpen={() => setQuickFindOpen(true)}
           />
           <main className="panel min-w-0 flex-1 overflow-hidden">
             {children}

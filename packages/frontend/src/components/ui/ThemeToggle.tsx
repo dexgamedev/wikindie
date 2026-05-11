@@ -25,7 +25,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      className="relative z-20 grid size-10 shrink-0 touch-manipulation place-items-center rounded-lg bg-surface-hover text-text-muted transition hover:bg-accent/10 hover:text-text sm:bg-transparent"
+      className="relative z-20 grid size-10 shrink-0 touch-manipulation place-items-center rounded-md bg-surface-hover text-text-muted transition hover:bg-accent/10 hover:text-text sm:bg-transparent"
       onPointerUp={handlePointerUp}
       onClick={handleClick}
       aria-pressed={theme === 'dark'}

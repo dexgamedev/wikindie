@@ -15,22 +15,22 @@ export function TopBar({
     <header className="panel relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 px-3 md:h-16 md:px-4">
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
-          className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text lg:hidden"
+          className="grid size-10 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text lg:hidden"
           onClick={onOpenMobile}
           aria-label="Open sidebar"
           title="Open sidebar"
         >
           <Menu size={17} />
         </button>
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-lg transition hover:opacity-80">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
           <img src={logoUrl} alt="" className="block h-9 w-auto shrink-0 md:h-10" />
-          <span className="hidden translate-y-0.5 truncate text-xl font-extrabold leading-none tracking-tight text-text sm:block md:text-2xl">Wikindie</span>
+          <span className="hidden translate-y-0.5 truncate text-xl font-bold leading-none tracking-tight text-text sm:block md:text-2xl">Wikindie</span>
         </Link>
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <button
-          className="grid size-10 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text sm:hidden"
+          className="grid size-10 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text sm:hidden"
           onClick={onSearchOpen}
           title="Search pages"
           aria-label="Search pages"
@@ -39,7 +39,7 @@ export function TopBar({
           <Search size={15} />
         </button>
         <button
-          className="hidden shrink-0 items-center gap-2 rounded-lg border border-control-border bg-surface-hover px-3 py-2 text-sm text-text-muted transition hover:border-accent hover:bg-control hover:text-text sm:flex"
+          className="hidden shrink-0 items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-muted transition hover:border-accent hover:text-text sm:flex"
           onClick={onSearchOpen}
           title="Search pages"
           type="button"
@@ -49,7 +49,7 @@ export function TopBar({
           <kbd className="hidden rounded border border-border bg-input px-1.5 py-0.5 text-[10px] text-text-muted md:inline">Ctrl K</kbd>
         </button>
         <ThemeToggle />
-        <AccountMenu direction="down" compact />
+        <AccountMenu direction="down" />
       </div>
     </header>
   )

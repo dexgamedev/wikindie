@@ -1,10 +1,11 @@
-import { ChevronDown, ChevronUp, LogOut, Shield } from 'lucide-react'
+import { LogOut, Moon, Shield, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTheme } from '../../hooks/useTheme'
 import { roleBadgeClass } from '../../lib/badges'
 import { useAuthStore } from '../../lib/store'
 
-export function AccountMenu({ collapsed = false, direction = 'down', compact = false }: { collapsed?: boolean; direction?: 'up' | 'down'; compact?: boolean }) {
+export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const username = useAuthStore((state) => state.username)
@@ -40,49 +41,41 @@ export function AccountMenu({ collapsed = false, direction = 'down', compact = f
     }
   }, [open])
 
+  const { theme, toggle: toggleTheme } = useTheme()
+  const ThemeIcon = theme === 'dark' ? Sun : Moon
+
   const signOut = () => {
     logout()
     navigate('/login')
   }
 
-  const labelClass = compact ? 'hidden' : collapsed ? 'md:hidden' : ''
   const popupPosition = direction === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'
-  const popupAlign = direction === 'down' || compact ? 'right-0' : 'left-0'
-  const popupWidth = compact || collapsed ? 'w-[260px]' : 'w-full'
-  const ChevronIcon = direction === 'down' ? ChevronDown : ChevronUp
 
   return (
     <div ref={rootRef} className="relative">
       <button
-        className={`flex w-full items-center rounded-lg py-2 text-left transition hover:bg-accent/10 ${compact ? 'justify-center px-2' : collapsed ? 'gap-3 px-2 md:justify-center md:px-0' : 'gap-3 px-3'}`}
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-white transition hover:brightness-110"
         onClick={() => setOpen((value) => !value)}
-        title={compact || collapsed ? username ?? 'Account' : undefined}
+        title={username ?? 'Account'}
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-cyan-300 text-sm font-bold text-slate-950">
-          {initials}
-        </span>
-        <span className={`min-w-0 flex-1 ${labelClass}`}>
-          <span className="block truncate text-sm font-medium text-text">{username ?? 'Account'}</span>
-          <span className="block truncate text-xs capitalize text-text-muted">{role ?? 'signed in'}</span>
-        </span>
-        <ChevronIcon size={15} className={`text-text-muted transition ${open ? 'rotate-180' : ''} ${labelClass}`} />
+        {initials}
       </button>
 
       {open && (
-        <div className={`absolute ${popupPosition} ${popupAlign} z-50 rounded-lg border border-border bg-input p-2 shadow-2xl ${popupWidth}`}>
-          <div className="mb-2 flex items-center gap-3 rounded-lg bg-surface p-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-cyan-300 text-sm font-bold text-slate-950">
+        <div className={`absolute ${popupPosition} right-0 z-50 w-[260px] rounded-md border border-border bg-input p-2 shadow-lg shadow-heavy`}>
+          <div className="mb-2 flex items-center gap-3 rounded-md bg-surface p-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-white">
               {initials}
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-text">{username ?? 'Account'}</p>
-              <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs capitalize ${roleBadgeClass(role)}`}>{role ?? 'unknown'}</span>
+              <span className={`mt-1 inline-flex rounded border px-2 py-0.5 text-xs capitalize ${roleBadgeClass(role)}`}>{role ?? 'unknown'}</span>
             </div>
           </div>
 
           {role === 'admin' && (
             <button
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
+              className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
               onClick={() => {
                 setOpen(false)
                 navigate('/admin')
@@ -91,8 +84,14 @@ export function AccountMenu({ collapsed = false, direction = 'down', compact = f
               <Shield size={15} /> Admin Console
             </button>
           )}
+          <button
+            className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
+            onClick={toggleTheme}
+          >
+            <ThemeIcon size={15} /> {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
           <div className="my-1 border-t border-border" />
-          <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger/10" onClick={signOut}>
+          <button className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-danger hover:bg-danger/10" onClick={signOut}>
             <LogOut size={15} /> Logout
           </button>
         </div>

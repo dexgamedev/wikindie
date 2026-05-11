@@ -34,8 +34,8 @@ export function QuickFindModal({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-start overflow-hidden bg-overlay p-3 md:place-items-center" onClick={onClose}>
-      <div className="mt-10 w-full max-w-xl overflow-hidden rounded-lg border border-border bg-input p-3 shadow-2xl md:mt-0" onClick={(event) => event.stopPropagation()}>
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+      <div className="mt-10 w-full max-w-xl overflow-hidden rounded-md border border-border bg-input p-3 shadow-lg shadow-heavy md:mt-0" onClick={(event) => event.stopPropagation()}>
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2">
           <Search size={16} className="shrink-0 text-text-muted" />
           <input
             autoFocus
@@ -52,7 +52,7 @@ export function QuickFindModal({ open, onClose }: { open: boolean; onClose: () =
           {filtered.map((node) => (
             <button
               key={node.path}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-text-muted hover:bg-accent/10 hover:text-text"
+              className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-text-muted hover:bg-accent/10 hover:text-text"
               onClick={() => {
                 navigate(pageUrl(node.path))
                 onClose()

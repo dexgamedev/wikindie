@@ -10,7 +10,7 @@ function initialsForUsername(username: string) {
 export function UserIconBadge({ username, className = 'size-5' }: { username: string; className?: string }) {
   return (
     <span
-      className={`grid place-items-center rounded-full border border-card bg-gradient-to-br from-indigo-400 to-cyan-300 text-[10px] font-bold text-slate-950 shadow-sm shadow-shadow ${className}`}
+      className={`grid place-items-center rounded-full border border-card bg-accent text-[10px] font-bold text-white shadow-sm shadow-shadow ${className}`}
       title={`Assigned to ${username}`}
     >
       {initialsForUsername(username)}

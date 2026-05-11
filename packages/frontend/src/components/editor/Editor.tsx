@@ -221,10 +221,10 @@ export function Editor({
 
   return (
     <section className="flex h-full min-h-0 flex-col">
-      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel/95 px-3 backdrop-blur md:px-4">
+      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel px-3 md:px-4">
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <button
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
             onClick={() => goBack(navigate)}
             title="Go back"
             aria-label="Go back"
@@ -252,7 +252,7 @@ export function Editor({
             {statusLabel}
           </span>
           {mayWrite && (
-            <div className="hidden rounded-lg border border-control-border bg-control p-0.5 text-sm sm:flex">
+            <div className="hidden rounded-md border border-control-border bg-control p-0.5 text-sm sm:flex">
               <button
                 className={`rounded-md px-3 py-1.5 transition ${editing ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-text-muted hover:bg-control-hover hover:text-text'}`}
                 onClick={() => setEditing(true)}
@@ -271,7 +271,7 @@ export function Editor({
             </div>
           )}
           <button
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
             onClick={openTasks}
             title="Task overview"
             aria-label="Open task overview"
@@ -280,7 +280,7 @@ export function Editor({
             <ListChecks size={16} />
           </button>
           <ActionMenu
-            buttonClassName="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+            buttonClassName="grid size-9 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
             iconSize={18}
             label="Page actions"
             menuClassName="w-52"
@@ -320,12 +320,12 @@ export function Editor({
         </div>
       </header>
 
-      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto bg-content bg-[radial-gradient(circle_at_50%_0%,var(--color-content-glow),transparent_32rem)]">
+      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto bg-content">
         <div className="mx-auto w-full max-w-5xl p-5 md:p-10">
-          {externalChange && <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">This page changed on disk while you had local edits.</div>}
+          {externalChange && <div className="mb-6 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">This page changed on disk while you had local edits.</div>}
 
           {mayWrite && metaEditing && (
-            <article className="mb-6 rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+            <article className="mb-6 rounded-md border border-border bg-card p-5 shadow-sm shadow-shadow">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-text">Page meta</h3>
@@ -341,7 +341,7 @@ export function Editor({
                       {wikiIcons.filter((item) => item.category === category).map((item) => (
                         <button
                           key={item.id}
-                          className={`grid size-8 place-items-center rounded-lg border text-lg transition hover:-translate-y-0.5 hover:border-accent hover:bg-accent/10 ${icon === item.id ? 'border-accent bg-accent/15 shadow-sm shadow-accent/20 ring-1 ring-accent/40' : 'border-transparent'}`}
+                          className={`grid size-8 place-items-center rounded-md border text-lg transition hover:border-accent hover:bg-accent/10 ${icon === item.id ? 'border-accent bg-accent/15 shadow-sm shadow-accent/20 ring-1 ring-accent/40' : 'border-transparent'}`}
                           onClick={() => setIcon(item.id)}
                           title={`${item.label} (${item.id})`}
                           type="button"
@@ -367,7 +367,7 @@ export function Editor({
           )}
 
           {childPages.length > 0 && (
-        <div className="mb-6 rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+        <div className="mb-6 rounded-md border border-border bg-card p-5 shadow-sm shadow-shadow">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-text-muted">Pages</h3>
             <span className="text-xs text-text-muted">{childPages.length} linked automatically</span>
@@ -377,7 +377,7 @@ export function Editor({
               <Link
                 key={child.path}
                 to={pageUrl(child.path)}
-                className="group rounded-lg border border-border bg-card p-4 transition hover:border-accent hover:bg-accent/10"
+                className="group rounded-md border border-border bg-card p-4 transition hover:border-accent hover:bg-accent/10"
               >
                 <div className="mb-1 flex min-w-0 items-center gap-2">
                   <PageIcon icon={child.icon} fallback={child.type === 'board' ? 'board' : 'page'} />
@@ -391,7 +391,7 @@ export function Editor({
           )}
 
           {mayWrite && editing ? (
-            <div className="mb-10 rounded-lg border border-border/70 bg-card p-6">
+            <div className="mb-10 rounded-md border border-border/70 bg-card p-6">
               <textarea
                 className="min-h-[52vh] w-full resize-y bg-transparent font-mono text-[15px] leading-7 text-text outline-none"
                 value={content}
@@ -415,7 +415,7 @@ export function Editor({
 
         {mayWrite && addingSection && (
           <form
-            className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4"
+            className="mb-6 flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-4"
             onSubmit={(event) => {
               event.preventDefault()
               void addSection()
@@ -438,7 +438,7 @@ export function Editor({
             const sectionEditing = editingSection === section.path
 
             return (
-              <article key={section.path} className="rounded-lg border border-border bg-card p-5 shadow-lg shadow-shadow">
+              <article key={section.path} className="rounded-md border border-border bg-card p-5 shadow-sm shadow-shadow">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   {mayWrite && sectionEditing ? (
                     <input
@@ -463,7 +463,7 @@ export function Editor({
                 </div>
                 {mayWrite && sectionEditing ? (
                   <textarea
-                    className="min-h-[180px] w-full resize-y rounded-lg border border-border bg-input p-3 font-mono text-sm text-text outline-none focus:border-accent"
+                    className="min-h-[180px] w-full resize-y rounded-md border border-border bg-input p-3 font-mono text-sm text-text outline-none focus:border-accent"
                     value={draft.content}
                     onChange={(event) => setSectionDrafts((prev) => ({ ...prev, [section.path]: { ...draft, content: event.target.value } }))}
                     spellCheck={false}
@@ -475,7 +475,7 @@ export function Editor({
             )
           })}
           {!page.sections.length && (
-            <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-text-muted xl:col-span-2">
+            <div className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-text-muted xl:col-span-2">
               No sections yet. Add one to split this page into modular sub-files.
             </div>
           )}
@@ -484,7 +484,7 @@ export function Editor({
       </div>
       </div>
 
-      <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel/95 px-3 text-xs text-text-muted md:px-4">
+      <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel px-3 text-xs text-text-muted md:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <span>{stats.words.toLocaleString()} words</span>
           <span>{stats.characters.toLocaleString()} characters</span>

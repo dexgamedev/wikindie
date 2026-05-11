@@ -35,7 +35,7 @@ export function ActionMenu({
   children,
   label = 'Actions',
   align = 'end',
-  buttonClassName = 'grid size-9 place-items-center rounded-lg text-text-muted hover:bg-accent/10 hover:text-text',
+  buttonClassName = 'grid size-9 place-items-center rounded-md text-text-muted hover:bg-accent/10 hover:text-text',
   iconSize = 15,
   menuClassName = 'w-56',
   onClose,
@@ -134,7 +134,7 @@ export function ActionMenu({
         createPortal(
           <div
             ref={menuRef}
-            className={`action-menu-scroll fixed z-50 overflow-y-auto rounded-lg border border-border bg-input p-1.5 shadow-2xl shadow-heavy ${menuClassName}`}
+            className={`action-menu-scroll fixed z-50 overflow-y-auto rounded-md border border-border bg-input p-1.5 shadow-lg shadow-heavy ${menuClassName}`}
             style={position ? position : { left: 0, maxHeight: window.innerHeight - 16, top: 0, visibility: 'hidden' }}
           >
             {typeof children === 'function' ? children({ close }) : children}
@@ -158,7 +158,7 @@ export function ActionMenuItem({
 }) {
   return (
     <button
-      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
         danger ? 'text-danger hover:bg-danger/10' : 'text-text hover:bg-accent/10'
       }`}
       disabled={disabled}

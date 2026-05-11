@@ -87,7 +87,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className="rounded-lg border border-border bg-surface p-3 sm:p-4"
+      className="rounded-md border border-border bg-surface p-3 sm:p-4"
       onDragOver={(event) => {
         if (editable) event.preventDefault()
       }}
@@ -149,7 +149,7 @@ export function KanbanColumn({
           )}
       </div>
       {editable && metaEditing && (
-        <article className="mb-4 rounded-lg border border-border bg-card p-3">
+        <article className="mb-4 rounded-md border border-border bg-card p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h4 className="text-sm font-semibold text-text">Column meta</h4>
             <span className="text-xs text-text-muted">Icon and title</span>
@@ -160,7 +160,7 @@ export function KanbanColumn({
             onChange={(event) => setMetaTitle(event.target.value)}
             placeholder="Column title"
           />
-          <div className="mb-3 max-h-48 overflow-y-auto rounded-lg border border-border bg-input p-2">
+          <div className="mb-3 max-h-48 overflow-y-auto rounded-md border border-border bg-input p-2">
             {iconCategories.map((category) => (
               <div key={category} className="mb-3 last:mb-0">
                 <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">{category}</div>
@@ -168,7 +168,7 @@ export function KanbanColumn({
                   {wikiIcons.filter((icon) => icon.category === category).map((icon) => (
                     <button
                       key={icon.id}
-                      className={`grid size-8 place-items-center rounded-lg border text-base transition ${metaIcon === icon.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
+                      className={`grid size-8 place-items-center rounded-md border text-base transition ${metaIcon === icon.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
                       onClick={() => setMetaIcon(icon.id)}
                       title={`${icon.label} (${icon.id})`}
                       type="button"

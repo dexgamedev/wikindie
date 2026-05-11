@@ -15,6 +15,8 @@ import { authRouter } from './routes/auth.js'
 import { filesRouter } from './routes/files.js'
 import { recentsRouter } from './routes/recents.js'
 
+import { statsRouter } from './routes/stats.js'
+
 const app = express()
 const server = http.createServer(app)
 const wss = new WebSocketServer({ noServer: true })
@@ -32,6 +34,8 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', authRouter)
 app.use('/api/admin', requireAuth, adminRouter)
 app.use('/api/recents', requireAuth, recentsRouter)
+app.use('/api/stats', requireAuth, statsRouter)
+
 app.use('/api', requireAuth, filesRouter)
 app.use(express.static(publicDir))
 app.get('*splat', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')))

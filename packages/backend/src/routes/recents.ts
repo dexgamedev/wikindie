@@ -9,6 +9,7 @@ export const recentsRouter = Router()
 interface RecentPage {
   path: string
   title: string
+  icon?: string
   mtime: string
   type: 'page' | 'board'
 }
@@ -40,7 +41,8 @@ async function collectPages(dir: string, pages: RecentPage[]) {
       const parsed = matter(raw)
       const title = String(parsed.data.title ?? pagePath.split('/').at(-1) ?? pagePath)
       const type = parsed.data.kanban === true ? 'board' : 'page'
-      pages.push({ path: pagePath, title, mtime: stat.mtime.toISOString(), type })
+      const icon = typeof parsed.data.icon === 'string' ? parsed.data.icon : undefined
+      pages.push({ path: pagePath, title, icon, mtime: stat.mtime.toISOString(), type })
     } catch {
       // skip unreadable files
     }

@@ -243,7 +243,7 @@ export function TreeItem({
         {(mayWrite || mayDelete) && (
           <ActionMenu
             align="start"
-            buttonClassName={`grid size-9 place-items-center rounded-lg text-text-muted opacity-100 hover:bg-accent/10 hover:text-text lg:opacity-0 lg:group-hover:opacity-100 ${collapsed ? 'lg:hidden' : ''}`}
+            buttonClassName={`grid size-9 place-items-center rounded-md text-text-muted opacity-100 hover:bg-accent/10 hover:text-text lg:opacity-0 lg:group-hover:opacity-100 ${collapsed ? 'lg:hidden' : ''}`}
             label="Page actions"
             menuClassName="w-[200px]"
             onClose={() => setConfirmDelete(false)}

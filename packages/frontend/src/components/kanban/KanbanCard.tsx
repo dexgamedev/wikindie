@@ -98,7 +98,7 @@ export function KanbanCard({
       onDragStart={(event) => {
         if (editable && !editing) event.dataTransfer.setData('text/plain', `${columnIndex}:${cardIndex}`)
       }}
-      className={`relative rounded-lg border border-border bg-card p-3 shadow-lg shadow-shadow hover:border-accent sm:p-4 ${assignees.length ? 'pb-10' : ''} ${editable ? 'cursor-grab' : ''}`}
+      className={`relative rounded-md border border-border bg-card p-3 shadow-sm shadow-shadow hover:border-accent sm:p-4 ${assignees.length ? 'pb-10' : ''} ${editable ? 'cursor-grab' : ''}`}
     >
       <div className="flex items-start gap-3">
         <input type="checkbox" checked={card.done} onChange={toggleDone} className="mt-0.5 size-5 accent-accent" disabled={!editable} />
@@ -127,8 +127,8 @@ export function KanbanCard({
                 }}
               />
               <div className="flex flex-wrap gap-2">
-                <button className="rounded-lg border border-control-border bg-control px-2.5 py-1.5 text-xs font-medium text-text hover:border-accent hover:bg-control-hover" type="submit">Save</button>
-                <button className="rounded-lg px-2.5 py-1.5 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={cancelEdit} type="button">Cancel</button>
+                <button className="rounded-md border border-control-border bg-control px-2.5 py-1.5 text-xs font-medium text-text hover:border-accent hover:bg-control-hover" type="submit">Save</button>
+                <button className="rounded-md px-2.5 py-1.5 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={cancelEdit} type="button">Cancel</button>
               </div>
             </form>
           ) : (
@@ -160,7 +160,7 @@ export function KanbanCard({
                     {board.columns.map((column, targetIndex) => (
                       <button
                         key={`${column.title}-${targetIndex}`}
-                        className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-text hover:bg-accent/10 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
+                        className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text hover:bg-accent/10 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
                         disabled={targetIndex === columnIndex}
                         onClick={() => { moveToColumn(targetIndex); close() }}
                         type="button"
@@ -180,7 +180,7 @@ export function KanbanCard({
                 {priorityOptions.map((option) => (
                   <button
                     key={option.label}
-                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-accent/10"
+                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent/10"
                     onClick={() => { setPriority(option.value); close() }}
                     type="button"
                   >
@@ -199,7 +199,7 @@ export function KanbanCard({
                     return (
                       <button
                         key={username}
-                        className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-accent/10"
+                        className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent/10"
                         onClick={() => toggleAssignee(username)}
                         type="button"
                       >

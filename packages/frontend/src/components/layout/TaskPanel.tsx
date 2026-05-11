@@ -211,7 +211,7 @@ export function TaskPanel({
   const collapsedPanel = (
     <aside className="panel hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-3 transition-[width,padding] duration-200 xl:flex">
       <button
-        className="grid size-9 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+        className="grid size-9 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
         onClick={onToggleCollapsed}
         title="Expand task panel"
         aria-label="Expand task panel"
@@ -221,7 +221,7 @@ export function TaskPanel({
       </button>
 
       <div className="mt-4 flex flex-1 flex-col items-center gap-3">
-        <div className="grid size-9 place-items-center rounded-lg border border-border bg-card text-text-muted" title="Task overview">
+        <div className="grid size-9 place-items-center rounded-md border border-border bg-card text-text-muted" title="Task overview">
           <ListChecks size={17} />
         </div>
         {loading ? (
@@ -252,7 +252,7 @@ export function TaskPanel({
         <div className="mb-2.5 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
             <button
-              className="grid size-9 shrink-0 place-items-center rounded-lg text-text-muted transition hover:bg-accent/10 hover:text-text"
+              className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
               onClick={mobile ? onCloseMobile : onToggleCollapsed}
               title={mobile ? 'Close task panel' : 'Collapse task panel'}
               aria-label={mobile ? 'Close task panel' : 'Collapse task panel'}
@@ -287,7 +287,7 @@ export function TaskPanel({
         </div>
       </div>
 
-      {error && <div className="mx-3 mt-3 rounded-lg border border-danger/40 bg-danger/10 p-2.5 text-sm text-danger">{error}</div>}
+      {error && <div className="mx-3 mt-3 rounded-md border border-danger/40 bg-danger/10 p-2.5 text-sm text-danger">{error}</div>}
 
       <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-3">
         {!pagePath ? (
@@ -391,7 +391,7 @@ function HealthState({
   const boardCountLabel = scope === 'board' && boardCount === 1 ? '1 board' : `${boardCount.toLocaleString()} boards`
 
   return (
-    <section className="mb-2.5 rounded-xl border border-border bg-card p-2">
+    <section className="mb-2.5 rounded-md border border-border bg-card p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">State</p>
@@ -402,14 +402,10 @@ function HealthState({
           <p>{boardCountLabel}</p>
         </div>
       </div>
-      <div className="relative mb-2 h-2 overflow-hidden rounded-full bg-input ring-1 ring-border">
+      <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-input">
         <div
-          className="h-full rounded-full transition-[width] duration-500"
-          style={{ background: 'linear-gradient(90deg, var(--color-accent), var(--color-info), var(--color-success))', width: `${clamped}%` }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-25"
-          style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0 18px, rgba(255,255,255,0.35) 18px 19px)' }}
+          className="h-full rounded-full bg-accent-warm transition-[width] duration-500"
+          style={{ width: `${clamped}%` }}
         />
       </div>
       <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
@@ -450,13 +446,13 @@ function FilteringPanel({
   scope: TaskOverviewScope
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-2">
+    <section className="rounded-md border border-border bg-card p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-text">
           <Filter size={15} className="text-accent" /> Filtering
         </h3>
         {hasFilterInput && (
-          <button className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={onClear} type="button">
+          <button className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={onClear} type="button">
             <X size={13} /> Clear
           </button>
         )}
@@ -465,7 +461,7 @@ function FilteringPanel({
         <label className="grid gap-1 text-xs text-text-muted">
           Priority
           <select
-            className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
             value={priorityFilter}
             onChange={(event) => onPriorityChange(event.target.value as TaskFilterValues['priorityFilter'])}
           >
@@ -479,7 +475,7 @@ function FilteringPanel({
         <label className="grid gap-1 text-xs text-text-muted">
           Assignee
           <select
-            className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
             value={assigneeFilter}
             onChange={(event) => onAssigneeChange(event.target.value)}
           >
@@ -494,7 +490,7 @@ function FilteringPanel({
           <div className="relative">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
-              className={`w-full rounded-lg border bg-input py-1.5 pl-8 pr-2 text-sm text-text outline-none transition focus:border-accent ${searchError ? 'border-danger' : 'border-border'}`}
+              className={`w-full rounded-md border bg-input py-1.5 pl-8 pr-2 text-sm text-text outline-none transition focus:border-accent ${searchError ? 'border-danger' : 'border-border'}`}
               value={searchPattern}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder={scope === 'board' ? 'Card, column, assignee' : 'Board or card regex'}
@@ -542,7 +538,7 @@ function BoardColumnDistribution({
   const totalLabel = filtered ? `${filteredTasks.length.toLocaleString()}/${board.totalCards.toLocaleString()} shown` : `${board.totalCards.toLocaleString()} cards`
 
   return (
-    <section className="rounded-xl border border-border bg-card p-2">
+    <section className="rounded-md border border-border bg-card p-2">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-text">Column distribution</h3>
@@ -575,7 +571,7 @@ function BoardColumnDistribution({
                 </span>
               </div>
               <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-input">
-                <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width }} />
+                <div className="h-full rounded-full bg-accent-warm transition-[width] duration-300" style={{ width }} />
               </div>
               <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
                 <span>{done}/{shown} done</span>
@@ -616,7 +612,7 @@ function BoardOverview({
   const statusClass = totalCards === 0 ? 'text-text-muted' : doneCards === totalCards ? 'text-success' : highOpen > 0 ? 'text-danger' : 'text-accent'
 
   return (
-    <article className="rounded-xl border border-border bg-surface p-2.5 shadow-sm shadow-shadow">
+    <article className="rounded-md border border-border bg-surface p-2.5 shadow-sm shadow-shadow">
       <div className="mb-2.5 flex min-w-0 items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
           <PageIcon icon={board.icon} fallback="board" className="mt-0.5 size-5 shrink-0" />
@@ -625,7 +621,7 @@ function BoardOverview({
             <p className="truncate text-xs text-text-muted">{board.path}</p>
           </div>
         </div>
-        <Link to={pageUrl(board.path)} className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-input text-text-muted transition hover:border-accent hover:text-text" title="Open board">
+        <Link to={pageUrl(board.path)} className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-input text-text-muted transition hover:border-accent hover:text-text" title="Open board">
           <ArrowUpRight size={15} />
         </Link>
       </div>
@@ -637,7 +633,7 @@ function BoardOverview({
         </span>
       </div>
       <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-input">
-        <div className="h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
+        <div className="h-full rounded-full bg-accent-warm" style={{ width: `${percent}%` }} />
       </div>
 
       <div className="mb-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide">
@@ -655,7 +651,7 @@ function BoardOverview({
                 <TaskPreview key={`${task.title}-${task.columnTitle}-${index}`} task={task} />
               ))}
               {matchingTasks.length > previewTasks.length && (
-                <Link to={pageUrl(board.path)} className="block rounded-lg px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text">
+                <Link to={pageUrl(board.path)} className="block rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text">
                   +{matchingTasks.length - previewTasks.length} more matching cards
                 </Link>
               )}
@@ -673,7 +669,7 @@ function TaskPreview({ task }: { task: TaskInfo }) {
   const assignees = task.assignees ?? []
 
   return (
-    <Link to={pageUrl(task.boardPath)} className={`relative block rounded-lg px-2 py-1 transition hover:bg-accent/10 ${assignees.length ? 'pb-7' : ''}`}>
+    <Link to={pageUrl(task.boardPath)} className={`relative block rounded-md px-2 py-1 transition hover:bg-accent/10 ${assignees.length ? 'pb-7' : ''}`}>
       <div className="flex min-w-0 items-start gap-2">
         <span className={`mt-1.5 size-2 shrink-0 rounded-full ${priorityColor(task.priority)}`} title={priorityLabel(task.priority)} />
         <div className="min-w-0 flex-1">
@@ -703,7 +699,7 @@ function EmptyBoardsState({
   onTitleChange: (value: string) => void
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-border bg-surface/60 p-3">
+    <div className="rounded-md border border-dashed border-border bg-surface/60 p-3">
       <div className="mb-2.5 flex items-start gap-2.5">
         <PageIcon icon="board" fallback="board" className="size-8 shrink-0" />
         <div>
@@ -715,13 +711,13 @@ function EmptyBoardsState({
       {mayWrite ? (
         <form className="mt-3 space-y-1.5" onSubmit={onCreateBoard}>
           <input
-            className="w-full rounded-lg border border-border bg-input px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="w-full rounded-md border border-border bg-input px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
             value={newBoardTitle}
             onChange={(event) => onTitleChange(event.target.value)}
             placeholder="Board title"
           />
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-control-border bg-control px-3 py-1.5 text-sm font-medium text-text transition hover:border-accent hover:bg-control-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-control-border bg-control px-3 py-1.5 text-sm font-medium text-text transition hover:border-accent hover:bg-control-hover disabled:cursor-not-allowed disabled:opacity-50"
             disabled={creating || !newBoardTitle.trim()}
             type="submit"
           >
@@ -730,7 +726,7 @@ function EmptyBoardsState({
           </button>
         </form>
       ) : (
-        <p className="mt-3 rounded-lg border border-border bg-card p-2.5 text-sm text-text-muted">You have read-only access, so board creation is unavailable.</p>
+        <p className="mt-3 rounded-md border border-border bg-card p-2.5 text-sm text-text-muted">You have read-only access, so board creation is unavailable.</p>
       )}
     </div>
   )
@@ -740,7 +736,7 @@ function PanelSkeleton() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="animate-pulse rounded-xl border border-border bg-surface p-2.5">
+        <div key={item} className="animate-pulse rounded-md border border-border bg-surface p-2.5">
           <div className="mb-2 h-4 w-2/3 rounded bg-border" />
           <div className="mb-2 h-2 rounded-full bg-border" />
           <div className="h-3 w-1/2 rounded bg-border" />
@@ -752,7 +748,7 @@ function PanelSkeleton() {
 
 function PanelMessage({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-border bg-surface/60 p-3">
+    <div className="rounded-md border border-dashed border-border bg-surface/60 p-3">
       <h3 className="text-base font-semibold text-text">{title}</h3>
       <p className="mt-1 text-sm text-text-muted">{body}</p>
     </div>
@@ -761,7 +757,7 @@ function PanelMessage({ title, body }: { title: string; body: string }) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-2 py-1">
+    <div className="rounded-md border border-border bg-card px-2 py-1">
       <div className="text-sm font-semibold text-text">{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
     </div>

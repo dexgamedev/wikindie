@@ -16,7 +16,7 @@ function formatDate(value: string | null) {
 function RoleSelect({ value, onChange }: { value: Role; onChange: (role: Role) => void }) {
   return (
     <select
-      className="rounded-lg border border-border bg-input px-2 py-2 text-sm text-text outline-none focus:border-accent"
+      className="rounded-md border border-border bg-input px-2 py-2 text-sm text-text outline-none focus:border-accent"
       value={value}
       onChange={(event) => onChange(event.target.value as Role)}
     >
@@ -134,7 +134,7 @@ export function AdminPage() {
       <div className="mx-auto max-w-6xl p-4 md:p-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-info/30 bg-info/10 px-3 py-1 text-sm text-info">
+          <div className="mb-2 inline-flex items-center gap-2 rounded border border-info/30 bg-info/10 px-3 py-1 text-sm text-info">
             <Shield size={15} /> Admin Console
           </div>
           <h2 className="text-2xl font-semibold text-text">Users and API keys</h2>
@@ -145,16 +145,16 @@ export function AdminPage() {
         </Button>
       </div>
 
-      <div className="mb-5 flex gap-2 rounded-lg border border-border bg-surface p-1">
-        <button className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${tab === 'users' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('users')}>Users</button>
-        <button className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${tab === 'keys' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('keys')}>API Keys</button>
+      <div className="mb-5 flex gap-2 rounded-md border border-border bg-surface p-1">
+        <button className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${tab === 'users' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('users')}>Users</button>
+        <button className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${tab === 'keys' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('keys')}>API Keys</button>
       </div>
 
-      {error && <div className="mb-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
+      {error && <div className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 
       {tab === 'users' ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="overflow-hidden rounded-md border border-border bg-surface">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
@@ -180,7 +180,7 @@ export function AdminPage() {
                       </td>
                       <td className="px-4 py-3 text-text-muted">{formatDate(user.createdAt)}</td>
                       <td className="px-4 py-3 text-right">
-                        <Button className="text-danger" onClick={() => void deleteUser(user)}>
+                        <Button variant="danger" onClick={() => void deleteUser(user)}>
                           <Trash2 size={14} /> Delete
                         </Button>
                       </td>
@@ -196,7 +196,7 @@ export function AdminPage() {
             </div>
           </div>
 
-          <form onSubmit={createUser} className="rounded-lg border border-border bg-surface p-4">
+          <form onSubmit={createUser} className="rounded-md border border-border bg-surface p-4">
             <div className="mb-4 flex items-center gap-2 text-text">
               <UserPlus size={17} /> <h3 className="font-semibold">Add user</h3>
             </div>
@@ -204,7 +204,7 @@ export function AdminPage() {
               <Input value={newUsername} onChange={(event) => setNewUsername(event.target.value)} placeholder="Username" className="w-full" />
               <Input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Temporary password" type="password" className="w-full" />
               <RoleSelect value={newRole} onChange={setNewRole} />
-              <Button type="submit" className="w-full justify-center bg-accent font-medium">Create user</Button>
+              <Button variant="primary" type="submit" className="w-full justify-center">Create user</Button>
             </div>
           </form>
         </div>
@@ -212,16 +212,16 @@ export function AdminPage() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             {createdKey && (
-              <div className="rounded-lg border border-success/40 bg-success/10 p-4">
+              <div className="rounded-md border border-success/40 bg-success/10 p-4">
                 <p className="mb-2 text-sm font-semibold text-success">Copy this key now. It will not be shown again.</p>
-                <code className="block break-all rounded-lg border border-border bg-input p-3 text-sm text-text">{createdKey}</code>
+                <code className="block break-all rounded-md border border-border bg-input p-3 text-sm text-text">{createdKey}</code>
                 <Button className="mt-3" onClick={() => void copyCreatedKey()}>
                   <Copy size={14} /> {copied ? 'Copied' : 'Copy key'}
                 </Button>
               </div>
             )}
 
-            <div className="overflow-hidden rounded-lg border border-border bg-surface">
+            <div className="overflow-hidden rounded-md border border-border bg-surface">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
@@ -246,7 +246,7 @@ export function AdminPage() {
                         <td className="px-4 py-3 text-text-muted">{formatDate(key.lastUsedAt)}</td>
                         <td className="px-4 py-3 text-text-muted">{key.revokedAt ? `Revoked ${formatDate(key.revokedAt)}` : 'Active'}</td>
                         <td className="px-4 py-3 text-right">
-                          <Button className="text-danger" onClick={() => void revokeKey(key)} disabled={Boolean(key.revokedAt)}>
+                          <Button variant="danger" onClick={() => void revokeKey(key)} disabled={Boolean(key.revokedAt)}>
                             <Trash2 size={14} /> Revoke
                           </Button>
                         </td>
@@ -263,14 +263,14 @@ export function AdminPage() {
             </div>
           </div>
 
-          <form onSubmit={generateKey} className="rounded-lg border border-border bg-surface p-4">
+          <form onSubmit={generateKey} className="rounded-md border border-border bg-surface p-4">
             <div className="mb-4 flex items-center gap-2 text-text">
               <KeyRound size={17} /> <h3 className="font-semibold">Generate API key</h3>
             </div>
             <div className="space-y-3">
               <Input value={keyLabel} onChange={(event) => setKeyLabel(event.target.value)} placeholder="Label, e.g. CI read access" className="w-full" />
               <RoleSelect value={keyRole} onChange={setKeyRole} />
-              <Button type="submit" className="w-full justify-center bg-accent font-medium">Generate key</Button>
+              <Button variant="primary" type="submit" className="w-full justify-center">Generate key</Button>
             </div>
           </form>
         </div>

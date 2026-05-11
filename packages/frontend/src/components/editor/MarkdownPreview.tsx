@@ -9,7 +9,7 @@ function isExternalUrl(href: string) {
 
 export function MarkdownPreview({ content, frameless = false }: { content: string; frameless?: boolean }) {
   return (
-    <article className={`markdown-preview text-text ${frameless ? '' : 'rounded-lg border border-border bg-surface p-5'}`}>
+    <article className={`markdown-preview text-text ${frameless ? '' : 'rounded-md border border-border bg-surface p-5'}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

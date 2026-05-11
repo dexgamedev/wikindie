@@ -1,40 +1,35 @@
 @import "tailwindcss";
 
-/*
- * Theme tokens – dark mode defaults.
- * Light mode overrides live in the `:root:not(.dark)` block below.
- * Every token MUST appear in both places; missing tokens silently fall
- * back to the dark value in light mode.
- */
 @theme {
-  --color-body: #050a14;
-  --color-sidebar: #111827;
-  --color-panel: #111827;
-  --color-content: #0d1424;
-  --color-surface: #1e293b;
-  --color-surface-hover: #283548;
-  --color-border: #293650;
-  --color-accent: #6366f1;
-  --color-input: #0a1020;
-  --color-card: #1a2332;
-  --color-control: rgba(99, 102, 241, 0.22);
-  --color-control-hover: rgba(99, 102, 241, 0.32);
-  --color-control-border: rgba(129, 140, 248, 0.4);
-  --color-text: #e2e8f0;
-  --color-text-muted: #94a3b8;
-  --color-text-heading: #f8fafc;
-  --color-text-link: #818cf8;
-  --color-text-code: #c7d2fe;
-  --color-scrollbar-thumb: #334155;
-  --color-scrollbar-track: #0f172a;
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-info: #818cf8;
-  --color-overlay: rgba(0, 0, 0, 0.55);
-  --color-content-glow: rgba(99, 102, 241, 0.16);
-  --color-shadow: rgba(0, 0, 0, 0.10);
-  --color-shadow-heavy: rgba(0, 0, 0, 0.40);
+  --color-body: #0c0e13;
+  --color-sidebar: #141820;
+  --color-panel: #141820;
+  --color-content: #101318;
+  --color-surface: #1c2028;
+  --color-surface-hover: #252a34;
+  --color-border: #2a2f3a;
+  --color-accent: #5b6af0;
+  --color-accent-warm: #d9a033;
+  --color-accent-soft: rgba(91, 106, 240, 0.10);
+  --color-input: #0e1118;
+  --color-card: #181c24;
+  --color-control: rgba(91, 106, 240, 0.12);
+  --color-control-hover: rgba(91, 106, 240, 0.22);
+  --color-control-border: rgba(91, 106, 240, 0.30);
+  --color-text: #d4d7de;
+  --color-text-muted: #7c8190;
+  --color-text-heading: #ebedf2;
+  --color-text-link: #7b88f5;
+  --color-text-code: #a0acf8;
+  --color-scrollbar-thumb: #2d323e;
+  --color-scrollbar-track: #0e1118;
+  --color-success: #4ade80;
+  --color-warning: #d9a033;
+  --color-danger: #ef4444;
+  --color-info: #60a5fa;
+  --color-overlay: rgba(0, 0, 0, 0.60);
+  --color-shadow: rgba(0, 0, 0, 0.18);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.50);
 }
 
 :root {
@@ -43,33 +38,35 @@
 
 :root:not(.dark) {
   color-scheme: light;
-  --color-body: #f1f5f9;
+  --color-body: #f4f5f7;
   --color-sidebar: #ffffff;
   --color-panel: #ffffff;
-  --color-content: #f8fafc;
-  --color-surface: #f1f5f9;
-  --color-surface-hover: #e2e8f0;
-  --color-border: #cbd5e1;
+  --color-content: #fafafa;
+  --color-surface: #f0f1f3;
+  --color-surface-hover: #e5e7eb;
+  --color-border: #d5d7dc;
+  --color-accent: #4a58e0;
+  --color-accent-warm: #b88525;
+  --color-accent-soft: rgba(74, 88, 224, 0.08);
   --color-input: #ffffff;
   --color-card: #ffffff;
-  --color-control: #eef2ff;
-  --color-control-hover: #e0e7ff;
-  --color-control-border: #c7d2fe;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  --color-text-heading: #0f172a;
-  --color-text-link: #4f46e5;
-  --color-text-code: #3730a3;
-  --color-scrollbar-thumb: #cbd5e1;
-  --color-scrollbar-track: #f1f5f9;
-  --color-success: #059669;
-  --color-warning: #d97706;
+  --color-control: #eef0fd;
+  --color-control-hover: #dde1fa;
+  --color-control-border: #b5bdf0;
+  --color-text: #24272e;
+  --color-text-muted: #6b6f7a;
+  --color-text-heading: #141620;
+  --color-text-link: #3d4bc8;
+  --color-text-code: #3540a8;
+  --color-scrollbar-thumb: #c8cbd2;
+  --color-scrollbar-track: #f0f1f3;
+  --color-success: #16a34a;
+  --color-warning: #b88525;
   --color-danger: #dc2626;
-  --color-info: #4f46e5;
-  --color-overlay: rgba(15, 23, 42, 0.35);
-  --color-content-glow: rgba(99, 102, 241, 0.08);
-  --color-shadow: rgba(0, 0, 0, 0.06);
-  --color-shadow-heavy: rgba(0, 0, 0, 0.14);
+  --color-info: #2563eb;
+  --color-overlay: rgba(15, 20, 30, 0.30);
+  --color-shadow: rgba(0, 0, 0, 0.05);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.12);
 }
 
 html,
@@ -82,14 +79,14 @@ body {
   margin: 0;
   background: var(--color-body);
   color: var(--color-text);
-  font-family: Nunito, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .panel {
   background: var(--color-panel);
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px var(--color-shadow);
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px var(--color-shadow);
 }
 
 button,
@@ -187,7 +184,7 @@ textarea {
 .markdown-preview code {
   background: var(--color-input);
   border: 1px solid var(--color-border);
-  border-radius: 0.35rem;
+  border-radius: 0.25rem;
   color: var(--color-text-code);
   padding: 0.1rem 0.3rem;
 }
@@ -195,7 +192,7 @@ textarea {
 .markdown-preview pre {
   background: var(--color-input);
   border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
+  border-radius: 0.375rem;
   overflow-x: auto;
   padding: 1rem;
 }
