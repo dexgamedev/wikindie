@@ -54,6 +54,15 @@ Wikindie stores your workspace as Markdown files on disk. For local development,
 
 Your workspace data is not stored in a database. Back up the directory configured by `SPACE_DIR` like any other important project folder.
 
+Wikindie also stores app-managed auth metadata inside the workspace directory under `.wikindie/`:
+
+```text
+<SPACE_DIR>/.wikindie/users.json
+<SPACE_DIR>/.wikindie/apikeys.json
+```
+
+Keep this hidden `.wikindie` directory with the rest of your workspace data. If it is not persisted, users and API keys created through the app will not survive redeploys.
+
 Create the workspace directory before first use if it does not exist yet:
 
 PowerShell:
