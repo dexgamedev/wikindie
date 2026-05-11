@@ -52,6 +52,8 @@ Local development defaults to `dev:dev` unless `WIKINDIE_USER` is set.
 
 Wikindie stores your workspace as Markdown files on disk. For local development, the default workspace is `packages/backend/space` when using the npm workspace scripts.
 
+Your workspace data is not stored in a database. Back up the directory configured by `SPACE_DIR` like any other important project folder.
+
 Create the workspace directory before first use if it does not exist yet:
 
 PowerShell:
@@ -88,6 +90,40 @@ docker compose up --build
 
 The compose file mounts `./space` into the container as `/space`, so your Docker workspace lives in a root-level `space` directory.
 
+## Production Data Safety
+
+Production deployments must mount `SPACE_DIR` to persistent storage. The container filesystem is disposable and must not be treated as workspace storage.
+
+Recommended production settings:
+
+```bash
+NODE_ENV=production
+SPACE_DIR=/space
+```
+
+For hosted Docker platforms such as CapRover, Coolify, and similar app managers, configure `/space` as persistent storage before first start. Depending on the platform, this may be called a persistent app directory, volume, storage mount, or directory mount. The path inside the container must be `/space`.
+
+In production, Wikindie refuses to create the starter workspace when `/space` is empty unless you explicitly opt in. This prevents a bad deploy or missing volume mount from silently replacing your real workspace with placeholder content.
+
+For the first intentional production initialization only, set:
+
+```bash
+WIKINDIE_INIT_DEFAULT_SPACE=true
+```
+
+Remove that variable after the first successful start. Existing non-empty workspaces are never overwritten by the starter workspace seeding step.
+
+Deployment checklist:
+
+1. Configure persistent storage mounted at `/space`.
+2. Set `SPACE_DIR=/space`.
+3. Set `WIKINDIE_USER` and `JWT_SECRET`.
+4. For a brand-new empty production workspace only, set `WIKINDIE_INIT_DEFAULT_SPACE=true` for the first start.
+5. Remove `WIKINDIE_INIT_DEFAULT_SPACE` after the starter workspace is created.
+6. Back up `/space` before changing deployment storage settings or deleting old containers/volumes.
+
+If the app starts with an empty persistent directory in production and `WIKINDIE_INIT_DEFAULT_SPACE` is not set, startup fails intentionally. Check the mounted `/space` path before enabling initialization. If data appears missing after a redeploy, inspect old Docker containers, volumes, and host paths before pruning anything.
+
 Change `WIKINDIE_USER` and `JWT_SECRET` before exposing the app outside your local machine.
 
 ## Environment
@@ -99,6 +135,7 @@ Set these variables in your shell, Docker environment, or deployment host:
 | `WIKINDIE_USER` | `dev:dev` | Login credentials in `username:password` format. Required in production. |
 | `JWT_SECRET` | Dev-only fallback | Secret used to sign session tokens. Required in production. |
 | `SPACE_DIR` | `./space` | Directory containing Markdown workspace files, resolved from the backend process working directory. |
+| `WIKINDIE_INIT_DEFAULT_SPACE` | unset | Set to `true` only for the first intentional production start with an empty `SPACE_DIR`. |
 | `PORT` | `3000` | Backend HTTP port. |
 
 `.env.example` documents the expected variables, but the Node app does not automatically load `.env` files. Pass variables through your shell, process manager, Docker, or hosting platform.

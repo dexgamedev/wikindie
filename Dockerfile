@@ -19,6 +19,5 @@ COPY packages/frontend/package.json packages/frontend/package.json
 RUN npm install --omit=dev --workspace packages/backend
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 COPY --from=builder /app/packages/frontend/dist packages/backend/public
-VOLUME ["/space"]
 EXPOSE 3000
 CMD ["node", "packages/backend/dist/index.js"]

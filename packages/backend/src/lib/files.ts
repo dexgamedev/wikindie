@@ -181,8 +181,15 @@ function parseSections(frontmatter: Record<string, unknown>): PageSection[] {
 
 export async function ensureSpace() {
   await fs.mkdir(SPACE_DIR, { recursive: true })
-  const hasWorkspacePage = (await exists('Workspace/_Index.md')) || (await exists('Workspace.md'))
-  if (hasWorkspacePage) return
+  const entries = await fs.readdir(SPACE_DIR)
+  const meaningfulEntries = entries.filter((entry) => !['.DS_Store', '.gitkeep', 'Thumbs.db'].includes(entry))
+  if (meaningfulEntries.length > 0) return
+
+  if (process.env.NODE_ENV === 'production' && process.env.WIKINDIE_INIT_DEFAULT_SPACE !== 'true') {
+    throw new Error(
+      `SPACE_DIR (${SPACE_DIR}) is empty. Refusing to initialize the default workspace in production because this may indicate a missing persistent volume. Set WIKINDIE_INIT_DEFAULT_SPACE=true only for the first intentional initialization.`,
+    )
+  }
 
   await Promise.allSettled(
     defaultSpaceFiles.map(async (file) => {
