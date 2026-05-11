@@ -186,9 +186,8 @@ export async function ensureSpace() {
   if (meaningfulEntries.length > 0) return
 
   if (process.env.NODE_ENV === 'production' && process.env.WIKINDIE_INIT_DEFAULT_SPACE !== 'true') {
-    throw new Error(
-      `SPACE_DIR (${SPACE_DIR}) is empty. Refusing to initialize the default workspace in production because this may indicate a missing persistent volume. Set WIKINDIE_INIT_DEFAULT_SPACE=true only for the first intentional initialization.`,
-    )
+    console.log(`Starting with an empty workspace at ${SPACE_DIR}. Set WIKINDIE_INIT_DEFAULT_SPACE=true to seed the starter workspace.`)
+    return
   }
 
   await Promise.allSettled(

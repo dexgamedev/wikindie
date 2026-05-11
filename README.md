@@ -94,35 +94,47 @@ The compose file mounts `./space` into the container as `/space`, so your Docker
 
 Production deployments must mount `SPACE_DIR` to persistent storage. The container filesystem is disposable and must not be treated as workspace storage.
 
-Recommended production settings:
+Common production settings when mounting storage at `/space`:
 
 ```bash
 NODE_ENV=production
 SPACE_DIR=/space
 ```
 
-For hosted Docker platforms such as CapRover, Coolify, and similar app managers, configure `/space` as persistent storage before first start. Depending on the platform, this may be called a persistent app directory, volume, storage mount, or directory mount. The path inside the container must be `/space`.
+If `SPACE_DIR` is not set in the Docker image, Wikindie uses `./space`, which resolves to `/app/space` because the container workdir is `/app`. You can either mount persistent storage at `/app/space` and omit `SPACE_DIR`, or mount persistent storage at another path such as `/space` and set `SPACE_DIR` to match.
 
-In production, Wikindie refuses to create the starter workspace when `/space` is empty unless you explicitly opt in. This prevents a bad deploy or missing volume mount from silently replacing your real workspace with placeholder content.
+For hosted Docker platforms such as CapRover, Coolify, and similar app managers, configure the workspace path as persistent storage before first start. Depending on the platform, this may be called a persistent app directory, volume, storage mount, or directory mount. The path inside the container must match `SPACE_DIR`; if `SPACE_DIR` is unset, use `/app/space`.
 
-For the first intentional production initialization only, set:
+Do not change the mounted workspace path after data exists unless you also migrate the files. For example, data stored under a persistent `/space` mount will not appear if the app later starts with `SPACE_DIR=/app/space` or with `SPACE_DIR` unset.
+
+In production, Wikindie starts with an empty workspace when the configured workspace directory is empty. It does not seed placeholder content unless you explicitly opt in. This keeps brand-new installs clean and prevents a bad deploy or missing volume mount from silently replacing your real workspace with starter content.
+
+To seed the optional starter workspace in production, set this for the first start only:
 
 ```bash
 WIKINDIE_INIT_DEFAULT_SPACE=true
 ```
 
-Remove that variable after the first successful start. Existing non-empty workspaces are never overwritten by the starter workspace seeding step.
+Remove that variable after the starter workspace is created. Existing non-empty workspaces are never overwritten by the starter workspace seeding step.
 
 Deployment checklist:
 
-1. Configure persistent storage mounted at `/space`.
-2. Set `SPACE_DIR=/space`.
+1. Configure persistent storage mounted at your chosen workspace path.
+2. Use `/app/space` with no `SPACE_DIR`, or set `SPACE_DIR` to your mounted path such as `/space`.
 3. Set `WIKINDIE_USER` and `JWT_SECRET`.
-4. For a brand-new empty production workspace only, set `WIKINDIE_INIT_DEFAULT_SPACE=true` for the first start.
-5. Remove `WIKINDIE_INIT_DEFAULT_SPACE` after the starter workspace is created.
-6. Back up `/space` before changing deployment storage settings or deleting old containers/volumes.
+4. Leave `WIKINDIE_INIT_DEFAULT_SPACE` unset for a blank wiki.
+5. Set `WIKINDIE_INIT_DEFAULT_SPACE=true` only if you want the starter/demo workspace on first start, then remove it.
+6. Back up the mounted workspace directory before changing deployment storage settings or deleting old containers/volumes.
 
-If the app starts with an empty persistent directory in production and `WIKINDIE_INIT_DEFAULT_SPACE` is not set, startup fails intentionally. Check the mounted `/space` path before enabling initialization. If data appears missing after a redeploy, inspect old Docker containers, volumes, and host paths before pruning anything.
+If the app starts with an empty workspace unexpectedly, check the mounted workspace path before creating new pages. If data appears missing after a redeploy, inspect old Docker containers, volumes, and host paths before pruning anything.
+
+Troubleshooting path errors:
+
+1. Check the startup log path, for example `Starting with an empty workspace at /app/space`.
+2. Check your platform persistent storage path inside the container.
+3. If the persistent path is `/space`, set `SPACE_DIR=/space`.
+4. If the persistent path is `/app/space`, leave `SPACE_DIR` unset or set `SPACE_DIR=/app/space`.
+5. If you switch between `/space` and `/app/space`, copy the existing Markdown files to the new mounted path before starting the app.
 
 Change `WIKINDIE_USER` and `JWT_SECRET` before exposing the app outside your local machine.
 
@@ -135,7 +147,7 @@ Set these variables in your shell, Docker environment, or deployment host:
 | `WIKINDIE_USER` | `dev:dev` | Login credentials in `username:password` format. Required in production. |
 | `JWT_SECRET` | Dev-only fallback | Secret used to sign session tokens. Required in production. |
 | `SPACE_DIR` | `./space` | Directory containing Markdown workspace files, resolved from the backend process working directory. |
-| `WIKINDIE_INIT_DEFAULT_SPACE` | unset | Set to `true` only for the first intentional production start with an empty `SPACE_DIR`. |
+| `WIKINDIE_INIT_DEFAULT_SPACE` | unset | Set to `true` only when you want to seed the starter/demo workspace into an empty `SPACE_DIR`. |
 | `PORT` | `3000` | Backend HTTP port. |
 
 `.env.example` documents the expected variables, but the Node app does not automatically load `.env` files. Pass variables through your shell, process manager, Docker, or hosting platform.
