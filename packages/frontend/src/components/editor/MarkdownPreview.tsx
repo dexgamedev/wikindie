@@ -8,6 +8,24 @@ function isExternalUrl(href: string) {
   return /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//')
 }
 
+function internalPathFor(href: string): string | null {
+  if (!href) return null
+  if (href.startsWith('/page/')) return href
+  try {
+    const url = new URL(href, window.location.origin)
+    if (url.origin === window.location.origin && url.pathname.startsWith('/page/')) {
+      return url.pathname + url.search + url.hash
+    }
+  } catch {
+    // not a parseable URL — fall through
+  }
+  // Malformed protocol-only forms (e.g. "https:///page/Foo") can come from
+  // typed paths that are missing a recognised scheme. Do not match real hosts.
+  const malformedProtocolPath = href.match(/^[a-z][a-z0-9+.-]*:\/\/(\/page\/.*)$/i)
+  if (malformedProtocolPath) return malformedProtocolPath[1]
+  return null
+}
+
 function escapeMarkdownLinkText(value: string) {
   return value.replace(/[\\[\]]/g, '\\$&')
 }
@@ -75,7 +93,8 @@ export function MarkdownPreview({ content, frameless = false }: { content: strin
         remarkPlugins={[remarkGfm]}
         components={{
           a: ({ href = '', children, ...props }) => {
-            if (href.startsWith('/page/')) return <Link to={href}>{children}</Link>
+            const internal = internalPathFor(href)
+            if (internal) return <Link to={internal}>{children}</Link>
             if (isExternalUrl(href)) return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>
             return <a href={href} {...props}>{children}</a>
           },

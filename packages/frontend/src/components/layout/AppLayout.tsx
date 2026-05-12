@@ -76,7 +76,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [location.pathname])
 
   return (
-    <div className="flex h-dvh flex-col gap-2 bg-body p-2 text-text md:p-3">
+    <div className="flex h-dvh min-h-0 flex-col gap-2 overflow-hidden bg-body p-2 text-text md:p-3">
       <div className="lg:hidden">
         <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
       </div>
@@ -90,7 +90,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             onToggleCollapsed={toggleSidebarCollapsed}
             onSearchOpen={() => setQuickFindOpen(true)}
           />
-          <main className="panel min-w-0 flex-1 overflow-hidden">
+          <main className="panel min-h-0 min-w-0 flex-1 overflow-hidden">
             {children}
           </main>
           <TaskPanel

@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCircle2, Eye, ListChecks, Pencil, Plus, Save, Settings } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
 import { useMobileTaskPanel } from '../layout/AppLayout'
@@ -49,6 +49,12 @@ function isCurrentPageEvent(currentPath: string, changedFilePath?: string) {
 }
 
 const iconCategories = Array.from(new Set(wikiIcons.map((icon) => icon.category)))
+
+const BlockEditor = lazy(() => import('./BlockEditor').then((module) => ({ default: module.BlockEditor })))
+
+function BlockEditorFallback({ className }: { className: string }) {
+  return <div className={`${className} grid place-items-center text-sm text-text-muted`}>Loading editor...</div>
+}
 
 export function Editor({
   page,
@@ -403,16 +409,17 @@ export function Editor({
           )}
 
           {mayWrite && editing ? (
-            <div className="mb-10 rounded-md border border-border/70 bg-card p-6">
-              <textarea
-                className="min-h-[52vh] w-full resize-y bg-transparent font-mono text-[15px] leading-7 text-text outline-none"
-                value={content}
-                onChange={(event) => {
-                  setContent(event.target.value)
-                  setStatus('dirty')
-                }}
-                spellCheck={false}
-              />
+            <div className="mb-10 overflow-hidden rounded-md border border-border/70 bg-card p-2 md:p-4">
+              <Suspense fallback={<BlockEditorFallback className="min-h-[52vh] w-full" />}>
+                <BlockEditor
+                  className="min-h-[52vh] w-full"
+                  value={content}
+                  onChange={(md) => {
+                    setContent(md)
+                    setStatus('dirty')
+                  }}
+                />
+              </Suspense>
             </div>
           ) : (
             <div className="mb-10">
@@ -474,12 +481,15 @@ export function Editor({
                   </div>
                 </div>
                 {mayWrite && sectionEditing ? (
-                  <textarea
-                    className="min-h-[180px] w-full resize-y rounded-md border border-border bg-input p-3 font-mono text-sm text-text outline-none focus:border-accent"
-                    value={draft.content}
-                    onChange={(event) => setSectionDrafts((prev) => ({ ...prev, [section.path]: { ...draft, content: event.target.value } }))}
-                    spellCheck={false}
-                  />
+                  <div className="overflow-hidden rounded-md border border-border bg-input p-2">
+                    <Suspense fallback={<BlockEditorFallback className="min-h-[180px] w-full" />}>
+                      <BlockEditor
+                        className="min-h-[180px] w-full"
+                        value={draft.content}
+                        onChange={(md) => setSectionDrafts((prev) => ({ ...prev, [section.path]: { ...draft, content: md } }))}
+                      />
+                    </Suspense>
+                  </div>
                 ) : (
                   <MarkdownPreview content={draft.content} frameless />
                 )}

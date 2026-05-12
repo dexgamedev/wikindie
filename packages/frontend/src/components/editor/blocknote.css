@@ -1,0 +1,143 @@
+/* Editor surface inherits the surrounding card */
+[data-wikindie-editor],
+[data-wikindie-editor] .bn-editor,
+[data-wikindie-editor] .bn-container,
+[data-wikindie-editor] .bn-default-styles {
+  background: transparent;
+  color: inherit;
+}
+
+[data-wikindie-editor] .bn-editor {
+  padding-inline: 0.5rem;
+}
+
+[data-wikindie-editor] .bn-block-content {
+  color: inherit;
+}
+
+/* BlockNote appends floating UI portals directly under <body>. Keep that
+   portal out of normal document layout so it cannot make the whole app scroll. */
+body > .bn-root:not(.bn-container) {
+  position: fixed;
+  inset: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+
+/* The shadcn Button "default" variant is bg-primary with shadow — too aggressive
+   for the drag handle, "+" button, and toolbar icon buttons. Reset BlockNote's
+   in-editor buttons to a ghost style and soften hover. Scope strictly to
+   BlockNote roots so it never bleeds into the rest of the app. */
+.bn-shadcn .bn-side-menu .bn-button,
+.bn-shadcn .bn-toolbar .bn-button,
+.bn-suggestion-menu .bn-button,
+.bn-grid-suggestion-menu .bn-button,
+.bn-menu-dropdown .bn-button,
+.bn-color-picker-dropdown .bn-button {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-text-muted);
+  transition: background-color 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.bn-shadcn .bn-side-menu .bn-button:hover,
+.bn-shadcn .bn-toolbar .bn-button:hover,
+.bn-suggestion-menu .bn-button:hover,
+.bn-grid-suggestion-menu .bn-button:hover,
+.bn-menu-dropdown .bn-button:hover,
+.bn-color-picker-dropdown .bn-button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.bn-shadcn .bn-side-menu .bn-button[data-state="open"],
+.bn-shadcn .bn-toolbar .bn-button[data-state="open"],
+.bn-shadcn .bn-toolbar .bn-button[data-state="on"],
+.bn-shadcn .bn-toolbar .bn-button[aria-pressed="true"] {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* Side menu only fades in on block hover — make the drag handle quiet */
+.bn-shadcn .bn-side-menu {
+  gap: 0.125rem;
+}
+
+.bn-shadcn .bn-side-menu .bn-button {
+  height: 22px;
+  width: 22px;
+  padding: 0;
+  border-radius: 4px;
+  opacity: 0.55;
+}
+
+.bn-shadcn .bn-side-menu .bn-button:hover {
+  opacity: 1;
+}
+
+.bn-shadcn .bn-side-menu .bn-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Floating toolbars / dropdowns: align surface with wikindie panels */
+.bn-suggestion-menu,
+.bn-grid-suggestion-menu,
+.bn-menu-dropdown,
+.bn-color-picker-dropdown,
+.bn-toolbar {
+  background: var(--color-card);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  box-shadow: 0 8px 24px var(--color-shadow-heavy);
+}
+
+/* Suggestion menu items (slash menu rows) */
+.bn-suggestion-menu [data-slot="dropdown-menu-item"],
+.bn-menu-dropdown [data-slot="dropdown-menu-item"],
+.bn-grid-suggestion-menu [data-slot="dropdown-menu-item"] {
+  border-radius: 4px;
+  color: var(--color-text);
+}
+
+.bn-suggestion-menu [data-slot="dropdown-menu-item"]:focus,
+.bn-suggestion-menu [data-slot="dropdown-menu-item"][data-highlighted],
+.bn-menu-dropdown [data-slot="dropdown-menu-item"]:focus,
+.bn-menu-dropdown [data-slot="dropdown-menu-item"][data-highlighted],
+.bn-grid-suggestion-menu [data-slot="dropdown-menu-item"]:focus,
+.bn-grid-suggestion-menu [data-slot="dropdown-menu-item"][data-highlighted] {
+  background: var(--color-surface-hover);
+  color: var(--color-text-heading);
+}
+
+.bn-suggestion-menu [data-slot="dropdown-menu-item"] [data-slot="dropdown-menu-item-subtitle"],
+.bn-menu-dropdown [data-slot="dropdown-menu-item"] [data-slot="dropdown-menu-item-subtitle"] {
+  color: var(--color-text-muted);
+}
+
+/* Formatting toolbar layout */
+.bn-shadcn .bn-toolbar {
+  gap: 0.125rem;
+  padding: 0.25rem;
+}
+
+/* Selects inside the toolbar (e.g. block type) */
+.bn-shadcn .bn-select [data-slot="select-trigger"] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-text);
+}
+
+.bn-shadcn .bn-select [data-slot="select-trigger"]:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Tooltips — quiet, panel-colored */
+[data-slot="tooltip-content"] {
+  background: var(--color-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}

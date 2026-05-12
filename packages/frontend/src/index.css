@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@source "../../../node_modules/@blocknote/shadcn/dist/**/*.js";
+@source "../../../node_modules/@blocknote/react/dist/**/*.js";
+
 @theme {
   --color-body: #0c0e13;
   --color-sidebar: #141820;
@@ -30,6 +33,22 @@
   --color-overlay: rgba(0, 0, 0, 0.60);
   --color-shadow: rgba(0, 0, 0, 0.18);
   --color-shadow-heavy: rgba(0, 0, 0, 0.50);
+
+  /* shadcn-style tokens consumed by @blocknote/shadcn menus & popovers (dark default) */
+  --color-background: #141820;
+  --color-foreground: #d4d7de;
+  --color-popover: #181c24;
+  --color-popover-foreground: #d4d7de;
+  --color-muted: #1c2028;
+  --color-muted-foreground: #7c8190;
+  --color-accent-foreground: #ffffff;
+  --color-primary: #5b6af0;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1c2028;
+  --color-secondary-foreground: #d4d7de;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-ring: #5b6af0;
 }
 
 :root {
@@ -67,6 +86,21 @@
   --color-overlay: rgba(15, 20, 30, 0.30);
   --color-shadow: rgba(0, 0, 0, 0.05);
   --color-shadow-heavy: rgba(0, 0, 0, 0.12);
+
+  --color-background: #ffffff;
+  --color-foreground: #24272e;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #24272e;
+  --color-muted: #f0f1f3;
+  --color-muted-foreground: #6b6f7a;
+  --color-accent-foreground: #ffffff;
+  --color-primary: #4a58e0;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f0f1f3;
+  --color-secondary-foreground: #24272e;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-ring: #4a58e0;
 }
 
 html,
