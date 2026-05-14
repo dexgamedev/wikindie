@@ -670,7 +670,7 @@ function TaskPreview({ task }: { task: TaskInfo }) {
   const assignees = task.assignees ?? []
 
   return (
-    <Link to={pageUrl(task.boardPath)} className={`relative block rounded-md px-2 py-1 transition hover:bg-accent/10 ${assignees.length ? 'pb-7' : ''}`}>
+    <Link to={pageUrl(task.boardPath)} className={`relative block rounded-md px-2 pt-1 transition hover:bg-accent/10 ${assignees.length ? 'pb-7' : 'pb-1'}`}>
       <div className="flex min-w-0 items-start gap-2">
         <span className={`mt-1.5 size-2 shrink-0 rounded-full ${priorityColor(task.priority)}`} title={priorityLabel(task.priority)} />
         <div className="min-w-0 flex-1">

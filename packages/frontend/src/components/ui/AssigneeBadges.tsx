@@ -18,14 +18,14 @@ export function UserIconBadge({ username, className = 'size-5' }: { username: st
   )
 }
 
-export function AssigneeCorner({ assignees, limit = 3 }: { assignees: string[]; limit?: number }) {
+export function AssigneeStack({ assignees, limit = 3, className = '' }: { assignees: string[]; limit?: number; className?: string }) {
   if (!assignees.length) return null
 
   const visible = assignees.slice(0, limit)
   const hidden = assignees.length - visible.length
 
   return (
-    <div className="absolute bottom-2 right-2 flex items-center -space-x-1.5">
+    <div className={`flex items-center -space-x-1.5 ${className}`}>
       {visible.map((assignee) => (
         <UserIconBadge key={assignee} username={assignee} className="size-6" />
       ))}
@@ -36,5 +36,9 @@ export function AssigneeCorner({ assignees, limit = 3 }: { assignees: string[]; 
       )}
     </div>
   )
+}
+
+export function AssigneeCorner({ assignees, limit = 3 }: { assignees: string[]; limit?: number }) {
+  return <AssigneeStack assignees={assignees} limit={limit} className="absolute bottom-2 right-2" />
 }
 

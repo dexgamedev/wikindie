@@ -95,15 +95,26 @@ export function Sidebar({
       {mobileOpen && <button className="fixed inset-0 z-30 bg-overlay lg:hidden" onClick={onCloseMobile} aria-label="Close sidebar" />}
       <aside className={`panel fixed left-0 top-0 z-40 flex h-dvh w-[min(300px,calc(100vw-1.5rem))] flex-col transition-[transform,width,padding] duration-200 lg:static lg:z-auto lg:h-auto lg:min-h-0 lg:shrink-0 ${collapsed ? 'lg:w-[72px]' : 'lg:w-[300px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
-        {/* Zone A — Logo (desktop only) */}
-        <div className={`hidden items-center border-b border-border px-4 py-3 lg:flex ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-          <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
-            <img src={logoUrl} alt="" className="block h-8 w-auto shrink-0" />
-            <span className={`min-w-0 translate-y-0.5 ${collapsed ? 'hidden' : ''}`}>
-              <span className="block truncate text-lg font-bold leading-none tracking-tight text-text">Wikindie</span>
-              <span className="block text-[10px] font-semibold leading-none tracking-wide text-text-muted">{appVersion}</span>
-            </span>
-          </Link>
+        {/* Zone A — Logo + desktop collapse toggle */}
+        <div className={`hidden items-center border-b border-border lg:flex ${collapsed ? 'justify-center px-2 py-3' : 'justify-between gap-2 px-3 py-3'}`}>
+          {!collapsed && (
+            <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
+              <img src={logoUrl} alt="" className="block h-8 w-auto shrink-0" />
+              <span className="min-w-0 translate-y-0.5">
+                <span className="block truncate text-lg font-bold leading-none tracking-tight text-text">Wikindie</span>
+                <span className="block text-[10px] font-semibold leading-none tracking-wide text-text-muted">{appVersion}</span>
+              </span>
+            </Link>
+          )}
+          <button
+            className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+            onClick={onToggleCollapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            type="button"
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         </div>
 
         {/* Zone B — New File + create flow */}
@@ -171,17 +182,9 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Zone C — Vault heading + collapse/close toggle */}
-        <div className={`flex items-center px-4 py-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>
-          <span className={`text-xs font-semibold uppercase tracking-wide text-text-muted ${collapsed ? 'lg:hidden' : ''}`}>Vault</span>
-          <button
-            className="hidden rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text lg:block"
-            onClick={onToggleCollapsed}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </button>
+        {/* Zone C — Vault heading + mobile close toggle */}
+        <div className={`flex items-center justify-between px-4 py-2 ${collapsed ? 'lg:hidden' : ''}`}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">Vault</span>
           <button className="rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text lg:hidden" onClick={onCloseMobile} title="Close">
             <X size={18} />
           </button>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, X } from 'lucide-react'
 import type { CardPriority, KanbanCard as Card } from '../../lib/api'
@@ -30,6 +30,7 @@ export function KanbanCardDialog({
   open: boolean
   users: string[]
 }) {
+  const backdropPointerDown = useRef(false)
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description ?? '')
   const [priority, setPriority] = useState<CardPriority | undefined>(card.priority)
@@ -72,11 +73,19 @@ export function KanbanCardDialog({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-overlay p-3 sm:p-6" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-overlay p-3 sm:p-6"
+      onPointerDown={(event) => {
+        backdropPointerDown.current = event.target === event.currentTarget
+      }}
+      onPointerUp={(event) => {
+        if (backdropPointerDown.current && event.target === event.currentTarget) onClose()
+        backdropPointerDown.current = false
+      }}
+    >
       <section
         aria-modal="true"
         className="mx-auto mt-8 flex max-h-[calc(100dvh-4rem)] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-border bg-input shadow-lg shadow-heavy"
-        onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-panel px-4 py-3">
