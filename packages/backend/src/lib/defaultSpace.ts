@@ -4,6 +4,13 @@ export interface DefaultSpaceFile {
   frontmatter?: Record<string, unknown>
 }
 
+const defaultKanbanColumns = [
+  { id: 'backlog', status: 'backlog' },
+  { id: 'next', status: 'next' },
+  { id: 'in-progress', status: 'in_progress' },
+  { id: 'done', status: 'done' },
+]
+
 export const defaultSpaceFiles: DefaultSpaceFile[] = [
   {
     relativePath: 'Workspace/_Index.md',
@@ -179,19 +186,19 @@ Prove that a 15-minute exploration loop can feel satisfying with lightweight cra
   },
   {
     relativePath: 'Workspace/Projects/Project Atlas/Sprint Board.md',
-    frontmatter: { title: 'Atlas Sprint Board', icon: 'board', kanban: true },
-    content: `## Backlog
+    frontmatter: { title: 'Atlas Sprint Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
+    content: `## :todo: Backlog
 - [ ] Draft island event list
 - [ ] Define resource names and icons
 - [ ] Add placeholder quest giver copy
-## Ready
+## :idea: Next Up
 - [ ] Build camp return screen wireframe
 - [ ] Create map marker legend
-## In Progress
+## :doing: In Progress
 - [ ] Tune first exploration route timing
-## Done
-- [x] Agree on prototype success metrics
-- [x] Pick three starter biomes
+## :done: Done
+- [ ] Agree on prototype success metrics
+- [ ] Pick three starter biomes
 `,
   },
   {
@@ -248,18 +255,18 @@ Validate whether a lightweight community hub reduces support churn and improves 
   },
   {
     relativePath: 'Workspace/Projects/Project Beacon/Sprint Board.md',
-    frontmatter: { title: 'Beacon Sprint Board', icon: 'board', kanban: true },
-    content: `## Backlog
+    frontmatter: { title: 'Beacon Sprint Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
+    content: `## :todo: Backlog
 - [ ] Draft moderation policy outline
 - [ ] Build interview script
 - [ ] Sketch notification preferences
-## Ready
+## :idea: Next Up
 - [ ] Schedule five discovery calls
 - [ ] Inventory current feedback channels
-## In Progress
+## :doing: In Progress
 - [ ] Prototype community landing page sections
-## Done
-- [x] Define discovery success criteria
+## :done: Done
+- [ ] Define discovery success criteria
 `,
   },
   {
@@ -312,19 +319,19 @@ Ship a small beta store that can sell digital bundles, measure conversion, and s
   },
   {
     relativePath: 'Workspace/Projects/Project Copper/Sprint Board.md',
-    frontmatter: { title: 'Copper Sprint Board', icon: 'board', kanban: true },
-    content: `## Backlog
+    frontmatter: { title: 'Copper Sprint Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
+    content: `## :todo: Backlog
 - [ ] Finalize beta discount rules
 - [ ] Add creator bundle preview images
 - [ ] Draft post-launch survey
-## Ready
+## :idea: Next Up
 - [ ] Confirm payment error messages
 - [ ] Write support macro set
-## In Progress
+## :doing: In Progress
 - [ ] Build storefront product card layout
-## Done
-- [x] Choose launch reporting metrics
-- [x] Confirm placeholder pricing tiers
+## :done: Done
+- [ ] Choose launch reporting metrics
+- [ ] Confirm placeholder pricing tiers
 `,
   },
   {
@@ -552,21 +559,21 @@ Use this section for cross-project planning artifacts that do not belong to a si
   },
   {
     relativePath: 'Workspace/Planning/Portfolio Board.md',
-    frontmatter: { title: 'Portfolio Board', icon: 'board', kanban: true },
-    content: `## Backlog
+    frontmatter: { title: 'Portfolio Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
+    content: `## :todo: Backlog
 - [ ] Replace placeholder project names
 - [ ] Add real budget snapshot per project
 - [ ] Create release checklist for every active launch
-## This Week
+## :idea: Next Up
 - [ ] Review Project Atlas prototype metrics
 - [ ] Schedule Project Beacon discovery interviews
 - [ ] Confirm Project Copper beta support plan
-## In Progress
+## :doing: In Progress
 - [ ] Draft organization-wide operating rhythm
 - [ ] Align department owners with active project needs
-## Done
-- [x] Create starter workspace structure
-- [x] Add placeholder departments and project boards
+## :done: Done
+- [ ] Create starter workspace structure
+- [ ] Add placeholder departments and project boards
 `,
   },
   {

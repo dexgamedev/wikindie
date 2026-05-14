@@ -1,7 +1,8 @@
 import { Pencil, Plus, Settings, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { KanbanBoard, KanbanCard as Card, KanbanColumn as Column } from '../../lib/api'
+import type { KanbanBoard, KanbanCard as Card, KanbanColumn as Column, KanbanColumnStatus } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
+import { getActiveDragSource, kanbanColumnStatusOptions } from '../../lib/kanban'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
@@ -35,21 +36,23 @@ export function KanbanColumn({
   const [metaEditing, setMetaEditing] = useState(false)
   const [metaTitle, setMetaTitle] = useState(column.title)
   const [metaIcon, setMetaIcon] = useState(column.icon || '')
+  const [metaStatus, setMetaStatus] = useState<KanbanColumnStatus>(column.status)
 
   useEffect(() => {
     if (!renaming) setRenameValue(column.title)
     if (!metaEditing) {
       setMetaTitle(column.title)
       setMetaIcon(column.icon || '')
+      setMetaStatus(column.status)
     }
-  }, [column.icon, column.title, metaEditing, renaming])
+  }, [column.icon, column.status, column.title, metaEditing, renaming])
 
   const addCard = () => {
     if (!editable) return
     const title = newCardTitle.trim()
     if (!title) return
     const next = structuredClone(board)
-    next.columns[columnIndex].cards.push({ title, done: false, assignees: [] })
+    next.columns[columnIndex].cards.push({ title, assignees: [] })
     onUpdate(next)
     setAddingCard(false)
     setNewCardTitle('')
@@ -72,6 +75,7 @@ export function KanbanColumn({
     const next = structuredClone(board)
     next.columns[columnIndex].title = title
     next.columns[columnIndex].icon = metaIcon || undefined
+    next.columns[columnIndex].status = metaStatus
     onUpdate(next)
     setMetaEditing(false)
   }
@@ -89,12 +93,12 @@ export function KanbanColumn({
     <div
       className="rounded-md border border-border bg-surface p-3 sm:p-4"
       onDragOver={(event) => {
-        if (editable) event.preventDefault()
+        if (editable && getActiveDragSource() !== null && getActiveDragSource() !== columnIndex) event.preventDefault()
       }}
       onDrop={(event) => {
         if (!editable) return
         const [fromColumn, fromCard] = event.dataTransfer.getData('text/plain').split(':').map(Number)
-        if (!Number.isNaN(fromColumn) && !Number.isNaN(fromCard)) onMove(fromColumn, fromCard, columnIndex)
+        if (!Number.isNaN(fromColumn) && !Number.isNaN(fromCard) && fromColumn !== columnIndex) onMove(fromColumn, fromCard, columnIndex)
       }}
     >
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -152,7 +156,7 @@ export function KanbanColumn({
         <article className="mb-4 rounded-md border border-border bg-card p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h4 className="text-sm font-semibold text-text">Column meta</h4>
-            <span className="text-xs text-text-muted">Icon and title</span>
+            <span className="text-xs text-text-muted">Icon, title, and workflow status</span>
           </div>
           <input
             className="mb-3 w-full rounded border border-accent bg-input px-2 py-1.5 text-sm text-text outline-none"
@@ -160,6 +164,18 @@ export function KanbanColumn({
             onChange={(event) => setMetaTitle(event.target.value)}
             placeholder="Column title"
           />
+          <label className="mb-3 grid gap-1 text-xs text-text-muted">
+            Workflow status
+            <select
+              className="w-full rounded border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+              value={metaStatus}
+              onChange={(event) => setMetaStatus(event.target.value as KanbanColumnStatus)}
+            >
+              {kanbanColumnStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
           <div className="mb-3 max-h-48 overflow-y-auto rounded-md border border-border bg-input p-2">
             {iconCategories.map((category) => (
               <div key={category} className="mb-3 last:mb-0">
@@ -212,7 +228,7 @@ export function KanbanColumn({
       <div className="space-y-4">
         {cardsToRender.map(({ card, cardIndex }) => (
           <KanbanCard
-            key={`${card.title}-${cardIndex}`}
+            key={card.id ?? `${card.title}-${cardIndex}`}
             card={card}
             cardIndex={cardIndex}
             columnIndex={columnIndex}

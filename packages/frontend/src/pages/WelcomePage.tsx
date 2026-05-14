@@ -26,7 +26,7 @@ function StatsCard() {
         <StatRow icon={<FileText size={14} />} label="Pages" value={stats?.totalPages} />
         <StatRow icon={<Layout size={14} />} label="Boards" value={stats?.totalBoards} />
         <StatRow icon={<CircleDot size={14} />} label="Open tasks" value={stats ? openTasks : undefined} accent />
-        <StatRow icon={<CheckCircle2 size={14} />} label="Completed" value={stats?.doneTasks} />
+        <StatRow icon={<CheckCircle2 size={14} />} label="In Done" value={stats?.doneTasks} />
       </ul>
 
       <div className="mt-3 flex items-center gap-2 rounded-md bg-accent/8 px-2.5 py-2 text-xs text-text-muted">

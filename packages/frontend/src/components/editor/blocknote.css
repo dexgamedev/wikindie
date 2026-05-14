@@ -23,6 +23,7 @@ body > .bn-root:not(.bn-container) {
   width: 0;
   height: 0;
   overflow: visible;
+  z-index: 60;
 }
 
 /* The shadcn Button "default" variant is bg-primary with shadow — too aggressive

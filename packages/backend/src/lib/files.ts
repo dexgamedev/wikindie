@@ -4,7 +4,19 @@ import path from 'node:path'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
 import { defaultSpaceFiles } from './defaultSpace.js'
-import { parseKanban, type CardPriority } from './kanban.js'
+import {
+  defaultKanbanBoard,
+  defaultKanbanFrontmatter,
+  isDoneColumn,
+  normalizeKanbanBoard,
+  parseKanban,
+  parseKanbanColumnMetadata,
+  parseTaskIdSettings,
+  serializeKanban,
+  withKanbanColumnMetadata,
+  type CardPriority,
+  type KanbanColumnStatus,
+} from './kanban.js'
 
 export const SPACE_DIR = path.resolve(process.env.SPACE_DIR ?? './space')
 
@@ -26,7 +38,9 @@ export interface PageBundle extends MarkdownFile {
 }
 
 export interface BoardSummaryColumn {
+  id: string
   title: string
+  status: KanbanColumnStatus
   icon?: string
   total: number
   done: number
@@ -42,13 +56,16 @@ export interface BoardSummary {
 }
 
 export interface TaskInfo {
+  id?: string
   title: string
-  done: boolean
+  description?: string
   priority?: CardPriority
   assignees: string[]
   boardPath: string
   boardTitle: string
+  columnId: string
   columnTitle: string
+  columnStatus: KanbanColumnStatus
   columnIcon?: string
 }
 
@@ -253,23 +270,27 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
   if (file.frontmatter.kanban !== true) return null
 
   const board = parseKanban(file.content)
+  const normalizedBoard = normalizeKanbanBoard(board, parseTaskIdSettings(file.frontmatter), parseKanbanColumnMetadata(file.frontmatter))
   const boardPath = normalizePagePath(pagePath)
   const boardTitle = String(file.frontmatter.title ?? pageTitleFromPath(pagePath))
-  const columns = board.columns.map((column) => {
-    const done = column.cards.filter((card) => card.done).length
-    return { title: column.title, icon: column.icon, total: column.cards.length, done }
+  const columns = normalizedBoard.columns.map((column) => {
+    const done = isDoneColumn(column) ? column.cards.length : 0
+    return { id: column.id, title: column.title, status: column.status, icon: column.icon, total: column.cards.length, done }
   })
   const totalCards = columns.reduce((sum, column) => sum + column.total, 0)
   const doneCards = columns.reduce((sum, column) => sum + column.done, 0)
-  const tasks = board.columns.flatMap((column) =>
+  const tasks = normalizedBoard.columns.flatMap((column) =>
     column.cards.map((card) => ({
+      id: card.id,
       title: card.title,
-      done: card.done,
+      description: card.description,
       priority: card.priority,
       assignees: [...card.assignees],
       boardPath,
       boardTitle,
+      columnId: column.id,
       columnTitle: column.title,
+      columnStatus: column.status,
       columnIcon: column.icon,
     })),
   )
@@ -362,8 +383,9 @@ export async function writePage(pagePath: string, content: string, frontmatter: 
 
 export async function createPage(pagePath: string, kanban = false) {
   const normalized = normalizePagePath(pagePath)
-  const frontmatter = kanban ? { kanban: true } : {}
-  const content = kanban ? '## :todo: To Do\n- [ ] New card\n## :doing: In Progress\n## :done: Done\n' : `# ${pageTitleFromPath(normalized)}\n`
+  const board = defaultKanbanBoard()
+  const frontmatter = kanban ? defaultKanbanFrontmatter() : {}
+  const content = kanban ? serializeKanban(board) : `# ${pageTitleFromPath(normalized)}\n`
   await writeMarkdownByPath(pageToLeafPath(normalized), content, frontmatter)
   return normalized
 }
@@ -381,6 +403,17 @@ export async function createChildPage(parentPath: string, pageName: string, kanb
 export async function updatePageMeta(pagePath: string, patch: Record<string, unknown>) {
   const page = await readPage(pagePath)
   const nextFrontmatter = { ...page.frontmatter, ...patch }
+  const currentTaskIds = parseTaskIdSettings(page.frontmatter)
+  const nextTaskIds = parseTaskIdSettings(nextFrontmatter)
+  const taskIdsChanged = Object.hasOwn(patch, 'taskIds') && nextTaskIds.enabled && (currentTaskIds.enabled !== nextTaskIds.enabled || currentTaskIds.prefix !== nextTaskIds.prefix)
+  const shouldRewriteBoard =
+    nextFrontmatter.kanban === true &&
+    (Object.hasOwn(patch, 'kanbanColumns') || taskIdsChanged || page.frontmatter.kanban !== true)
+
+  if (shouldRewriteBoard) {
+    const board = normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(nextFrontmatter), parseKanbanColumnMetadata(nextFrontmatter))
+    return writePage(page.path, serializeKanban(board), withKanbanColumnMetadata(nextFrontmatter, board))
+  }
   return writePage(page.path, page.content, nextFrontmatter)
 }
 
@@ -409,8 +442,9 @@ export async function createFolder(relativePath: string) {
 }
 
 export async function createFile(relativePath: string, kanban = false) {
-  const content = kanban ? '## :todo: To Do\n- [ ] New card\n## :doing: In Progress\n## :done: Done\n' : '# Untitled\n'
-  await writeMarkdown(relativePath, content, kanban ? { kanban: true } : {})
+  const board = defaultKanbanBoard()
+  const content = kanban ? serializeKanban(board) : '# Untitled\n'
+  await writeMarkdown(relativePath, content, kanban ? defaultKanbanFrontmatter() : {})
 }
 
 export async function deleteItem(relativePath: string) {

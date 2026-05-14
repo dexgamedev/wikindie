@@ -1,8 +1,9 @@
 import { ArrowLeft, CheckCircle2, ListChecks, Plus, Settings } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, type KanbanBoard as Board, type KanbanCard as Card, type PageBundle } from '../../lib/api'
+import { api, type KanbanBoard as Board, type KanbanCard as Card, type PageBundle, type TaskIdSettings } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
+import { createKanbanColumn, isDoneColumn, sortBoardByPriority } from '../../lib/kanban'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canWrite, useAuthStore, useFilesStore, useTaskFiltersStore } from '../../lib/store'
 import { compileSearchRegex, defaultTaskFilters, hasAppliedFilters, matchesKanbanCardFilters, type TaskFilterValues } from '../../lib/taskFilters'
@@ -23,17 +24,42 @@ function defaultColumnIcon(title: string) {
   return undefined
 }
 
+function normalizeTaskIdPrefix(value: string) {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'TASK'
+}
+
+function defaultTaskIdPrefix(value: string) {
+  const parts = value.split('/').filter(Boolean)
+  return normalizeTaskIdPrefix(parts[parts.length - 1] ?? value)
+}
+
+function taskIdSettingsFromFrontmatter(frontmatter: Record<string, unknown> | undefined, fallback: string): TaskIdSettings {
+  const raw = frontmatter?.taskIds
+  if (!raw || typeof raw !== 'object') return { enabled: false, prefix: defaultTaskIdPrefix(fallback) }
+  const data = raw as Record<string, unknown>
+  return {
+    enabled: data.enabled === true,
+    prefix: normalizeTaskIdPrefix(String(data.prefix ?? fallback)),
+  }
+}
+
 export function KanbanBoard({
   path,
   initial,
   title,
   icon,
+  frontmatter,
   onPageChange,
 }: {
   path: string
   initial: Board
   title?: string
   icon?: string
+  frontmatter?: Record<string, unknown>
   onPageChange?: (page: PageBundle) => void
 }) {
   const navigate = useNavigate()
@@ -53,6 +79,8 @@ export function KanbanBoard({
   const [metaEditing, setMetaEditing] = useState(false)
   const [metaTitle, setMetaTitle] = useState(title || pageNameFromPath(path))
   const [metaIcon, setMetaIcon] = useState(icon || '')
+  const [taskIdsEnabled, setTaskIdsEnabled] = useState(() => taskIdSettingsFromFrontmatter(frontmatter, title || path).enabled)
+  const [taskIdPrefix, setTaskIdPrefix] = useState(() => taskIdSettingsFromFrontmatter(frontmatter, title || path).prefix)
   const breadcrumbs = useMemo(
     () => breadcrumbsFromPath(path).map((c) => ({
       ...c,
@@ -63,7 +91,7 @@ export function KanbanBoard({
   const showBreadcrumbs = breadcrumbs.length > 1
   const displayTitle = title || pageNameFromPath(path)
   const cardCount = useMemo(() => board.columns.reduce((sum, column) => sum + column.cards.length, 0), [board])
-  const doneCount = useMemo(() => board.columns.reduce((sum, column) => sum + column.cards.filter((card) => card.done).length, 0), [board])
+  const doneCount = useMemo(() => board.columns.reduce((sum, column) => sum + (isDoneColumn(column) ? column.cards.length : 0), 0), [board])
   const taskFilters = useMemo<TaskFilterValues>(
     () => (filterPagePath === path ? { priorityFilter, assigneeFilter, searchPattern } : defaultTaskFilters),
     [assigneeFilter, filterPagePath, path, priorityFilter, searchPattern],
@@ -71,7 +99,7 @@ export function KanbanBoard({
   const search = useMemo(() => compileSearchRegex(taskFilters.searchPattern), [taskFilters.searchPattern])
   const filtersApplied = hasAppliedFilters(taskFilters, search.regex)
   const cardMatchesFilter = useMemo(
-    () => (filtersApplied ? (card: Card, columnTitle: string) => matchesKanbanCardFilters(card, columnTitle, taskFilters, search.regex) : undefined),
+    () => (filtersApplied ? (card: Card, column: Board['columns'][number]) => matchesKanbanCardFilters(card, column, taskFilters, search.regex) : undefined),
     [filtersApplied, search.regex, taskFilters],
   )
   const visibleColumns = useMemo(
@@ -81,7 +109,7 @@ export function KanbanBoard({
         columnIndex,
         cards: column.cards
           .map((card, cardIndex) => ({ card, cardIndex }))
-          .filter(({ card }) => !cardMatchesFilter || cardMatchesFilter(card, column.title)),
+          .filter(({ card }) => !cardMatchesFilter || cardMatchesFilter(card, column)),
       })),
     [board.columns, cardMatchesFilter],
   )
@@ -97,8 +125,11 @@ export function KanbanBoard({
   useEffect(() => {
     setMetaTitle(title || pageNameFromPath(path))
     setMetaIcon(icon || '')
+    const taskIdSettings = taskIdSettingsFromFrontmatter(frontmatter, title || path)
+    setTaskIdsEnabled(taskIdSettings.enabled)
+    setTaskIdPrefix(taskIdSettings.prefix)
     setMetaEditing(false)
-  }, [icon, path, title])
+  }, [frontmatter, icon, path, title])
 
   useEffect(() => {
     let cancelled = false
@@ -116,17 +147,23 @@ export function KanbanBoard({
 
   const update = async (next: Board) => {
     if (!mayWrite) return
-    setBoard(next)
+    const sorted = sortBoardByPriority(next)
+    setBoard(sorted)
     setSaving(true)
-    await api.saveKanban(path, next)
-    setSaving(false)
+    try {
+      const updated = await api.saveKanban(path, sorted)
+      setBoard(updated.board)
+      onPageChange?.(updated)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const addColumn = () => {
     if (!mayWrite) return
     const title = newColumnTitle.trim()
     if (!title) return
-    void update({ columns: [...board.columns, { title, icon: defaultColumnIcon(title), cards: [] }] })
+    void update({ columns: [...board.columns, { ...createKanbanColumn(title, board.columns), icon: defaultColumnIcon(title) }] })
     setAddingColumn(false)
     setNewColumnTitle('')
   }
@@ -137,7 +174,16 @@ export function KanbanBoard({
     if (!cleanTitle) return
     setSaving(true)
     try {
-      const updated = await api.patchPageMeta(path, { title: cleanTitle, icon: metaIcon || undefined })
+      const currentTaskIdSettings = taskIdSettingsFromFrontmatter(frontmatter, title || path)
+      const nextTaskIdSettings = { enabled: taskIdsEnabled, prefix: normalizeTaskIdPrefix(taskIdPrefix || cleanTitle) }
+      const patch: Record<string, unknown> = {
+        title: cleanTitle,
+        icon: metaIcon || undefined,
+      }
+      if (currentTaskIdSettings.enabled !== nextTaskIdSettings.enabled || currentTaskIdSettings.prefix !== nextTaskIdSettings.prefix) patch.taskIds = nextTaskIdSettings
+
+      const updated = await api.patchPageMeta(path, patch)
+      if (updated.board) setBoard(updated.board)
       onPageChange?.({ ...updated, board: updated.board ?? board })
       setMetaEditing(false)
     } finally {
@@ -146,7 +192,7 @@ export function KanbanBoard({
   }
 
   const moveCard = (fromColumn: number, fromCard: number, toColumn: number) => {
-    if (!mayWrite) return
+    if (!mayWrite || fromColumn === toColumn) return
     const next = structuredClone(board)
     const [card] = next.columns[fromColumn].cards.splice(fromCard, 1)
     next.columns[toColumn].cards.push(card)
@@ -205,7 +251,7 @@ export function KanbanBoard({
               mayWrite ? (
                 <>
                   <ActionMenuItem onSelect={() => { setMetaEditing((open) => !open); close() }}>
-                    <Settings size={15} /> {metaEditing ? 'Close page meta' : 'Page meta'}
+                    <Settings size={15} /> {metaEditing ? 'Close board meta' : 'Board meta'}
                   </ActionMenuItem>
                   <ActionMenuItem onSelect={() => { setAddingColumn((open) => !open); close() }}>
                     <Plus size={15} /> {addingColumn ? 'Close column form' : 'Add column'}
@@ -224,7 +270,7 @@ export function KanbanBoard({
         <article className="mb-4 max-w-3xl rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold">Board meta</h3>
-            <span className="text-xs text-text-muted">Title and sidebar icon</span>
+            <span className="text-xs text-text-muted">Title, icon, and task IDs</span>
           </div>
           <div className="mb-4 grid max-h-72 gap-4 overflow-y-auto rounded-md border border-border bg-input p-3">
             {iconCategories.map((category) => (
@@ -256,8 +302,32 @@ export function KanbanBoard({
             onChange={(event) => setMetaTitle(event.target.value)}
             className="mb-4 w-full rounded border border-accent bg-input px-3 py-2 text-lg font-semibold text-text outline-none"
           />
+          <div className="mb-4 rounded-md border border-border bg-input p-3">
+            <label className="mb-3 flex items-start gap-3 text-sm text-text">
+              <input
+                checked={taskIdsEnabled}
+                className="mt-1 size-4 accent-accent"
+                onChange={(event) => setTaskIdsEnabled(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                <span className="block font-semibold">Automatic task IDs</span>
+                <span className="block text-xs text-text-muted">Disabled by default. Existing IDs stay unchanged; new IDs use this board prefix.</span>
+              </span>
+            </label>
+            <label className="grid gap-1 text-xs text-text-muted">
+              ID prefix
+              <input
+                value={taskIdPrefix}
+                onChange={(event) => setTaskIdPrefix(event.target.value.toUpperCase())}
+                className="w-full rounded border border-border bg-card px-3 py-2 text-sm font-semibold tracking-wide text-text outline-none transition focus:border-accent"
+                placeholder="TASK"
+              />
+            </label>
+            <p className="mt-2 text-xs text-text-muted">Example next ID format: <span className="font-semibold text-text">[{normalizeTaskIdPrefix(taskIdPrefix || metaTitle)}-1]</span></p>
+          </div>
           <div className="flex gap-2">
-            <Button onClick={() => void saveMeta()}>Save title</Button>
+            <Button onClick={() => void saveMeta()}>Save meta</Button>
             <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
           </div>
         </article>
@@ -284,7 +354,7 @@ export function KanbanBoard({
         <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:w-max sm:grid-flow-col sm:auto-cols-[280px] sm:grid-cols-none sm:gap-4">
           {visibleColumns.map(({ column, columnIndex, cards }) => (
             <KanbanColumn
-              key={`${column.title}-${columnIndex}`}
+              key={`${column.id}-${columnIndex}`}
               column={column}
               columnIndex={columnIndex}
               board={board}
@@ -308,7 +378,7 @@ export function KanbanBoard({
         <div className="flex min-w-0 items-center gap-3">
           <span>{board.columns.length.toLocaleString()} columns</span>
           <span>{filtersApplied ? `${shownCardCount.toLocaleString()}/${cardCount.toLocaleString()} shown` : `${cardCount.toLocaleString()} cards`}</span>
-          <span>{doneCount.toLocaleString()} done</span>
+          <span>{doneCount.toLocaleString()} in Done</span>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="hidden items-center gap-1.5 sm:flex">

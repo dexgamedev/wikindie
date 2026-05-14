@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowUpRight, Filter, ListChecks, PanelRightClose, Panel
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type BoardSummary, type TaskInfo, type TaskOverviewScope } from '../../lib/api'
+import { isDoneColumn } from '../../lib/kanban'
 import { pageUrl } from '../../lib/paths'
 import { priorityColor, priorityLabel, priorityRank } from '../../lib/priority'
 import { canWrite, useAuthStore, useFilesStore, useTaskFiltersStore } from '../../lib/store'
@@ -37,7 +38,7 @@ function uniqueAssignees(tasks: TaskInfo[]) {
 }
 
 function taskPreviewOrder(tasks: TaskInfo[]) {
-  return [...tasks].sort((a, b) => Number(a.done) - Number(b.done) || priorityRank(a.priority) - priorityRank(b.priority) || a.title.localeCompare(b.title))
+  return [...tasks].sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority) || a.title.localeCompare(b.title))
 }
 
 export function TaskPanel({
@@ -182,10 +183,10 @@ export function TaskPanel({
     }
 
     const totalTasks = visibleScopeTasks.length
-    const doneTasks = visibleScopeTasks.filter((task) => task.done).length
+    const doneTasks = visibleScopeTasks.filter((task) => task.columnStatus === 'done').length
     return { totalTasks, doneTasks, percent: completion(doneTasks, totalTasks) }
   }, [isBoardScope, visibleBoards, visibleScopeTasks])
-  const highOpenCount = useMemo(() => visibleScopeTasks.filter((task) => !task.done && task.priority === 'high').length, [visibleScopeTasks])
+  const highOpenCount = useMemo(() => visibleScopeTasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length, [visibleScopeTasks])
   const waitingForCurrentPath = Boolean(pagePath && loadedPath !== pagePath)
 
   const createBoard = async (event: FormEvent) => {
@@ -238,7 +239,7 @@ export function TaskPanel({
         </div>
         {hasFilterInput && <span className="size-2 rounded-full bg-accent" title="Filters active" />}
         {highOpenCount > 0 && (
-          <div className="grid size-7 place-items-center rounded-full border border-danger/40 bg-danger/10 text-[10px] font-bold text-danger" title={`${highOpenCount} high-priority open cards`}>
+          <div className="grid size-7 place-items-center rounded-full border border-danger/40 bg-danger/10 text-[10px] font-bold text-danger" title={`${highOpenCount} high-priority cards outside Done`}>
             {highOpenCount}
           </div>
         )}
@@ -283,7 +284,7 @@ export function TaskPanel({
         <div className="grid grid-cols-3 gap-2 text-center">
           <Stat label={isBoardScope ? 'Board' : 'Boards'} value={visibleBoards.length} />
           <Stat label="Cards" value={totals.totalTasks} />
-          <Stat label="Done" value={totals.doneTasks} />
+          <Stat label="In Done" value={totals.doneTasks} />
         </div>
       </div>
 
@@ -409,11 +410,11 @@ function HealthState({
         />
       </div>
       <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
-        <span>{doneTasks.toLocaleString()}/{totalTasks.toLocaleString()} done</span>
+        <span>{doneTasks.toLocaleString()}/{totalTasks.toLocaleString()} in Done</span>
         {highOpenCount > 0 ? (
           <span className="flex items-center gap-1 text-danger"><AlertTriangle size={13} /> {highOpenCount.toLocaleString()} high open</span>
         ) : (
-          <span>{openTasks.toLocaleString()} open</span>
+          <span>{openTasks.toLocaleString()} outside Done</span>
         )}
       </div>
     </section>
@@ -506,14 +507,14 @@ function FilteringPanel({
   )
 }
 
-function columnKey(title: string, icon?: string) {
-  return `${icon ?? ''}::${title}`
+function columnKey(id: string) {
+  return id
 }
 
 function taskGroupsByColumn(tasks: TaskInfo[]) {
   const groups = new Map<string, TaskInfo[]>()
   for (const task of tasks) {
-    const key = columnKey(task.columnTitle, task.columnIcon)
+    const key = columnKey(task.columnId)
     const group = groups.get(key)
     if (group) group.push(task)
     else groups.set(key, [task])
@@ -551,12 +552,12 @@ function BoardColumnDistribution({
 
       <div className="space-y-2">
         {board.columns.map((column, index) => {
-          const columnTasks = tasksByColumn.get(columnKey(column.title, column.icon)) ?? []
-          const visibleTasks = filtered ? filteredTasksByColumn.get(columnKey(column.title, column.icon)) ?? [] : columnTasks
+          const columnTasks = tasksByColumn.get(columnKey(column.id)) ?? []
+          const visibleTasks = filtered ? filteredTasksByColumn.get(columnKey(column.id)) ?? [] : columnTasks
           const shown = filtered ? visibleTasks.length : column.total
-          const done = filtered ? visibleTasks.filter((task) => task.done).length : column.done
+          const done = filtered ? (isDoneColumn(column) ? visibleTasks.length : 0) : column.done
           const open = Math.max(0, shown - done)
-          const highOpen = visibleTasks.filter((task) => !task.done && task.priority === 'high').length
+          const highOpen = visibleTasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length
           const width = `${Math.round((shown / denominator) * 100)}%`
 
           return (
@@ -574,7 +575,7 @@ function BoardColumnDistribution({
                 <div className="h-full rounded-full bg-accent-warm transition-[width] duration-300" style={{ width }} />
               </div>
               <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
-                <span>{done}/{shown} done</span>
+                <span>{done}/{shown} in Done</span>
                 {highOpen > 0 ? (
                   <span className="text-danger">{highOpen} high</span>
                 ) : (
@@ -604,8 +605,8 @@ function BoardOverview({
   const doneCards = board.doneCards
   const percent = completion(doneCards, totalCards)
   const openCount = Math.max(0, totalCards - doneCards)
-  const highOpen = tasks.filter((task) => !task.done && task.priority === 'high').length
-  const mediumOpen = tasks.filter((task) => !task.done && task.priority === 'medium').length
+  const highOpen = tasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length
+  const mediumOpen = tasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'medium').length
   const matchingTasks = taskPreviewOrder(filteredTasks)
   const previewTasks = matchingTasks.slice(0, 5)
   const status = totalCards === 0 ? 'No cards' : doneCards === totalCards ? 'Complete' : highOpen > 0 ? `${highOpen} high` : 'Active'
@@ -629,7 +630,7 @@ function BoardOverview({
       <div className="mb-2 flex items-center justify-between gap-2 text-xs">
         <span className={`font-semibold ${statusClass}`}>{status}</span>
         <span className="text-text-muted">
-          {doneCards}/{totalCards} done
+          {doneCards}/{totalCards} in Done
         </span>
       </div>
       <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-input">
@@ -637,7 +638,7 @@ function BoardOverview({
       </div>
 
       <div className="mb-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide">
-        <span className="rounded-full border border-border bg-input px-2 py-1 text-text-muted">{openCount} open</span>
+        <span className="rounded-full border border-border bg-input px-2 py-1 text-text-muted">{openCount} outside Done</span>
         <span className="rounded-full border border-border bg-input px-2 py-1 text-text-muted">{board.columns.length} columns</span>
         {highOpen > 0 && <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-1 text-danger">{highOpen} high</span>}
         {mediumOpen > 0 && <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-1 text-warning">{mediumOpen} medium</span>}
@@ -648,7 +649,7 @@ function BoardOverview({
           {previewTasks.length > 0 ? (
             <>
               {previewTasks.map((task, index) => (
-                <TaskPreview key={`${task.title}-${task.columnTitle}-${index}`} task={task} />
+                <TaskPreview key={task.id ?? `${task.title}-${task.columnTitle}-${index}`} task={task} />
               ))}
               {matchingTasks.length > previewTasks.length && (
                 <Link to={pageUrl(board.path)} className="block rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text">
@@ -673,7 +674,7 @@ function TaskPreview({ task }: { task: TaskInfo }) {
       <div className="flex min-w-0 items-start gap-2">
         <span className={`mt-1.5 size-2 shrink-0 rounded-full ${priorityColor(task.priority)}`} title={priorityLabel(task.priority)} />
         <div className="min-w-0 flex-1">
-          <p className={`break-words text-sm ${task.done ? 'text-text-muted line-through' : 'text-text'}`}>{task.title}</p>
+          <p className="break-words text-sm text-text">{task.id ? `[${task.id}] ` : ''}{task.title}</p>
           <p className="mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs text-text-muted">
             <PageIcon icon={task.columnIcon} fallback="column" className="size-3 shrink-0" />
             <span className="min-w-0 truncate">{task.columnTitle}</span>

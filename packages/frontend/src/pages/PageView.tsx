@@ -73,6 +73,7 @@ export function PageView() {
         initial={page.board}
         title={typeof page.frontmatter.title === 'string' ? page.frontmatter.title : undefined}
         icon={typeof page.frontmatter.icon === 'string' ? page.frontmatter.icon : undefined}
+        frontmatter={page.frontmatter}
         onPageChange={(next) => { pageCache.set(next.path, next); setPage(next) }}
       />
     )

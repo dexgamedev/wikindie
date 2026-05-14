@@ -30,16 +30,20 @@ export interface PageBundle extends MarkdownFile {
 }
 
 export type CardPriority = 'high' | 'medium' | 'low'
+export type KanbanColumnStatus = 'backlog' | 'next' | 'in_progress' | 'done' | 'custom'
 
 export interface KanbanCard {
+  id?: string
   title: string
-  done: boolean
+  description?: string
   priority?: CardPriority
   assignees: string[]
 }
 
 export interface KanbanColumn {
+  id: string
   title: string
+  status: KanbanColumnStatus
   icon?: string
   cards: KanbanCard[]
 }
@@ -49,7 +53,9 @@ export interface KanbanBoard {
 }
 
 export interface BoardSummaryColumn {
+  id: string
   title: string
+  status: KanbanColumnStatus
   icon?: string
   total: number
   done: number
@@ -65,13 +71,16 @@ export interface BoardSummary {
 }
 
 export interface TaskInfo {
+  id?: string
   title: string
-  done: boolean
+  description?: string
   priority?: CardPriority
   assignees: string[]
   boardPath: string
   boardTitle: string
+  columnId: string
   columnTitle: string
+  columnStatus: KanbanColumnStatus
   columnIcon?: string
 }
 
@@ -89,6 +98,11 @@ export interface WorkspaceStats {
   totalTasks: number
   doneTasks: number
   diskSizeBytes: number
+}
+
+export interface TaskIdSettings {
+  enabled: boolean
+  prefix: string
 }
 
 export interface RecentPage {
@@ -165,7 +179,7 @@ export const api = {
     }),
   kanban: (path: string) => request<PageBundle & { board: KanbanBoard }>(`/api/kanban/${encodePath(path)}`),
   saveKanban: (path: string, board: KanbanBoard) =>
-    request<PageBundle>(`/api/kanban/${encodePath(path)}`, { method: 'PUT', body: JSON.stringify({ board }) }),
+    request<PageBundle & { board: KanbanBoard }>(`/api/kanban/${encodePath(path)}`, { method: 'PUT', body: JSON.stringify({ board }) }),
   recents: (limit = 10) => request<{ pages: RecentPage[] }>(`/api/recents?limit=${limit}`),
   stats: () => request<{ stats: WorkspaceStats }>('/api/stats'),
 }

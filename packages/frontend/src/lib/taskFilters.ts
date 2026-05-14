@@ -1,4 +1,4 @@
-import type { CardPriority, KanbanCard, TaskInfo } from './api'
+import type { CardPriority, KanbanCard, KanbanColumn, TaskInfo } from './api'
 
 export type TaskPriorityFilter = 'all' | CardPriority | 'none'
 
@@ -55,15 +55,15 @@ export function matchesTaskInfoFilters(task: TaskInfo, filters: TaskFilterValues
   return (
     matchesPriority(task.priority, filters.priorityFilter) &&
     matchesAssignee(task.assignees, filters.assigneeFilter) &&
-    matchesRegex(regex, [task.title, task.columnTitle, task.columnIcon, task.priority, task.done ? 'done' : 'open', ...task.assignees])
+    matchesRegex(regex, [task.id, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...task.assignees])
   )
 }
 
-export function matchesKanbanCardFilters(card: KanbanCard, columnTitle: string, filters: TaskFilterValues, regex?: RegExp) {
+export function matchesKanbanCardFilters(card: KanbanCard, column: Pick<KanbanColumn, 'id' | 'title' | 'status'>, filters: TaskFilterValues, regex?: RegExp) {
   return (
     matchesPriority(card.priority, filters.priorityFilter) &&
     matchesAssignee(card.assignees, filters.assigneeFilter) &&
-    matchesRegex(regex, [card.title, columnTitle, card.priority, card.done ? 'done' : 'open', ...(card.assignees ?? [])])
+    matchesRegex(regex, [card.id, card.title, card.description, column.id, column.title, column.status, card.priority, ...(card.assignees ?? [])])
   )
 }
 

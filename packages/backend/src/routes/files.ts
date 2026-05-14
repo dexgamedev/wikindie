@@ -12,7 +12,7 @@ import {
   upsertSection,
   writePage,
 } from '../lib/files.js'
-import { parseKanban, serializeKanban } from '../lib/kanban.js'
+import { normalizeKanbanBoard, parseKanban, parseKanbanColumnMetadata, parseTaskIdSettings, serializeKanban, withKanbanColumnMetadata } from '../lib/kanban.js'
 import { AppError } from '../lib/errors.js'
 import { requirePermission } from '../middleware/permissions.js'
 import { listUsers } from '../lib/users.js'
@@ -20,6 +20,9 @@ import { listUsers } from '../lib/users.js'
 export const filesRouter = Router()
 
 const joinedPath = (value: unknown) => (Array.isArray(value) ? value.join('/') : String(value ?? ''))
+
+const boardForPage = (page: Awaited<ReturnType<typeof readPage>>) =>
+  normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter))
 
 filesRouter.get('/tree', requirePermission('read'), async (_req, res) => {
   res.json({ tree: await buildTree() })
@@ -32,14 +35,17 @@ filesRouter.get('/users', requirePermission('read'), async (_req, res) => {
 
 filesRouter.get('/kanban/*path', requirePermission('read'), async (req, res) => {
   const page = await readPage(joinedPath(req.params.path))
-  res.json({ ...page, board: parseKanban(page.content) })
+  res.json({ ...page, board: boardForPage(page) })
 })
 
 filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) => {
   const { board } = req.body as { board?: ReturnType<typeof parseKanban> }
   if (!board) throw new AppError(400, 'Missing board')
   const page = await readPage(joinedPath(req.params.path))
-  res.json(await writePage(page.path, serializeKanban(board), { ...page.frontmatter, kanban: true }))
+  const frontmatter = { ...page.frontmatter, kanban: true }
+  const normalized = normalizeKanbanBoard(board, parseTaskIdSettings(frontmatter), parseKanbanColumnMetadata(frontmatter), false)
+  const updated = await writePage(page.path, serializeKanban(normalized), withKanbanColumnMetadata(frontmatter, normalized))
+  res.json({ ...updated, board: normalized })
 })
 
 filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res) => {
@@ -49,7 +55,7 @@ filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res)
 filesRouter.get('/page/*path', requirePermission('read'), async (req, res) => {
   const page = await readPage(joinedPath(req.params.path))
   if (page.type === 'board') {
-    res.json({ ...page, board: parseKanban(page.content) })
+    res.json({ ...page, board: boardForPage(page) })
     return
   }
   res.json(page)
@@ -63,7 +69,12 @@ filesRouter.put('/page/*path', requirePermission('write'), async (req, res) => {
 filesRouter.patch('/page/*path/meta', requirePermission('write'), async (req, res) => {
   const { patch } = req.body as { patch?: Record<string, unknown> }
   if (!patch) throw new AppError(400, 'Missing patch')
-  res.json(await updatePageMeta(joinedPath(req.params.path), patch))
+  const updated = await updatePageMeta(joinedPath(req.params.path), patch)
+  if (updated.type === 'board') {
+    res.json({ ...updated, board: boardForPage(updated) })
+    return
+  }
+  res.json(updated)
 })
 
 filesRouter.post('/pages', requirePermission('write'), async (req, res) => {

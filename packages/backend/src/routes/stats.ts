@@ -3,7 +3,7 @@ import path from 'node:path'
 import matter from 'gray-matter'
 import { Router } from 'express'
 import { SPACE_DIR } from '../lib/files.js'
-import { parseKanban } from '../lib/kanban.js'
+import { isDoneColumn, normalizeKanbanBoard, parseKanban, parseKanbanColumnMetadata, parseTaskIdSettings } from '../lib/kanban.js'
 
 export const statsRouter = Router()
 
@@ -39,10 +39,10 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
       const parsed = matter(raw)
       if (parsed.data.kanban === true) {
         stats.totalBoards++
-        const board = parseKanban(parsed.content)
+        const board = normalizeKanbanBoard(parseKanban(parsed.content), parseTaskIdSettings(parsed.data), parseKanbanColumnMetadata(parsed.data))
         for (const col of board.columns) {
           stats.totalTasks += col.cards.length
-          stats.doneTasks += col.cards.filter((c) => c.done).length
+          if (isDoneColumn(col)) stats.doneTasks += col.cards.length
         }
       } else {
         stats.totalPages++
