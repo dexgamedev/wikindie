@@ -1,9 +1,9 @@
 import { ChevronRight, Pencil, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
 import { getPageDragPayload, hasPageDragPayload, setPageDragPayload, type PageDragPayload } from '../../lib/pageDrag'
-import { pageUrl } from '../../lib/paths'
+import { pageUrl, pagePathFromLocation } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore } from '../../lib/store'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { PageIcon } from '../ui/PageIcon'
@@ -51,6 +51,7 @@ export function TreeItem({
   const [dragOver, setDragOver] = useState(false)
   const renameFormRef = useRef<HTMLFormElement>(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const role = useAuthStore((state) => state.role)
   const mayWrite = canWrite(role)
   const mayDelete = canDelete(role)
@@ -77,10 +78,20 @@ export function TreeItem({
       cancelRename()
       return
     }
-    await api.patchPageMeta(node.path, { title: clean })
+    const newBasename = clean.replaceAll('/', '-').replaceAll('\\', '-')
+    const newPath = joinPath(dirname(node.path), newBasename)
+    const pathChanged = newPath !== node.path
+    const currentPath = pagePathFromLocation(location.pathname)
+    const isCurrentOrAncestor = currentPath === node.path || currentPath.startsWith(`${node.path}/`)
+    if (pathChanged) await api.movePage(node.path, newPath)
+    await api.patchPageMeta(newPath, { title: clean })
     await onRefresh()
+    if (pathChanged && isCurrentOrAncestor) {
+      const remappedPath = currentPath === node.path ? newPath : `${newPath}${currentPath.slice(node.path.length)}`
+      navigate(pageUrl(remappedPath))
+    }
     setRenaming(false)
-  }, [cancelRename, mayWrite, node.path, onRefresh, renameValue])
+  }, [cancelRename, location.pathname, mayWrite, navigate, node.path, onRefresh, renameValue])
 
   useEffect(() => {
     if (!renaming) setRenameValue(node.title)
