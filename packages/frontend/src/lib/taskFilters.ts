@@ -1,16 +1,21 @@
 import type { CardPriority, KanbanCard, KanbanColumn, TaskInfo } from './api'
 
 export type TaskPriorityFilter = 'all' | CardPriority | 'none'
+export type TaskStateFilter = 'active' | 'archived' | 'all'
 
 export interface TaskFilterValues {
   priorityFilter: TaskPriorityFilter
   assigneeFilter: string
+  labelFilter: string
+  stateFilter: TaskStateFilter
   searchPattern: string
 }
 
 export const defaultTaskFilters: TaskFilterValues = {
   priorityFilter: 'all',
   assigneeFilter: 'all',
+  labelFilter: 'all',
+  stateFilter: 'active',
   searchPattern: '',
 }
 
@@ -29,11 +34,11 @@ export function compileSearchRegex(pattern: string) {
 }
 
 export function hasFilterValues(filters: TaskFilterValues) {
-  return filters.priorityFilter !== 'all' || filters.assigneeFilter !== 'all' || filters.searchPattern.trim() !== ''
+  return filters.priorityFilter !== 'all' || filters.assigneeFilter !== 'all' || filters.labelFilter !== 'all' || filters.stateFilter !== 'active' || filters.searchPattern.trim() !== ''
 }
 
 export function hasAppliedFilters(filters: TaskFilterValues, regex?: RegExp) {
-  return filters.priorityFilter !== 'all' || filters.assigneeFilter !== 'all' || Boolean(regex)
+  return filters.priorityFilter !== 'all' || filters.assigneeFilter !== 'all' || filters.labelFilter !== 'all' || filters.stateFilter !== 'active' || Boolean(regex)
 }
 
 function matchesPriority(priority: CardPriority | undefined, filter: TaskPriorityFilter) {
@@ -46,6 +51,17 @@ function matchesAssignee(assignees: string[] | undefined, filter: string) {
   return filter === 'all' || Boolean(assignees?.includes(filter))
 }
 
+function matchesLabel(labels: string[] | undefined, filter: string) {
+  if (filter === 'all') return true
+  if (filter === 'none') return !labels?.length
+  return Boolean(labels?.includes(filter))
+}
+
+function matchesState(archived: boolean | undefined, filter: TaskStateFilter) {
+  if (filter === 'all') return true
+  return filter === 'archived' ? archived === true : archived !== true
+}
+
 function matchesRegex(regex: RegExp | undefined, values: Array<string | undefined>) {
   if (!regex) return true
   return regex.test(values.filter(Boolean).join('\n'))
@@ -55,7 +71,9 @@ export function matchesTaskInfoFilters(task: TaskInfo, filters: TaskFilterValues
   return (
     matchesPriority(task.priority, filters.priorityFilter) &&
     matchesAssignee(task.assignees, filters.assigneeFilter) &&
-    matchesRegex(regex, [task.id, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...task.assignees])
+    matchesLabel(task.labels, filters.labelFilter) &&
+    matchesState(task.archived, filters.stateFilter) &&
+    matchesRegex(regex, [task.id, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...task.assignees, ...(task.labels ?? [])])
   )
 }
 
@@ -63,7 +81,9 @@ export function matchesKanbanCardFilters(card: KanbanCard, column: Pick<KanbanCo
   return (
     matchesPriority(card.priority, filters.priorityFilter) &&
     matchesAssignee(card.assignees, filters.assigneeFilter) &&
-    matchesRegex(regex, [card.id, card.title, card.description, column.id, column.title, column.status, card.priority, ...(card.assignees ?? [])])
+    matchesLabel(card.labels, filters.labelFilter) &&
+    matchesState(card.archived, filters.stateFilter) &&
+    matchesRegex(regex, [card.id, card.title, card.description, column.id, column.title, column.status, card.priority, ...(card.assignees ?? []), ...(card.labels ?? [])])
   )
 }
 

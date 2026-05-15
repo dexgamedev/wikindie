@@ -38,6 +38,8 @@ export interface KanbanCard {
   description?: string
   priority?: CardPriority
   assignees: string[]
+  labels: string[]
+  archived?: boolean
 }
 
 export interface KanbanColumn {
@@ -58,7 +60,9 @@ export interface BoardSummaryColumn {
   status: KanbanColumnStatus
   icon?: string
   total: number
+  active: number
   done: number
+  archived: number
 }
 
 export interface BoardSummary {
@@ -67,7 +71,9 @@ export interface BoardSummary {
   icon?: string
   columns: BoardSummaryColumn[]
   totalCards: number
+  activeCards: number
   doneCards: number
+  archivedCards: number
 }
 
 export interface TaskInfo {
@@ -76,6 +82,8 @@ export interface TaskInfo {
   description?: string
   priority?: CardPriority
   assignees: string[]
+  labels: string[]
+  archived?: boolean
   boardPath: string
   boardTitle: string
   columnId: string
@@ -97,6 +105,7 @@ export interface WorkspaceStats {
   totalBoards: number
   totalTasks: number
   doneTasks: number
+  archivedTasks: number
   diskSizeBytes: number
 }
 

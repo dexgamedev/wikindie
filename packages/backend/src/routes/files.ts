@@ -12,7 +12,7 @@ import {
   upsertSection,
   writePage,
 } from '../lib/files.js'
-import { normalizeKanbanBoard, parseKanban, parseKanbanColumnMetadata, parseTaskIdSettings, serializeKanban, withKanbanColumnMetadata } from '../lib/kanban.js'
+import { isReservedLabelName, normalizeKanbanBoard, parseKanban, parseKanbanColumnMetadata, parseTaskIdSettings, serializeKanban, withKanbanColumnMetadata } from '../lib/kanban.js'
 import { AppError } from '../lib/errors.js'
 import { requirePermission } from '../middleware/permissions.js'
 import { listUsers } from '../lib/users.js'
@@ -23,6 +23,15 @@ const joinedPath = (value: unknown) => (Array.isArray(value) ? value.join('/') :
 
 const boardForPage = (page: Awaited<ReturnType<typeof readPage>>) =>
   normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter))
+
+function assertNoReservedLabels(board: ReturnType<typeof parseKanban>) {
+  for (const column of board.columns ?? []) {
+    for (const card of column.cards ?? []) {
+      const reserved = (card.labels ?? []).find((label) => isReservedLabelName(String(label)))
+      if (reserved) throw new AppError(400, `Label "${reserved}" is reserved for priority. Use the priority field instead.`)
+    }
+  }
+}
 
 filesRouter.get('/tree', requirePermission('read'), async (_req, res) => {
   res.json({ tree: await buildTree() })
@@ -41,6 +50,7 @@ filesRouter.get('/kanban/*path', requirePermission('read'), async (req, res) => 
 filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) => {
   const { board } = req.body as { board?: ReturnType<typeof parseKanban> }
   if (!board) throw new AppError(400, 'Missing board')
+  assertNoReservedLabels(board)
   const page = await readPage(joinedPath(req.params.path))
   const frontmatter = { ...page.frontmatter, kanban: true }
   const normalized = normalizeKanbanBoard(board, parseTaskIdSettings(frontmatter), parseKanbanColumnMetadata(frontmatter), false)

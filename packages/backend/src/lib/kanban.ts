@@ -17,6 +17,8 @@ export interface KanbanCard {
   description?: string
   priority?: CardPriority
   assignees: string[]
+  labels: string[]
+  archived?: boolean
 }
 
 export interface KanbanColumn {
@@ -33,8 +35,10 @@ export interface KanbanBoard {
 
 const defaultTaskIdPrefix = 'TASK'
 const columnStatuses = new Set<KanbanColumnStatus>(['backlog', 'next', 'in_progress', 'done', 'custom'])
+const reservedLabelNames = new Set(['high', 'medium', 'low'])
 
 const taskIdPattern = /^([A-Za-z][A-Za-z0-9-]*-\d+)$/
+const labelPattern = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/
 
 export const defaultKanbanColumns: Array<KanbanColumnMetadata & { title: string; icon?: string }> = [
   { id: 'backlog', status: 'backlog', title: 'Backlog', icon: 'todo' },
@@ -139,7 +143,7 @@ export function defaultKanbanBoard(): KanbanBoard {
   return {
     columns: defaultKanbanColumns.map((column, index) => ({
       ...column,
-      cards: index === 0 ? [{ title: 'New card', assignees: [] }] : [],
+      cards: index === 0 ? [{ title: 'New card', assignees: [], labels: [] }] : [],
     })),
   }
 }
@@ -148,17 +152,34 @@ export function defaultKanbanFrontmatter() {
   return withKanbanColumnMetadata({ kanban: true }, defaultKanbanBoard())
 }
 
-function parseMetadataBlock(raw: string): { priority?: CardPriority; assignees: string[] } | null {
+export function isReservedLabelName(label: string) {
+  return reservedLabelNames.has(label.trim().toLowerCase())
+}
+
+function parseMetadataBlock(raw: string): { priority?: CardPriority; assignees: string[]; labels: string[]; archived?: boolean } | null {
   const tokens = raw.trim().split(/\s+/).filter(Boolean)
   if (!tokens.length) return null
 
   let priority: CardPriority | undefined
   const assignees: string[] = []
+  const labels: string[] = []
+  let archived = false
 
   for (const token of tokens) {
+    if (token === '!archived') {
+      archived = true
+      continue
+    }
+
     const priorityMatch = token.match(/^#(high|medium|low)$/i)
     if (priorityMatch) {
       priority = priorityMatch[1].toLowerCase() as CardPriority
+      continue
+    }
+
+    const labelMatch = token.match(/^#(.+)$/)
+    if (labelMatch && labelPattern.test(labelMatch[1]) && !isReservedLabelName(labelMatch[1])) {
+      labels.push(labelMatch[1].toLowerCase())
       continue
     }
 
@@ -183,12 +204,16 @@ function parseMetadataBlock(raw: string): { priority?: CardPriority; assignees: 
     return null
   }
 
-  return { priority, assignees }
+  return { priority, assignees, labels, archived: archived || undefined }
 }
 
-function parseCardTags(raw: string): { title: string; priority?: CardPriority; assignees: string[] } {
+function uniqueLabels(labels: string[]) {
+  return [...new Set(labels.map((label) => label.trim().toLowerCase()).filter((label) => label && !isReservedLabelName(label)))]
+}
+
+function parseCardTags(raw: string): { title: string; priority?: CardPriority; assignees: string[]; labels: string[]; archived?: boolean } {
   const trimmed = raw.trim()
-  if (!trimmed) return { title: '', assignees: [] }
+  if (!trimmed) return { title: '', assignees: [], labels: [] }
 
   // Prefer double-space separator for explicit metadata blocks.
   const separators = [...trimmed.matchAll(/\s{2,}/g)]
@@ -197,7 +222,7 @@ function parseCardTags(raw: string): { title: string; priority?: CardPriority; a
     if (separator.index === undefined) continue
     const title = trimmed.slice(0, separator.index).trimEnd()
     const metadata = parseMetadataBlock(trimmed.slice(separator.index + separator[0].length))
-    if (title && metadata) return { title, ...metadata }
+    if (title && metadata) return { title, ...metadata, labels: uniqueLabels(metadata.labels) }
   }
 
   // Fallback: try trailing single-space tokens when they form a valid metadata-only run.
@@ -205,19 +230,23 @@ function parseCardTags(raw: string): { title: string; priority?: CardPriority; a
   let tokensConsumed = 0
   let priority: CardPriority | undefined
   const assignees: string[] = []
+  const labels: string[] = []
+  let archived = false
   for (let i = tokens.length - 1; i >= 1; i -= 1) {
     const block = parseMetadataBlock(tokens[i])
     if (!block) break
     if (block.priority) priority = block.priority
     if (block.assignees.length) assignees.unshift(...block.assignees)
+    if (block.labels.length) labels.unshift(...block.labels)
+    if (block.archived) archived = true
     tokensConsumed = tokens.length - i
   }
   if (tokensConsumed > 0) {
     const title = tokens.slice(0, tokens.length - tokensConsumed).join(' ')
-    if (title) return { title, priority, assignees }
+    if (title) return { title, priority, assignees, labels: uniqueLabels(labels), archived: archived || undefined }
   }
 
-  return { title: trimmed, assignees: [] }
+  return { title: trimmed, assignees: [], labels: [] }
 }
 
 function parseCardText(raw: string): KanbanCard {
@@ -298,7 +327,8 @@ function normalizeCard(card: KanbanCard): KanbanCard {
   const description = typeof card.description === 'string' ? card.description.trimEnd() : undefined
   const priority = card.priority === 'high' || card.priority === 'medium' || card.priority === 'low' ? card.priority : undefined
   const assignees = Array.isArray(card.assignees) ? card.assignees.map((assignee) => String(assignee).trim()).filter(Boolean) : []
-  return { id, title, description: description || undefined, priority, assignees }
+  const labels = Array.isArray(card.labels) ? uniqueLabels(card.labels.map(String).filter((label) => labelPattern.test(label))) : []
+  return { id, title, description: description || undefined, priority, assignees, labels, archived: card.archived === true || undefined }
 }
 
 export function normalizeKanbanBoard(
@@ -371,7 +401,9 @@ export function serializeKanban(board: KanbanBoard) {
         ...column.cards.flatMap((card) => {
           const tagSuffix = [
             ...(card.assignees ?? []).map(formatAssigneeTag),
+            ...(card.labels ?? []).map((label) => `#${label}`),
             card.priority ? `#${card.priority}` : '',
+            card.archived ? '!archived' : '',
           ]
             .filter(Boolean)
             .join(' ')

@@ -37,6 +37,10 @@ function uniqueAssignees(tasks: TaskInfo[]) {
   return [...new Set(tasks.flatMap((task) => task.assignees ?? []))].sort((a, b) => a.localeCompare(b))
 }
 
+function uniqueLabels(tasks: TaskInfo[]) {
+  return [...new Set(tasks.flatMap((task) => task.labels ?? []))].sort((a, b) => a.localeCompare(b))
+}
+
 function taskPreviewOrder(tasks: TaskInfo[]) {
   return [...tasks].sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority) || a.title.localeCompare(b.title))
 }
@@ -68,10 +72,14 @@ export function TaskPanel({
   const setTree = useFilesStore((state) => state.setTree)
   const priorityFilter = useTaskFiltersStore((state) => state.priorityFilter)
   const assigneeFilter = useTaskFiltersStore((state) => state.assigneeFilter)
+  const labelFilter = useTaskFiltersStore((state) => state.labelFilter)
+  const stateFilter = useTaskFiltersStore((state) => state.stateFilter)
   const searchPattern = useTaskFiltersStore((state) => state.searchPattern)
   const setTaskFilterPath = useTaskFiltersStore((state) => state.setTaskFilterPath)
   const setPriorityFilter = useTaskFiltersStore((state) => state.setPriorityFilter)
   const setAssigneeFilter = useTaskFiltersStore((state) => state.setAssigneeFilter)
+  const setLabelFilter = useTaskFiltersStore((state) => state.setLabelFilter)
+  const setStateFilter = useTaskFiltersStore((state) => state.setStateFilter)
   const setSearchPattern = useTaskFiltersStore((state) => state.setSearchPattern)
   const clearTaskFilters = useTaskFiltersStore((state) => state.clearTaskFilters)
   const navigate = useNavigate()
@@ -136,24 +144,23 @@ export function TaskPanel({
 
   const isBoardScope = scope === 'board'
   const assigneeOptions = useMemo(() => uniqueAssignees(tasks), [tasks])
-  const taskFilters = useMemo<TaskFilterValues>(() => ({ priorityFilter, assigneeFilter, searchPattern }), [assigneeFilter, priorityFilter, searchPattern])
+  const labelOptions = useMemo(() => uniqueLabels(tasks), [tasks])
+  const taskFilters = useMemo<TaskFilterValues>(() => ({ priorityFilter, assigneeFilter, labelFilter, stateFilter, searchPattern }), [assigneeFilter, labelFilter, priorityFilter, searchPattern, stateFilter])
   const search = useMemo(() => compileSearchRegex(searchPattern), [searchPattern])
   const searchRegex = search.regex
   const searchError = search.error
   const hasFilterInput = hasFilterValues(taskFilters)
   const filtersApplied = hasAppliedFilters(taskFilters, searchRegex)
-  const hasTaskFilters = priorityFilter !== 'all' || assigneeFilter !== 'all'
+  const hasTaskFilters = priorityFilter !== 'all' || assigneeFilter !== 'all' || labelFilter !== 'all' || stateFilter !== 'active'
   const hasSearchFilter = Boolean(searchRegex)
   const allTasksByBoard = useMemo(() => taskGroupsByBoard(tasks), [tasks])
   const filteredTasks = useMemo(
-    () => (filtersApplied
-      ? tasks.filter((task) => {
+    () => tasks.filter((task) => {
         if (matchesTaskInfoFilters(task, taskFilters, searchRegex)) return true
         if (hasSearchFilter && hasTaskFilters && matchesBoardSearch(searchRegex, task.boardTitle, task.boardPath)) return matchesTaskInfoFilters(task, taskFilters)
         return false
-      })
-      : tasks),
-    [filtersApplied, hasSearchFilter, hasTaskFilters, searchRegex, taskFilters, tasks],
+      }),
+    [hasSearchFilter, hasTaskFilters, searchRegex, taskFilters, tasks],
   )
   const filteredTasksByBoard = useMemo(() => taskGroupsByBoard(filteredTasks), [filteredTasks])
   const visibleBoards = useMemo(() => {
@@ -172,12 +179,12 @@ export function TaskPanel({
   }, [allTasksByBoard, boards, filtersApplied, hasSearchFilter, hasTaskFilters, isBoardScope, searchRegex, taskFilters])
   const visibleBoardPaths = useMemo(() => new Set(visibleBoards.map((board) => board.path)), [visibleBoards])
   const visibleScopeTasks = useMemo(
-    () => (isBoardScope ? filteredTasks : tasks.filter((task) => visibleBoardPaths.has(task.boardPath))),
-    [filteredTasks, isBoardScope, tasks, visibleBoardPaths],
+    () => (isBoardScope ? filteredTasks : filteredTasks.filter((task) => visibleBoardPaths.has(task.boardPath))),
+    [filteredTasks, isBoardScope, visibleBoardPaths],
   )
   const totals = useMemo(() => {
-    if (!isBoardScope) {
-      const totalTasks = visibleBoards.reduce((sum, board) => sum + board.totalCards, 0)
+    if (!isBoardScope && !filtersApplied) {
+      const totalTasks = visibleBoards.reduce((sum, board) => sum + board.activeCards, 0)
       const doneTasks = visibleBoards.reduce((sum, board) => sum + board.doneCards, 0)
       return { totalTasks, doneTasks, percent: completion(doneTasks, totalTasks) }
     }
@@ -185,7 +192,7 @@ export function TaskPanel({
     const totalTasks = visibleScopeTasks.length
     const doneTasks = visibleScopeTasks.filter((task) => task.columnStatus === 'done').length
     return { totalTasks, doneTasks, percent: completion(doneTasks, totalTasks) }
-  }, [isBoardScope, visibleBoards, visibleScopeTasks])
+  }, [filtersApplied, isBoardScope, visibleBoards, visibleScopeTasks])
   const highOpenCount = useMemo(() => visibleScopeTasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length, [visibleScopeTasks])
   const waitingForCurrentPath = Boolean(pagePath && loadedPath !== pagePath)
 
@@ -283,7 +290,7 @@ export function TaskPanel({
 
         <div className="grid grid-cols-3 gap-2 text-center">
           <Stat label={isBoardScope ? 'Board' : 'Boards'} value={visibleBoards.length} />
-          <Stat label="Cards" value={totals.totalTasks} />
+          <Stat label="Active" value={totals.totalTasks} />
           <Stat label="In Done" value={totals.doneTasks} />
         </div>
       </div>
@@ -309,13 +316,18 @@ export function TaskPanel({
               assigneeFilter={assigneeFilter}
               assignees={assigneeOptions}
               hasFilterInput={hasFilterInput}
+              labelFilter={labelFilter}
+              labels={labelOptions}
               onAssigneeChange={setAssigneeFilter}
               onClear={clearTaskFilters}
+              onLabelChange={setLabelFilter}
               onPriorityChange={setPriorityFilter}
               onSearchChange={setSearchPattern}
+              onStateChange={setStateFilter}
               priorityFilter={priorityFilter}
               searchError={searchError}
               searchPattern={searchPattern}
+              stateFilter={stateFilter}
               scope={scope}
             />
             {isBoardScope && boards[0] && (
@@ -425,25 +437,35 @@ function FilteringPanel({
   assigneeFilter,
   assignees,
   hasFilterInput,
+  labelFilter,
+  labels,
   onAssigneeChange,
   onClear,
+  onLabelChange,
   onPriorityChange,
   onSearchChange,
+  onStateChange,
   priorityFilter,
   searchError,
   searchPattern,
+  stateFilter,
   scope,
 }: {
   assigneeFilter: string
   assignees: string[]
   hasFilterInput: boolean
+  labelFilter: string
+  labels: string[]
   onAssigneeChange: (value: string) => void
   onClear: () => void
+  onLabelChange: (value: string) => void
   onPriorityChange: (value: TaskFilterValues['priorityFilter']) => void
   onSearchChange: (value: string) => void
+  onStateChange: (value: TaskFilterValues['stateFilter']) => void
   priorityFilter: TaskFilterValues['priorityFilter']
   searchError: string
   searchPattern: string
+  stateFilter: TaskFilterValues['stateFilter']
   scope: TaskOverviewScope
 }) {
   return (
@@ -459,6 +481,18 @@ function FilteringPanel({
         )}
       </div>
       <div className="grid gap-1.5">
+        <label className="grid gap-1 text-xs text-text-muted">
+          State
+          <select
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            value={stateFilter}
+            onChange={(event) => onStateChange(event.target.value as TaskFilterValues['stateFilter'])}
+          >
+            <option value="active">Active cards</option>
+            <option value="archived">Archived cards</option>
+            <option value="all">All cards</option>
+          </select>
+        </label>
         <label className="grid gap-1 text-xs text-text-muted">
           Priority
           <select
@@ -487,6 +521,20 @@ function FilteringPanel({
           </select>
         </label>
         <label className="grid gap-1 text-xs text-text-muted">
+          Label / sprint
+          <select
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            value={labelFilter}
+            onChange={(event) => onLabelChange(event.target.value)}
+          >
+            <option value="all">All labels</option>
+            <option value="none">No label</option>
+            {labels.map((label) => (
+              <option key={label} value={label}>#{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-text-muted">
           Search regex
           <div className="relative">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -494,7 +542,7 @@ function FilteringPanel({
               className={`w-full rounded-md border bg-input py-1.5 pl-8 pr-2 text-sm text-text outline-none transition focus:border-accent ${searchError ? 'border-danger' : 'border-border'}`}
               value={searchPattern}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder={scope === 'board' ? 'Card, column, assignee' : 'Board or card regex'}
+              placeholder={scope === 'board' ? 'Card, column, assignee, label' : 'Board or card regex'}
             />
           </div>
           {searchError && <span className="text-danger">Regex ignored: {searchError}</span>}
@@ -502,6 +550,9 @@ function FilteringPanel({
       </div>
       {!assignees.length && (
         <p className="mt-1.5 text-xs text-text-muted">No assigned cards found {scope === 'board' ? 'in this board.' : 'in nested boards.'}</p>
+      )}
+      {!labels.length && (
+        <p className="mt-1.5 text-xs text-text-muted">No labels found {scope === 'board' ? 'in this board.' : 'in nested boards.'}</p>
       )}
     </section>
   )
@@ -533,10 +584,11 @@ function BoardColumnDistribution({
   filteredTasks: TaskInfo[]
   tasks: TaskInfo[]
 }) {
-  const tasksByColumn = taskGroupsByColumn(tasks)
+  const activeTasks = tasks.filter((task) => !task.archived)
+  const tasksByColumn = taskGroupsByColumn(activeTasks)
   const filteredTasksByColumn = taskGroupsByColumn(filteredTasks)
-  const denominator = Math.max(1, filtered ? filteredTasks.length : board.totalCards)
-  const totalLabel = filtered ? `${filteredTasks.length.toLocaleString()}/${board.totalCards.toLocaleString()} shown` : `${board.totalCards.toLocaleString()} cards`
+  const denominator = Math.max(1, filtered ? filteredTasks.length : board.activeCards)
+  const totalLabel = filtered ? `${filteredTasks.length.toLocaleString()}/${board.totalCards.toLocaleString()} shown` : `${board.activeCards.toLocaleString()} active`
 
   return (
     <section className="rounded-md border border-border bg-card p-2">
@@ -554,7 +606,7 @@ function BoardColumnDistribution({
         {board.columns.map((column, index) => {
           const columnTasks = tasksByColumn.get(columnKey(column.id)) ?? []
           const visibleTasks = filtered ? filteredTasksByColumn.get(columnKey(column.id)) ?? [] : columnTasks
-          const shown = filtered ? visibleTasks.length : column.total
+          const shown = filtered ? visibleTasks.length : column.active
           const done = filtered ? (isDoneColumn(column) ? visibleTasks.length : 0) : column.done
           const open = Math.max(0, shown - done)
           const highOpen = visibleTasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length
@@ -601,12 +653,13 @@ function BoardOverview({
   showFilteredTasks: boolean
   tasks: TaskInfo[]
 }) {
-  const totalCards = board.totalCards
+  const totalCards = board.activeCards
   const doneCards = board.doneCards
   const percent = completion(doneCards, totalCards)
   const openCount = Math.max(0, totalCards - doneCards)
-  const highOpen = tasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length
-  const mediumOpen = tasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'medium').length
+  const activeTasks = tasks.filter((task) => !task.archived)
+  const highOpen = activeTasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'high').length
+  const mediumOpen = activeTasks.filter((task) => task.columnStatus !== 'done' && task.priority === 'medium').length
   const matchingTasks = taskPreviewOrder(filteredTasks)
   const previewTasks = matchingTasks.slice(0, 5)
   const status = totalCards === 0 ? 'No cards' : doneCards === totalCards ? 'Complete' : highOpen > 0 ? `${highOpen} high` : 'Active'

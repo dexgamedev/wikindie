@@ -12,6 +12,7 @@ interface WorkspaceStats {
   totalBoards: number
   totalTasks: number
   doneTasks: number
+  archivedTasks: number
   diskSizeBytes: number
 }
 
@@ -41,8 +42,10 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
         stats.totalBoards++
         const board = normalizeKanbanBoard(parseKanban(parsed.content), parseTaskIdSettings(parsed.data), parseKanbanColumnMetadata(parsed.data))
         for (const col of board.columns) {
-          stats.totalTasks += col.cards.length
-          if (isDoneColumn(col)) stats.doneTasks += col.cards.length
+          const activeCards = col.cards.filter((card) => !card.archived)
+          stats.totalTasks += activeCards.length
+          stats.archivedTasks += col.cards.length - activeCards.length
+          if (isDoneColumn(col)) stats.doneTasks += activeCards.length
         }
       } else {
         stats.totalPages++
@@ -54,7 +57,7 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
 }
 
 statsRouter.get('/', async (_req, res) => {
-  const stats: WorkspaceStats = { totalPages: 0, totalBoards: 0, totalTasks: 0, doneTasks: 0, diskSizeBytes: 0 }
+  const stats: WorkspaceStats = { totalPages: 0, totalBoards: 0, totalTasks: 0, doneTasks: 0, archivedTasks: 0, diskSizeBytes: 0 }
   await collectStats(SPACE_DIR, stats)
   res.json({ stats })
 })

@@ -43,7 +43,9 @@ export interface BoardSummaryColumn {
   status: KanbanColumnStatus
   icon?: string
   total: number
+  active: number
   done: number
+  archived: number
 }
 
 export interface BoardSummary {
@@ -52,7 +54,9 @@ export interface BoardSummary {
   icon?: string
   columns: BoardSummaryColumn[]
   totalCards: number
+  activeCards: number
   doneCards: number
+  archivedCards: number
 }
 
 export interface TaskInfo {
@@ -61,6 +65,8 @@ export interface TaskInfo {
   description?: string
   priority?: CardPriority
   assignees: string[]
+  labels: string[]
+  archived?: boolean
   boardPath: string
   boardTitle: string
   columnId: string
@@ -274,11 +280,15 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
   const boardPath = normalizePagePath(pagePath)
   const boardTitle = String(file.frontmatter.title ?? pageTitleFromPath(pagePath))
   const columns = normalizedBoard.columns.map((column) => {
-    const done = isDoneColumn(column) ? column.cards.length : 0
-    return { id: column.id, title: column.title, status: column.status, icon: column.icon, total: column.cards.length, done }
+    const active = column.cards.filter((card) => !card.archived).length
+    const done = isDoneColumn(column) ? column.cards.filter((card) => !card.archived).length : 0
+    const archived = column.cards.filter((card) => card.archived).length
+    return { id: column.id, title: column.title, status: column.status, icon: column.icon, total: column.cards.length, active, done, archived }
   })
   const totalCards = columns.reduce((sum, column) => sum + column.total, 0)
+  const activeCards = columns.reduce((sum, column) => sum + column.active, 0)
   const doneCards = columns.reduce((sum, column) => sum + column.done, 0)
+  const archivedCards = columns.reduce((sum, column) => sum + column.archived, 0)
   const tasks = normalizedBoard.columns.flatMap((column) =>
     column.cards.map((card) => ({
       id: card.id,
@@ -286,6 +296,8 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
       description: card.description,
       priority: card.priority,
       assignees: [...card.assignees],
+      labels: [...card.labels],
+      archived: card.archived,
       boardPath,
       boardTitle,
       columnId: column.id,
@@ -302,7 +314,9 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
       icon: typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined,
       columns,
       totalCards,
+      activeCards,
       doneCards,
+      archivedCards,
     },
     tasks,
   }

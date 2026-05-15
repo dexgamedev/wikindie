@@ -15,6 +15,7 @@ export function KanbanColumn({
   columnIndex,
   board,
   editable,
+  availableLabels,
   visibleCards,
   users,
   onUpdate,
@@ -24,6 +25,7 @@ export function KanbanColumn({
   columnIndex: number
   board: KanbanBoard
   editable: boolean
+  availableLabels: string[]
   visibleCards?: Array<{ card: Card; cardIndex: number }>
   users: string[]
   onUpdate: (board: KanbanBoard) => void
@@ -52,7 +54,7 @@ export function KanbanColumn({
     const title = newCardTitle.trim()
     if (!title) return
     const next = structuredClone(board)
-    next.columns[columnIndex].cards.push({ title, assignees: [] })
+    next.columns[columnIndex].cards.push({ title, assignees: [], labels: [] })
     onUpdate(next)
     setAddingCard(false)
     setNewCardTitle('')
@@ -91,7 +93,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className="rounded-md border border-border bg-surface p-3 sm:p-4"
+      className="overflow-hidden rounded-md border border-border bg-surface p-3 sm:p-4"
       onDragOver={(event) => {
         if (editable && getActiveDragSource() !== null && getActiveDragSource() !== columnIndex) event.preventDefault()
       }}
@@ -124,16 +126,7 @@ export function KanbanColumn({
           </h3>
         )}
         {editable && (
-          <div className="relative flex items-center gap-1">
-            <Button
-              aria-label={addingCard ? 'Close card form' : 'Add card'}
-              className="grid min-w-10 place-items-center px-3"
-              onClick={() => setAddingCard((v) => !v)}
-              title={addingCard ? 'Close card form' : 'Add card'}
-              type="button"
-            >
-              {addingCard ? 'Close' : <Plus size={15} />}
-            </Button>
+          <div className="relative flex items-center gap-0.5">
             <ActionMenu label="Column actions" menuClassName="w-40">
               {({ close }) => (
                 <>
@@ -207,24 +200,6 @@ export function KanbanColumn({
           </div>
         </article>
       )}
-      {editable && addingCard && (
-        <form
-          className="mb-4 flex items-center gap-3"
-          onSubmit={(event) => {
-            event.preventDefault()
-            addCard()
-          }}
-        >
-          <input
-            autoFocus
-            className="min-w-0 flex-1 rounded border border-accent bg-input px-2 py-1.5 text-sm text-text outline-none"
-            value={newCardTitle}
-            onChange={(event) => setNewCardTitle(event.target.value)}
-            placeholder="Card title"
-          />
-          <Button type="submit">Add</Button>
-        </form>
-      )}
       <div className="space-y-4">
         {cardsToRender.map(({ card, cardIndex }) => (
           <KanbanCard
@@ -234,12 +209,46 @@ export function KanbanColumn({
             columnIndex={columnIndex}
             board={board}
             editable={editable}
+            availableLabels={availableLabels}
             users={users}
             onMove={onMove}
             onUpdate={onUpdate}
           />
         ))}
       </div>
+      {editable && (
+        <div className={`-mx-3 -mb-3 mt-4 border-t border-border bg-panel sm:-mx-4 sm:-mb-4 ${addingCard ? 'p-3' : ''}`}>
+          {addingCard ? (
+            <form
+              className="grid gap-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                addCard()
+              }}
+            >
+              <input
+                autoFocus
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                value={newCardTitle}
+                onChange={(event) => setNewCardTitle(event.target.value)}
+                placeholder="Task title"
+              />
+              <div className="flex justify-end gap-2">
+                <Button onClick={() => { setAddingCard(false); setNewCardTitle('') }} type="button">Cancel</Button>
+                <Button type="submit" variant="primary">Add task</Button>
+              </div>
+            </form>
+          ) : (
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-text-muted transition hover:bg-accent/8 hover:text-text"
+              onClick={() => setAddingCard(true)}
+              type="button"
+            >
+              <Plus size={14} /> Add task
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

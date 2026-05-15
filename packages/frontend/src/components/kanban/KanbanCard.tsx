@@ -1,19 +1,12 @@
-import { Check, Pencil, Trash2 } from 'lucide-react'
+import { Archive, Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
-import type { CardPriority, KanbanBoard, KanbanCard as Card } from '../../lib/api'
+import type { KanbanBoard, KanbanCard as Card } from '../../lib/api'
 import { setActiveDragSource } from '../../lib/kanban'
 import { priorityColor, priorityLabel } from '../../lib/priority'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
-import { AssigneeStack, UserIconBadge } from '../ui/AssigneeBadges'
+import { AssigneeStack } from '../ui/AssigneeBadges'
 import { PageIcon } from '../ui/PageIcon'
 import { KanbanCardDialog } from './KanbanCardDialog'
-
-const priorityOptions: Array<{ value: CardPriority | undefined; label: string }> = [
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low', label: 'Low' },
-  { value: undefined, label: 'None' },
-]
 
 export function KanbanCard({
   card,
@@ -21,6 +14,7 @@ export function KanbanCard({
   columnIndex,
   board,
   editable,
+  availableLabels,
   users,
   onMove,
   onUpdate,
@@ -30,6 +24,7 @@ export function KanbanCard({
   columnIndex: number
   board: KanbanBoard
   editable: boolean
+  availableLabels: string[]
   users: string[]
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
   onUpdate: (board: KanbanBoard) => void
@@ -37,22 +32,14 @@ export function KanbanCard({
   const [dialogOpen, setDialogOpen] = useState(false)
   const suppressNextClick = useRef(false)
   const assignees = card.assignees ?? []
+  const labels = card.labels ?? []
 
   const updateCard = (patch: Partial<Card>) => {
     if (!editable) return
     const next = structuredClone(board)
     const current = next.columns[columnIndex].cards[cardIndex]
-    next.columns[columnIndex].cards[cardIndex] = { ...current, assignees: current.assignees ?? [], ...patch }
+    next.columns[columnIndex].cards[cardIndex] = { ...current, assignees: current.assignees ?? [], labels: current.labels ?? [], ...patch }
     onUpdate(next)
-  }
-
-  const setPriority = (priority?: CardPriority) => {
-    updateCard({ priority })
-  }
-
-  const toggleAssignee = (username: string) => {
-    const nextAssignees = assignees.includes(username) ? assignees.filter((assignee) => assignee !== username) : [...assignees, username]
-    updateCard({ assignees: nextAssignees })
   }
 
   const removeCard = () => {
@@ -60,6 +47,10 @@ export function KanbanCard({
     const next = structuredClone(board)
     next.columns[columnIndex].cards.splice(cardIndex, 1)
     onUpdate(next)
+  }
+
+  const toggleArchived = () => {
+    updateCard({ archived: card.archived ? undefined : true })
   }
 
   const moveToColumn = (targetColumnIndex: number) => {
@@ -99,7 +90,14 @@ export function KanbanCard({
           {card.priority && <span className={`mt-2 size-2 shrink-0 rounded-full ${priorityColor(card.priority)}`} title={priorityLabel(card.priority)} />}
           <div className="min-w-0 flex-1">
             <div className="block min-w-0 text-left text-sm text-text">
-              {card.id && <span className="mb-1 inline-flex rounded-full border border-accent/35 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">{card.id}</span>}
+              {(card.id || card.archived || labels.length > 0) && (
+                <span className="mb-1 flex flex-wrap gap-1">
+                  {card.id && <span className="rounded-full border border-accent/35 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">{card.id}</span>}
+                  {card.archived && <span className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">Archived</span>}
+                  {labels.slice(0, 3).map((label) => <span key={label} className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">#{label}</span>)}
+                  {labels.length > 3 && <span className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">+{labels.length - 3}</span>}
+                </span>
+              )}
               <span className="block min-w-0 break-words">{card.title}</span>
               {card.description && <span className="mt-1 block text-xs text-text-muted">Has details</span>}
             </div>
@@ -138,44 +136,9 @@ export function KanbanCard({
                         )}
 
                         <div className="my-1 border-t border-border" />
-                        <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Set priority</div>
-                        {priorityOptions.map((option) => (
-                          <button
-                            key={option.label}
-                            className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent/10"
-                            onClick={() => { setPriority(option.value); close() }}
-                            type="button"
-                          >
-                            <span className="flex items-center gap-2">
-                              <span className={`size-2 rounded-full ${priorityColor(option.value)}`} /> {option.label}
-                            </span>
-                            {card.priority === option.value && <Check size={13} className="text-accent" />}
-                          </button>
-                        ))}
-
-                        <div className="my-1 border-t border-border" />
-                        <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Assign</div>
-                        {users.length > 0 ? (
-                          users.map((username) => {
-                            const selected = assignees.includes(username)
-                            return (
-                              <button
-                                key={username}
-                                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent/10"
-                                onClick={() => toggleAssignee(username)}
-                                type="button"
-                              >
-                                <span className="flex min-w-0 items-center gap-2">
-                                  <UserIconBadge username={username} className="size-5 shrink-0" />
-                                  <span className="min-w-0 truncate">{username}</span>
-                                </span>
-                                {selected && <Check size={13} className="shrink-0 text-accent" />}
-                              </button>
-                            )
-                          })
-                        ) : (
-                          <div className="px-2 py-1.5 text-sm text-text-muted">No users found</div>
-                        )}
+                        <ActionMenuItem onSelect={() => { toggleArchived(); close() }}>
+                          {card.archived ? <RotateCcw size={14} /> : <Archive size={14} />} {card.archived ? 'Restore' : 'Archive'}
+                        </ActionMenuItem>
 
                         <div className="my-1 border-t border-border" />
                         <ActionMenuItem danger onSelect={() => { removeCard(); close() }}>
@@ -194,6 +157,7 @@ export function KanbanCard({
       <KanbanCardDialog
         card={card}
         editable={editable}
+        availableLabels={availableLabels}
         onClose={() => setDialogOpen(false)}
         onSave={updateCard}
         open={dialogOpen}
