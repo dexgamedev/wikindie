@@ -4,6 +4,11 @@ import { defaultTaskFilters, type TaskFilterValues, type TaskPriorityFilter, typ
 
 export type Role = 'admin' | 'editor' | 'readonly'
 
+export interface RuntimeConfig {
+  publicReadonly: boolean
+  publicDefaultPage: string
+}
+
 interface AuthState {
   token: string | null
   username: string | null
@@ -15,6 +20,11 @@ interface AuthState {
 interface FilesState {
   tree: TreeNode[]
   setTree: (tree: TreeNode[]) => void
+}
+
+interface RuntimeConfigState {
+  config: RuntimeConfig | null
+  setConfig: (config: RuntimeConfig) => void
 }
 
 interface TaskFiltersState extends TaskFilterValues {
@@ -56,6 +66,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem(roleKey)
     set({ token: null, username: null, role: null })
   },
+}))
+
+export const useRuntimeConfigStore = create<RuntimeConfigState>((set) => ({
+  config: null,
+  setConfig: (config) => set({ config }),
 }))
 
 export const useFilesStore = create<FilesState>((set) => ({

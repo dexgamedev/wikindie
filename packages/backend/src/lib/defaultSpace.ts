@@ -55,16 +55,16 @@ Welcome to the default Wikindie workspace. This starter wiki is filled with plac
 
 Use this checklist during the first setup pass.
 
-- [ ] Rename departments to match the actual organization.
-- [ ] Replace placeholder owners with real accountable people.
-- [ ] Delete projects that do not apply.
-- [ ] Add links to repositories, design files, dashboards, and shared folders.
-- [ ] Choose one weekly review cadence for the portfolio board.
+- Rename departments to match the actual organization.
+- Replace placeholder owners with real accountable people.
+- Delete projects that do not apply.
+- Add links to repositories, design files, dashboards, and shared folders.
+- Choose one weekly review cadence for the portfolio board.
 
 ## Editing Notes
 
 - Pages are normal Markdown files stored on disk.
-- Kanban boards use Markdown task lists under level-two headings.
+- Kanban boards use Markdown bullet lists under level-two headings.
 - Page metadata, icons, and sections live in frontmatter.
 `,
   },
@@ -188,17 +188,17 @@ Prove that a 15-minute exploration loop can feel satisfying with lightweight cra
     relativePath: 'Workspace/Projects/Project Atlas/Sprint Board.md',
     frontmatter: { title: 'Atlas Sprint Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
     content: `## :todo: Backlog
-- [ ] Draft island event list
-- [ ] Define resource names and icons
-- [ ] Add placeholder quest giver copy
+- Draft island event list
+- Define resource names and icons
+- Add placeholder quest giver copy
 ## :idea: Next Up
-- [ ] Build camp return screen wireframe
-- [ ] Create map marker legend
+- Build camp return screen wireframe
+- Create map marker legend
 ## :doing: In Progress
-- [ ] Tune first exploration route timing
+- Tune first exploration route timing
 ## :done: Done
-- [ ] Agree on prototype success metrics
-- [ ] Pick three starter biomes
+- Agree on prototype success metrics
+- Pick three starter biomes
 `,
   },
   {
@@ -257,16 +257,16 @@ Validate whether a lightweight community hub reduces support churn and improves 
     relativePath: 'Workspace/Projects/Project Beacon/Sprint Board.md',
     frontmatter: { title: 'Beacon Sprint Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
     content: `## :todo: Backlog
-- [ ] Draft moderation policy outline
-- [ ] Build interview script
-- [ ] Sketch notification preferences
+- Draft moderation policy outline
+- Build interview script
+- Sketch notification preferences
 ## :idea: Next Up
-- [ ] Schedule five discovery calls
-- [ ] Inventory current feedback channels
+- Schedule five discovery calls
+- Inventory current feedback channels
 ## :doing: In Progress
-- [ ] Prototype community landing page sections
+- Prototype community landing page sections
 ## :done: Done
-- [ ] Define discovery success criteria
+- Define discovery success criteria
 `,
   },
   {
@@ -321,17 +321,17 @@ Ship a small beta store that can sell digital bundles, measure conversion, and s
     relativePath: 'Workspace/Projects/Project Copper/Sprint Board.md',
     frontmatter: { title: 'Copper Sprint Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
     content: `## :todo: Backlog
-- [ ] Finalize beta discount rules
-- [ ] Add creator bundle preview images
-- [ ] Draft post-launch survey
+- Finalize beta discount rules
+- Add creator bundle preview images
+- Draft post-launch survey
 ## :idea: Next Up
-- [ ] Confirm payment error messages
-- [ ] Write support macro set
+- Confirm payment error messages
+- Write support macro set
 ## :doing: In Progress
-- [ ] Build storefront product card layout
+- Build storefront product card layout
 ## :done: Done
-- [ ] Choose launch reporting metrics
-- [ ] Confirm placeholder pricing tiers
+- Choose launch reporting metrics
+- Confirm placeholder pricing tiers
 `,
   },
   {
@@ -561,19 +561,19 @@ Use this section for cross-project planning artifacts that do not belong to a si
     relativePath: 'Workspace/Planning/Portfolio Board.md',
     frontmatter: { title: 'Portfolio Board', icon: 'board', kanban: true, kanbanColumns: defaultKanbanColumns },
     content: `## :todo: Backlog
-- [ ] Replace placeholder project names
-- [ ] Add real budget snapshot per project
-- [ ] Create release checklist for every active launch
+- Replace placeholder project names
+- Add real budget snapshot per project
+- Create release checklist for every active launch
 ## :idea: Next Up
-- [ ] Review Project Atlas prototype metrics
-- [ ] Schedule Project Beacon discovery interviews
-- [ ] Confirm Project Copper beta support plan
+- Review Project Atlas prototype metrics
+- Schedule Project Beacon discovery interviews
+- Confirm Project Copper beta support plan
 ## :doing: In Progress
-- [ ] Draft organization-wide operating rhythm
-- [ ] Align department owners with active project needs
+- Draft organization-wide operating rhythm
+- Align department owners with active project needs
 ## :done: Done
-- [ ] Create starter workspace structure
-- [ ] Add placeholder departments and project boards
+- Create starter workspace structure
+- Add placeholder departments and project boards
 `,
   },
   {
@@ -642,9 +642,9 @@ Attendees: Sam Rivera, Riley Park, Morgan Lee, Lila Hart, Nia Brooks
 
 ### Actions
 
-- [ ] Riley to schedule Project Atlas prototype session.
-- [ ] Morgan to publish Project Beacon interview script.
-- [ ] Priya to review Project Copper support macro tone.
+- Riley to schedule Project Atlas prototype session.
+- Morgan to publish Project Beacon interview script.
+- Priya to review Project Copper support macro tone.
 `,
   },
   {

@@ -19,7 +19,7 @@
 - Backend storage is filesystem Markdown under `SPACE_DIR`; there is no database. Keep path handling through `safePath`, `normalizePagePath`, and related helpers in `packages/backend/src/lib/files.ts`.
 - Pages can be leaf files (`Page.md`) or index pages with children (`Page/_Index.md`). Creating a child page may convert a leaf page into an `_Index.md` container.
 - Page frontmatter controls display metadata (`title`, `icon`), sections (`sections` array), and board mode (`kanban: true`). Sections are separate Markdown files, usually below `_sections/`, and are referenced from frontmatter.
-- Kanban boards are Markdown: `##` headings are columns and task-list items are cards; checked items remain normal cards. Archived cards use a trailing `!archived` metadata token. `#high`, `#medium`, and `#low` are reserved for priority, not labels. The parser/serializer is in `packages/backend/src/lib/kanban.ts`.
+- Kanban boards are Markdown: `##` headings are columns and plain bullet items are cards. Archived cards use a trailing `!archived` metadata token. `#high`, `#medium`, and `#low` are reserved for priority, not labels. The parser/serializer is in `packages/backend/src/lib/kanban.ts`.
 - WebSocket file events send Markdown paths like `Page.md` or `Page/_Index.md`; frontend page refresh logic matches those paths in `packages/frontend/src/pages/PageView.tsx`.
 
 ## Code Quirks

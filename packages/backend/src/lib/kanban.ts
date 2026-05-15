@@ -299,10 +299,10 @@ export function parseKanban(markdown: string): KanbanBoard {
       continue
     }
 
-    const card = line.match(/^- \[( |x|X)\]\s+(.+)$/)
+    const card = line.match(/^- (.+)$/)
     if (card && current) {
       flushDescription()
-      currentCard = parseCardText(card[2])
+      currentCard = parseCardText(card[1])
       current.cards.push(currentCard)
       continue
     }
@@ -408,7 +408,7 @@ export function serializeKanban(board: KanbanBoard) {
             .filter(Boolean)
             .join(' ')
           return [
-            `- [ ] ${card.id ? `[${card.id}] ` : ''}${card.title}${tagSuffix ? `  ${tagSuffix}` : ''}`,
+            `- ${card.id ? `[${card.id}] ` : ''}${card.title}${tagSuffix ? `  ${tagSuffix}` : ''}`,
             ...formatDescription(card.description),
           ]
         }),

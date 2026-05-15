@@ -1,5 +1,5 @@
-import { useAuthStore } from './store'
-import type { Role } from './store'
+import { useAuthStore, useRuntimeConfigStore } from './store'
+import type { Role, RuntimeConfig } from './store'
 
 export interface MarkdownFile {
   content: string
@@ -128,16 +128,24 @@ export function encodePath(path: string) {
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = useAuthStore.getState().token
-  const res = await fetch(path, {
+  const buildHeaders = (authToken: string | null) => ({
+    'Content-Type': 'application/json',
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...init.headers,
+  })
+  let res = await fetch(path, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
+    headers: buildHeaders(token),
   })
 
-  if (res.status === 401) useAuthStore.getState().logout()
+  if (res.status === 401) {
+    if (token) useAuthStore.getState().logout()
+    const method = String(init.method ?? 'GET').toUpperCase()
+    if (token && useRuntimeConfigStore.getState().config?.publicReadonly && (method === 'GET' || method === 'HEAD')) {
+      res = await fetch(path, { ...init, headers: buildHeaders(null) })
+    }
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }))
     throw new Error(body.error ?? 'Request failed')
@@ -146,6 +154,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 }
 
 export const api = {
+  config: () => request<RuntimeConfig>('/api/config'),
   login: (username: string, password: string) =>
     request<{ token: string; user: { id: string; username: string; role: Role } }>('/api/auth/login', {
       method: 'POST',

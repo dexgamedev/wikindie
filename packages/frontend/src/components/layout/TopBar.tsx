@@ -1,7 +1,7 @@
-import { Menu, Search } from 'lucide-react'
+import { Github, Menu, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import logoUrl from '../../assets/wikindie_logo.png'
-import { appVersion } from '../../lib/version'
+import { appVersion, githubUrl } from '../../lib/version'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { AccountMenu } from './AccountMenu'
 
@@ -53,6 +53,16 @@ export function TopBar({
           <kbd className="hidden rounded border border-border bg-input px-1.5 py-0.5 text-[10px] text-text-muted md:inline">Ctrl K</kbd>
         </button>
         <ThemeToggle />
+        <a
+          className="grid size-10 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+          href={githubUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="GitHub repository"
+          aria-label="GitHub repository"
+        >
+          <Github size={16} />
+        </a>
         <AccountMenu direction="down" />
       </div>
     </header>

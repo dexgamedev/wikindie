@@ -33,7 +33,6 @@ function StatsCard() {
         <HardDrive size={13} className="shrink-0 text-accent" />
         <span className="font-medium">{stats ? formatBytes(stats.diskSizeBytes) : '–'}</span>
         <span>on disk</span>
-        <span className="ml-auto rounded border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">Local</span>
       </div>
     </div>
   )

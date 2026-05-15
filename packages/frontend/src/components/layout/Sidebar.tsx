@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen, Plus, Search, X } from 'lucide-react'
+import { Github, PanelLeftClose, PanelLeftOpen, Plus, Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logoUrl from '../../assets/wikindie_logo.png'
@@ -6,7 +6,7 @@ import { api } from '../../lib/api'
 import { getPageDragPayload, hasPageDragPayload } from '../../lib/pageDrag'
 import { findTreeNode, pagePathFromLocation, pageUrl } from '../../lib/paths'
 import { canWrite, useAuthStore, useFilesStore } from '../../lib/store'
-import { appVersion } from '../../lib/version'
+import { appVersion, githubUrl } from '../../lib/version'
 import { PageIcon } from '../ui/PageIcon'
 
 import { AccountMenu } from './AccountMenu'
@@ -236,6 +236,16 @@ export function Sidebar({
               <Search size={16} />
             </button>
           )}
+          <a
+            className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+            href={githubUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="GitHub repository"
+            aria-label="GitHub repository"
+          >
+            <Github size={16} />
+          </a>
           <AccountMenu direction="up" />
         </div>
 

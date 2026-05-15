@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { api } from '../lib/api'
-import { useAuthStore } from '../lib/store'
+import { useAuthStore, useRuntimeConfigStore } from '../lib/store'
 
 const features = [
   { icon: '📝', label: 'Markdown wiki', desc: 'Write durable notes as plain Markdown pages.' },
@@ -17,8 +17,9 @@ const features = [
 export function LoginPage() {
   const token = useAuthStore((state) => state.token)
   const setSession = useAuthStore((state) => state.setSession)
-  const [username, setUsername] = useState('dev')
-  const [password, setPassword] = useState('dev')
+  const publicReadonly = useRuntimeConfigStore((state) => state.config?.publicReadonly)
+  const [username, setUsername] = useState(import.meta.env.DEV ? 'dev' : '')
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'dev' : '')
   const [error, setError] = useState('')
 
   if (token) return <Navigate to="/" replace />
@@ -55,7 +56,9 @@ export function LoginPage() {
         >
           <div className="mb-5 text-center">
             <h2 className="text-xl font-bold text-text-heading">Sign in</h2>
-            <p className="mt-1 text-sm text-text-muted">Enter your workspace credentials.</p>
+            <p className="mt-1 text-sm text-text-muted">
+              {publicReadonly ? 'Public visitors can browse in read-only mode. Sign in to edit.' : 'Enter your workspace credentials.'}
+            </p>
           </div>
           <div className="space-y-3">
             <Input

@@ -24,7 +24,7 @@ If you are tired of juggling a wiki, a task board, a docs tool, and a pile of pr
 - Nested page tree with drag-and-drop moves.
 - Page metadata through frontmatter, including title and icon.
 - Modular page sections stored as separate Markdown files.
-- Kanban boards serialized as Markdown task lists.
+- Kanban boards serialized as plain Markdown bullet lists.
 - HTTP API for managing the tree, pages, sections, metadata, and kanban boards.
 - Token-based login with WebSocket refresh events for file changes.
 - Docker image that serves the built frontend from the backend.
@@ -157,6 +157,12 @@ Set these variables in your shell, Docker environment, or deployment host:
 | `JWT_SECRET` | Dev-only fallback | Secret used to sign session tokens. Required in production. |
 | `SPACE_DIR` | `./space` | Directory containing Markdown workspace files, resolved from the backend process working directory. |
 | `WIKINDIE_INIT_DEFAULT_SPACE` | unset | Set to `true` only when you want to seed the starter/demo workspace into an empty `SPACE_DIR`. |
+| `WIKINDIE_PUBLIC_READONLY` | unset | Set to `true` to let anonymous visitors browse read-only while keeping writes behind login. |
+| `WIKINDIE_PUBLIC_DEFAULT_PAGE` | unset | Page path to open from `/` in public showcase mode, such as `Projects/Wikindie/Roadmap`. |
+| `WIKINDIE_ALLOWED_HOSTS` | unset | Comma-separated hostnames allowed to serve the app, such as `wiki.example.com`. Unknown hosts return 404. |
+| `WIKINDIE_CORS_ORIGINS` | unset | Optional comma-separated origins allowed for cross-origin API calls. If omitted, allowed hosts are used when configured. |
+| `WIKINDIE_LOGIN_RATE_LIMIT_MAX` | `10` | Maximum login attempts per client IP in the rate-limit window. |
+| `WIKINDIE_LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | Login rate-limit window in milliseconds. |
 | `PORT` | `3000` | Backend HTTP port. |
 
 `.env.example` documents the expected variables, but the Node app does not automatically load `.env` files. Pass variables through your shell, process manager, Docker, or hosting platform.
@@ -184,7 +190,7 @@ Pages are Markdown files. Nested pages can be stored as either `Page.md` leaf fi
 
 Sections are declared in page frontmatter and stored as additional Markdown files, usually under `_sections/` inside the page folder.
 
-Kanban boards are Markdown files with `kanban: true` frontmatter. Each `## Heading` becomes a column and task-list items become cards; `kanbanColumns` frontmatter stores stable column IDs and workflow statuses for integrations. Completion is represented by moving cards into a column whose status is `done` rather than checking individual cards. Archived cards use a trailing `!archived` metadata token, and `high`, `medium`, and `low` are reserved label names because `#high`, `#medium`, and `#low` represent priority.
+Kanban boards are Markdown files with `kanban: true` frontmatter. Each `## Heading` becomes a column and plain bullet items become cards; `kanbanColumns` frontmatter stores stable column IDs and workflow statuses for integrations. Completion is represented by moving cards into a column whose status is `done`. Archived cards use a trailing `!archived` metadata token, and `high`, `medium`, and `low` are reserved label names because `#high`, `#medium`, and `#low` represent priority.
 
 ## Status
 

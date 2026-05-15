@@ -1,16 +1,18 @@
-import { LogOut, Moon, Shield, Sun } from 'lucide-react'
+import { LogIn, LogOut, Moon, Shield, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { roleBadgeClass } from '../../lib/badges'
-import { useAuthStore } from '../../lib/store'
+import { useAuthStore, useRuntimeConfigStore } from '../../lib/store'
 
 export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const username = useAuthStore((state) => state.username)
   const role = useAuthStore((state) => state.role)
+  const token = useAuthStore((state) => state.token)
   const logout = useAuthStore((state) => state.logout)
+  const publicReadonly = useRuntimeConfigStore((state) => state.config?.publicReadonly)
   const navigate = useNavigate()
 
   const initials = useMemo(() => {
@@ -50,6 +52,21 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
   }
 
   const popupPosition = direction === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'
+
+  if (!token && publicReadonly) {
+    return (
+      <button
+        className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text sm:text-sm"
+        onClick={() => navigate('/login')}
+        title="Guest · Read only"
+        type="button"
+      >
+        <LogIn size={15} />
+        <span className="hidden sm:inline">Sign in</span>
+        <span className="sm:hidden">Guest</span>
+      </button>
+    )
+  }
 
   return (
     <div ref={rootRef} className="relative">
