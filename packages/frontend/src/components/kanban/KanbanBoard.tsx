@@ -178,6 +178,42 @@ export function KanbanBoard({
     }
   }
 
+  const addComment = async (input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) => {
+    if (!mayWrite) return
+    setSaving(true)
+    try {
+      const updated = await api.addTaskComment(path, input)
+      setBoard(updated.board)
+      onPageChange?.(updated)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateComment = async (commentId: string, body: string) => {
+    if (!mayWrite) return
+    setSaving(true)
+    try {
+      const updated = await api.updateTaskComment(path, commentId, body)
+      setBoard(updated.board)
+      onPageChange?.(updated)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const deleteComment = async (commentId: string) => {
+    if (!mayWrite) return
+    setSaving(true)
+    try {
+      const updated = await api.deleteTaskComment(path, commentId)
+      setBoard(updated.board)
+      onPageChange?.(updated)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const addColumn = () => {
     if (!mayWrite) return
     const title = newColumnTitle.trim()
@@ -412,12 +448,15 @@ export function KanbanBoard({
                 users={users}
                 onUpdate={update}
                 onMove={moveCard}
+                onAddComment={addComment}
+                onUpdateComment={updateComment}
+                onDeleteComment={deleteComment}
               />
             ))}
           </div>
         </div>
       ) : (
-        <KanbanTableView board={board} editable={mayWrite} availableLabels={labelOptions} rows={tableCards} users={users} onUpdate={update} />
+        <KanbanTableView board={board} editable={mayWrite} availableLabels={labelOptions} rows={tableCards} users={users} onUpdate={update} onAddComment={addComment} onUpdateComment={updateComment} onDeleteComment={deleteComment} />
       )}
       {shownCardCount === 0 && (
         <div className="mt-5 rounded-md border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-text-muted">
@@ -451,6 +490,9 @@ function KanbanTableView({
   rows,
   users,
   onUpdate,
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
 }: {
   board: Board
   editable: boolean
@@ -458,19 +500,25 @@ function KanbanTableView({
   rows: Array<{ card: Card; cardIndex: number; column: Board['columns'][number]; columnIndex: number }>
   users: string[]
   onUpdate: (board: Board) => void
+  onAddComment: (input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) => Promise<void>
+  onUpdateComment: (commentId: string, body: string) => Promise<void>
+  onDeleteComment: (commentId: string) => Promise<void>
 }) {
-  const [editing, setEditing] = useState<null | { card: Card; cardIndex: number; columnIndex: number }>(null)
+  const [editing, setEditing] = useState<null | { cardIndex: number; columnIndex: number }>(null)
   const defaultColumnIndex = Math.max(0, board.columns.findIndex((column) => column.status === 'backlog'))
   const [adding, setAdding] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskColumn, setNewTaskColumn] = useState(defaultColumnIndex)
   const [newTaskPriority, setNewTaskPriority] = useState<CardPriority | undefined>()
   const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([])
+  const editingColumn = editing ? board.columns[editing.columnIndex] : undefined
+  const editingCard = editing && editingColumn ? editingColumn.cards[editing.cardIndex] : undefined
 
   const updateCard = (patch: Partial<Card>) => {
     if (!editable || !editing) return
     const next = structuredClone(board)
-    const current = next.columns[editing.columnIndex].cards[editing.cardIndex]
+    const current = next.columns[editing.columnIndex]?.cards[editing.cardIndex]
+    if (!current) return
     next.columns[editing.columnIndex].cards[editing.cardIndex] = { ...current, assignees: current.assignees ?? [], labels: current.labels ?? [], ...patch }
     onUpdate(next)
   }
@@ -518,15 +566,20 @@ function KanbanTableView({
             <tr
               key={`${column.id}-${card.id ?? `${card.title}-${cardIndex}`}`}
               className="cursor-pointer border-b border-border/70 transition hover:bg-accent/8"
-              onClick={() => setEditing({ card, cardIndex, columnIndex })}
+              onClick={() => setEditing({ cardIndex, columnIndex })}
             >
               <td className="max-w-[320px] px-3 py-2 align-middle">
                 <span className="mb-1 flex flex-wrap gap-1">
                   {card.id && <span className="rounded-full border border-accent/35 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">{card.id}</span>}
                   {card.labels?.map((label) => <span key={label} className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">#{label}</span>)}
                 </span>
-                <span className="break-words text-text">{card.title}</span>
-                {card.description && <span className="ml-2 text-xs text-text-muted">Details</span>}
+                <span className="block break-words text-text">{card.title}</span>
+                {(card.description || card.comments?.length) && (
+                  <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-text-muted">
+                    {card.description && <span className="whitespace-nowrap">Details</span>}
+                    {!!card.comments?.length && <span className="whitespace-nowrap">{card.comments.length} comment{card.comments.length === 1 ? '' : 's'}</span>}
+                  </span>
+                )}
               </td>
               <td className="px-3 py-2 align-middle text-text-muted">
                 <span className="inline-flex items-center gap-1.5">
@@ -632,12 +685,15 @@ function KanbanTableView({
           )}
         </div>
       )}
-      {editing && (
+      {editing && editingColumn && editingCard && (
         <KanbanCardDialog
-          card={editing.card}
+          card={editingCard}
           editable={editable}
           availableLabels={availableLabels}
           onClose={() => setEditing(null)}
+          onAddComment={(body) => onAddComment({ taskId: editingCard.id, cardUid: editingCard.uid, columnId: editingColumn.id, index: editing.cardIndex, body })}
+          onUpdateComment={onUpdateComment}
+          onDeleteComment={onDeleteComment}
           onSave={updateCard}
           open
           users={users}

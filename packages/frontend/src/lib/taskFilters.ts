@@ -68,22 +68,24 @@ function matchesRegex(regex: RegExp | undefined, values: Array<string | undefine
 }
 
 export function matchesTaskInfoFilters(task: TaskInfo, filters: TaskFilterValues, regex?: RegExp) {
+  const commentValues = (task.comments ?? []).flatMap((comment) => [comment.author, comment.body, comment.editedBy])
   return (
     matchesPriority(task.priority, filters.priorityFilter) &&
     matchesAssignee(task.assignees, filters.assigneeFilter) &&
     matchesLabel(task.labels, filters.labelFilter) &&
     matchesState(task.archived, filters.stateFilter) &&
-    matchesRegex(regex, [task.id, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...task.assignees, ...(task.labels ?? [])])
+    matchesRegex(regex, [task.id, task.uid, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...task.assignees, ...(task.labels ?? []), ...commentValues])
   )
 }
 
 export function matchesKanbanCardFilters(card: KanbanCard, column: Pick<KanbanColumn, 'id' | 'title' | 'status'>, filters: TaskFilterValues, regex?: RegExp) {
+  const commentValues = (card.comments ?? []).flatMap((comment) => [comment.author, comment.body, comment.editedBy])
   return (
     matchesPriority(card.priority, filters.priorityFilter) &&
     matchesAssignee(card.assignees, filters.assigneeFilter) &&
     matchesLabel(card.labels, filters.labelFilter) &&
     matchesState(card.archived, filters.stateFilter) &&
-    matchesRegex(regex, [card.id, card.title, card.description, column.id, column.title, column.status, card.priority, ...(card.assignees ?? []), ...(card.labels ?? [])])
+    matchesRegex(regex, [card.id, card.uid, card.title, card.description, column.id, column.title, column.status, card.priority, ...(card.assignees ?? []), ...(card.labels ?? []), ...commentValues])
   )
 }
 

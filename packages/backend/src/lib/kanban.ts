@@ -1,5 +1,16 @@
+import { randomUUID } from 'node:crypto'
+
 export type CardPriority = 'high' | 'medium' | 'low'
 export type KanbanColumnStatus = 'backlog' | 'next' | 'in_progress' | 'done' | 'custom'
+
+export interface TaskComment {
+  id: string
+  author?: string
+  body: string
+  createdAt: string
+  updatedAt?: string
+  editedBy?: string
+}
 
 export interface TaskIdSettings {
   enabled: boolean
@@ -12,9 +23,11 @@ export interface KanbanColumnMetadata {
 }
 
 export interface KanbanCard {
+  uid?: string
   id?: string
   title: string
   description?: string
+  comments?: TaskComment[]
   priority?: CardPriority
   assignees: string[]
   labels: string[]
@@ -38,7 +51,10 @@ const columnStatuses = new Set<KanbanColumnStatus>(['backlog', 'next', 'in_progr
 const reservedLabelNames = new Set(['high', 'medium', 'low'])
 
 const taskIdPattern = /^([A-Za-z][A-Za-z0-9-]*-\d+)$/
+const cardUidPattern = /^card_[a-f0-9]{32}$/
+const commentIdPattern = /^cmt_[a-f0-9]{32}$/
 const labelPattern = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/
+const cardUidMarkerPattern = /^<!--\s*wikindie-card-uid:\s*(card_[a-f0-9]{32})\s*-->$/
 
 export const defaultKanbanColumns: Array<KanbanColumnMetadata & { title: string; icon?: string }> = [
   { id: 'backlog', status: 'backlog', title: 'Backlog', icon: 'todo' },
@@ -117,6 +133,68 @@ export function parseTaskIdSettings(frontmatter: Record<string, unknown>): TaskI
   }
 }
 
+export function generateCardUid() {
+  return `card_${randomUUID().replaceAll('-', '')}`
+}
+
+function generateCommentId() {
+  return `cmt_${randomUUID().replaceAll('-', '')}`
+}
+
+function validDateString(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return false
+  return !Number.isNaN(Date.parse(value))
+}
+
+function normalizeComment(comment: unknown): TaskComment | null {
+  if (!comment || typeof comment !== 'object') return null
+  const data = comment as Record<string, unknown>
+  const body = String(data.body ?? '').trim()
+  if (!body) return null
+  const id = typeof data.id === 'string' && commentIdPattern.test(data.id) ? data.id : generateCommentId()
+  const createdAt = validDateString(data.createdAt) ? String(data.createdAt) : new Date().toISOString()
+  const author = typeof data.author === 'string' && data.author.trim() ? data.author.trim() : undefined
+  const updatedAt = validDateString(data.updatedAt) ? String(data.updatedAt) : undefined
+  const editedBy = typeof data.editedBy === 'string' && data.editedBy.trim() ? data.editedBy.trim() : undefined
+  return {
+    id,
+    ...(author ? { author } : {}),
+    body,
+    createdAt,
+    ...(updatedAt ? { updatedAt } : {}),
+    ...(editedBy ? { editedBy } : {}),
+  }
+}
+
+function normalizeComments(comments: unknown): TaskComment[] {
+  if (!Array.isArray(comments)) return []
+  return comments.map(normalizeComment).filter((comment): comment is TaskComment => Boolean(comment))
+}
+
+export function createTaskComment(body: string, author?: string): TaskComment {
+  const cleanBody = body.trim()
+  if (!cleanBody) throw new Error('Comment body is required')
+  const cleanAuthor = author?.trim()
+  return {
+    id: generateCommentId(),
+    ...(cleanAuthor ? { author: cleanAuthor } : {}),
+    body: cleanBody,
+    createdAt: new Date().toISOString(),
+  }
+}
+
+export function parseTaskComments(frontmatter: Record<string, unknown>) {
+  const raw = frontmatter.taskComments
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const comments: Record<string, TaskComment[]> = {}
+  for (const [uid, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!cardUidPattern.test(uid)) continue
+    const normalized = normalizeComments(value)
+    if (normalized.length) comments[uid] = normalized
+  }
+  return comments
+}
+
 export function parseKanbanColumnMetadata(frontmatter: Record<string, unknown>): KanbanColumnMetadata[] {
   const raw = frontmatter.kanbanColumns
   if (!Array.isArray(raw)) return []
@@ -135,8 +213,26 @@ export function kanbanColumnMetadata(board: KanbanBoard): KanbanColumnMetadata[]
   return board.columns.map((column) => ({ id: column.id, status: column.status }))
 }
 
+function kanbanTaskComments(board: KanbanBoard) {
+  const comments: Record<string, TaskComment[]> = {}
+  for (const column of board.columns) {
+    for (const card of column.cards) {
+      const normalized = normalizeComments(card.comments)
+      if (card.uid && normalized.length) comments[card.uid] = normalized
+    }
+  }
+  return comments
+}
+
 export function withKanbanColumnMetadata(frontmatter: Record<string, unknown>, board: KanbanBoard) {
-  return { ...frontmatter, kanban: true, kanbanColumns: kanbanColumnMetadata(board) }
+  const { taskComments: _taskComments, ...rest } = frontmatter
+  const comments = kanbanTaskComments(board)
+  return {
+    ...rest,
+    kanban: true,
+    kanbanColumns: kanbanColumnMetadata(board),
+    ...(Object.keys(comments).length ? { taskComments: comments } : {}),
+  }
 }
 
 export function defaultKanbanBoard(): KanbanBoard {
@@ -309,6 +405,11 @@ export function parseKanban(markdown: string): KanbanBoard {
 
     const description = line.match(/^(?: {2}|\t)(.*)$/)
     if (description && currentCard) {
+      const uidMarker = description[1].trim().match(cardUidMarkerPattern)
+      if (uidMarker) {
+        currentCard.uid = uidMarker[1]
+        continue
+      }
       descriptionLines.push(description[1])
       continue
     }
@@ -322,13 +423,15 @@ export function parseKanban(markdown: string): KanbanBoard {
 }
 
 function normalizeCard(card: KanbanCard): KanbanCard {
+  const uid = typeof card.uid === 'string' && cardUidPattern.test(card.uid) ? card.uid : undefined
   const id = typeof card.id === 'string' && taskIdPattern.test(card.id) ? card.id : undefined
   const title = String(card.title ?? '').trim().replace(/\s+/g, ' ')
   const description = typeof card.description === 'string' ? card.description.trimEnd() : undefined
+  const comments = normalizeComments(card.comments)
   const priority = card.priority === 'high' || card.priority === 'medium' || card.priority === 'low' ? card.priority : undefined
   const assignees = Array.isArray(card.assignees) ? card.assignees.map((assignee) => String(assignee).trim()).filter(Boolean) : []
   const labels = Array.isArray(card.labels) ? uniqueLabels(card.labels.map(String).filter((label) => labelPattern.test(label))) : []
-  return { id, title, description: description || undefined, priority, assignees, labels, archived: card.archived === true || undefined }
+  return { uid, id, title, description: description || undefined, comments: comments.length ? comments : undefined, priority, assignees, labels, archived: card.archived === true || undefined }
 }
 
 export function normalizeKanbanBoard(
@@ -336,6 +439,7 @@ export function normalizeKanbanBoard(
   taskIds: TaskIdSettings = { enabled: false, prefix: defaultTaskIdPrefix },
   columnMetadata: KanbanColumnMetadata[] = [],
   preferMetadata = true,
+  taskComments: Record<string, TaskComment[]> = {},
 ): KanbanBoard {
   const usedColumnIds = new Set<string>()
   const next: KanbanBoard = {
@@ -356,6 +460,14 @@ export function normalizeKanbanBoard(
         cards: (column.cards ?? []).map(normalizeCard).filter((card) => card.title),
       }
     }),
+  }
+
+  for (const column of next.columns) {
+    for (const card of column.cards) {
+      if (card.comments?.length && !card.uid) card.uid = generateCardUid()
+      if (!card.comments?.length && card.uid && taskComments[card.uid]?.length) card.comments = taskComments[card.uid]
+      if (card.comments?.length && !card.uid) card.uid = generateCardUid()
+    }
   }
 
   if (taskIds.enabled) {
@@ -393,6 +505,10 @@ function formatDescription(description: string | undefined) {
   return clean.split('\n').map((line) => (line ? `  ${line}` : ''))
 }
 
+function formatCardUid(uid: string | undefined) {
+  return uid ? [`  <!-- wikindie-card-uid: ${uid} -->`] : []
+}
+
 export function serializeKanban(board: KanbanBoard) {
   return board.columns
     .map((column) =>
@@ -409,10 +525,51 @@ export function serializeKanban(board: KanbanBoard) {
             .join(' ')
           return [
             `- ${card.id ? `[${card.id}] ` : ''}${card.title}${tagSuffix ? `  ${tagSuffix}` : ''}`,
+            ...formatCardUid(card.uid),
             ...formatDescription(card.description),
           ]
         }),
       ].join('\n'),
     )
     .join('\n')
+}
+
+export interface KanbanCardMatch {
+  column: KanbanColumn
+  columnIndex: number
+  card: KanbanCard
+  cardIndex: number
+}
+
+export function findKanbanCard(board: KanbanBoard, locator: { taskId?: string; cardUid?: string; columnId?: string; index?: number }): KanbanCardMatch | null {
+  if (locator.cardUid) {
+    for (const [columnIndex, column] of board.columns.entries()) {
+      const cardIndex = column.cards.findIndex((card) => card.uid === locator.cardUid)
+      if (cardIndex >= 0) return { column, columnIndex, card: column.cards[cardIndex], cardIndex }
+    }
+  }
+
+  if (locator.taskId) {
+    for (const [columnIndex, column] of board.columns.entries()) {
+      const cardIndex = column.cards.findIndex((card) => card.id === locator.taskId)
+      if (cardIndex >= 0) return { column, columnIndex, card: column.cards[cardIndex], cardIndex }
+    }
+  }
+
+  if (locator.columnId && locator.index !== undefined) {
+    const columnIndex = board.columns.findIndex((column) => column.id === locator.columnId)
+    const column = columnIndex >= 0 ? board.columns[columnIndex] : undefined
+    const card = column?.cards[locator.index]
+    if (column && card) return { column, columnIndex, card, cardIndex: locator.index }
+  }
+
+  return null
+}
+
+export function findKanbanComment(board: KanbanBoard, commentId: string) {
+  for (const match of board.columns.flatMap((column, columnIndex) => column.cards.map((card, cardIndex) => ({ column, columnIndex, card, cardIndex })))) {
+    const commentIndex = match.card.comments?.findIndex((comment) => comment.id === commentId) ?? -1
+    if (commentIndex >= 0 && match.card.comments) return { ...match, comment: match.card.comments[commentIndex], commentIndex }
+  }
+  return null
 }

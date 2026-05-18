@@ -12,7 +12,20 @@ import {
   upsertSection,
   writePage,
 } from '../lib/files.js'
-import { isReservedLabelName, normalizeKanbanBoard, parseKanban, parseKanbanColumnMetadata, parseTaskIdSettings, serializeKanban, withKanbanColumnMetadata } from '../lib/kanban.js'
+import {
+  createTaskComment,
+  findKanbanCard,
+  findKanbanComment,
+  generateCardUid,
+  isReservedLabelName,
+  normalizeKanbanBoard,
+  parseKanban,
+  parseKanbanColumnMetadata,
+  parseTaskComments,
+  parseTaskIdSettings,
+  serializeKanban,
+  withKanbanColumnMetadata,
+} from '../lib/kanban.js'
 import { AppError } from '../lib/errors.js'
 import { requirePermission } from '../middleware/permissions.js'
 import { listUsers } from '../lib/users.js'
@@ -22,7 +35,21 @@ export const filesRouter = Router()
 const joinedPath = (value: unknown) => (Array.isArray(value) ? value.join('/') : String(value ?? ''))
 
 const boardForPage = (page: Awaited<ReturnType<typeof readPage>>) =>
-  normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter))
+  normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter), true, parseTaskComments(page.frontmatter))
+
+async function writeBoard(page: Awaited<ReturnType<typeof readPage>>, board: ReturnType<typeof parseKanban>) {
+  assertNoReservedLabels(board)
+  const frontmatter = { ...page.frontmatter, kanban: true }
+  const normalized = normalizeKanbanBoard(board, parseTaskIdSettings(frontmatter), parseKanbanColumnMetadata(frontmatter), false, parseTaskComments(frontmatter))
+  const updated = await writePage(page.path, serializeKanban(normalized), withKanbanColumnMetadata(frontmatter, normalized))
+  return { ...updated, board: normalized }
+}
+
+function requireCommentBody(value: unknown) {
+  const body = String(value ?? '').trim()
+  if (!body) throw new AppError(400, 'Missing comment body')
+  return body
+}
 
 function assertNoReservedLabels(board: ReturnType<typeof parseKanban>) {
   for (const column of board.columns ?? []) {
@@ -50,12 +77,48 @@ filesRouter.get('/kanban/*path', requirePermission('read'), async (req, res) => 
 filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) => {
   const { board } = req.body as { board?: ReturnType<typeof parseKanban> }
   if (!board) throw new AppError(400, 'Missing board')
-  assertNoReservedLabels(board)
   const page = await readPage(joinedPath(req.params.path))
-  const frontmatter = { ...page.frontmatter, kanban: true }
-  const normalized = normalizeKanbanBoard(board, parseTaskIdSettings(frontmatter), parseKanbanColumnMetadata(frontmatter), false)
-  const updated = await writePage(page.path, serializeKanban(normalized), withKanbanColumnMetadata(frontmatter, normalized))
-  res.json({ ...updated, board: normalized })
+  res.json(await writeBoard(page, board))
+})
+
+filesRouter.post('/kanban-comments/*path', requirePermission('write'), async (req, res) => {
+  const { taskId, cardUid, columnId, index, body } = req.body as { taskId?: string; cardUid?: string; columnId?: string; index?: number; body?: string }
+  const page = await readPage(joinedPath(req.params.path))
+  const board = boardForPage(page)
+  const match = findKanbanCard(board, { taskId, cardUid, columnId, index })
+  if (!match) throw new AppError(404, 'Task not found')
+  if (!match.card.uid) match.card.uid = generateCardUid()
+  const comment = createTaskComment(requireCommentBody(body), req.user?.username)
+  match.card.comments = [...(match.card.comments ?? []), comment]
+  const updated = await writeBoard(page, board)
+  res.status(201).json({ comment, card: match.card, ...updated })
+})
+
+filesRouter.patch('/kanban-comments/*path', requirePermission('write'), async (req, res) => {
+  const { commentId, body } = req.body as { commentId?: string; body?: string }
+  if (!commentId) throw new AppError(400, 'Missing commentId')
+  const page = await readPage(joinedPath(req.params.path))
+  const board = boardForPage(page)
+  const match = findKanbanComment(board, commentId)
+  if (!match) throw new AppError(404, 'Comment not found')
+  match.comment.body = requireCommentBody(body)
+  match.comment.updatedAt = new Date().toISOString()
+  match.comment.editedBy = req.user?.username
+  const updated = await writeBoard(page, board)
+  res.json({ comment: match.comment, card: match.card, ...updated })
+})
+
+filesRouter.delete('/kanban-comments/*path', requirePermission('write'), async (req, res) => {
+  const { commentId } = req.body as { commentId?: string }
+  if (!commentId) throw new AppError(400, 'Missing commentId')
+  const page = await readPage(joinedPath(req.params.path))
+  const board = boardForPage(page)
+  const match = findKanbanComment(board, commentId)
+  if (!match || !match.card.comments) throw new AppError(404, 'Comment not found')
+  const [comment] = match.card.comments.splice(match.commentIndex, 1)
+  if (!match.card.comments.length) match.card.comments = undefined
+  const updated = await writeBoard(page, board)
+  res.json({ comment, card: match.card, ...updated })
 })
 
 filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res) => {

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, X } from 'lucide-react'
-import type { CardPriority, KanbanCard as Card } from '../../lib/api'
+import type { CardPriority, KanbanCard as Card, TaskComment } from '../../lib/api'
 import { priorityColor } from '../../lib/priority'
 import { Button } from '../ui/Button'
 import { UserIconBadge } from '../ui/AssigneeBadges'
@@ -37,6 +37,9 @@ export function KanbanCardDialog({
   availableLabels,
   onClose,
   onSave,
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
   open,
   users,
 }: {
@@ -45,6 +48,9 @@ export function KanbanCardDialog({
   availableLabels: string[]
   onClose: () => void
   onSave: (patch: Partial<Card>) => void
+  onAddComment?: (body: string) => Promise<void>
+  onUpdateComment?: (commentId: string, body: string) => Promise<void>
+  onDeleteComment?: (commentId: string) => Promise<void>
   open: boolean
   users: string[]
 }) {
@@ -55,7 +61,16 @@ export function KanbanCardDialog({
   const [assignees, setAssignees] = useState<string[]>(card.assignees ?? [])
   const [labels, setLabels] = useState((card.labels ?? []).join(', '))
   const [labelError, setLabelError] = useState('')
+  const [commentBody, setCommentBody] = useState('')
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingCommentBody, setEditingCommentBody] = useState('')
+  const [commentBusy, setCommentBusy] = useState(false)
   const labelOptions = [...new Set(availableLabels)].filter((label) => !reservedLabelNames.has(label)).sort((a, b) => a.localeCompare(b))
+  const comments = [...(card.comments ?? [])].sort((left, right) => {
+    const leftTime = new Date(left.updatedAt ?? left.createdAt).getTime()
+    const rightTime = new Date(right.updatedAt ?? right.createdAt).getTime()
+    return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
+  })
 
   useEffect(() => {
     if (!open) return
@@ -65,6 +80,9 @@ export function KanbanCardDialog({
     setAssignees(card.assignees ?? [])
     setLabels((card.labels ?? []).join(', '))
     setLabelError('')
+    setCommentBody('')
+    setEditingCommentId(null)
+    setEditingCommentBody('')
   }, [card, open])
 
   useEffect(() => {
@@ -111,6 +129,56 @@ export function KanbanCardDialog({
       labels: parseLabelInput(labels),
     })
     onClose()
+  }
+
+  const addComment = async () => {
+    const body = commentBody.trim()
+    if (!editable || !body || !onAddComment) return
+    setCommentBusy(true)
+    try {
+      await onAddComment(body)
+      setCommentBody('')
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  const saveComment = async (commentId: string) => {
+    const body = editingCommentBody.trim()
+    if (!editable || !body || !onUpdateComment) return
+    setCommentBusy(true)
+    try {
+      await onUpdateComment(commentId, body)
+      setEditingCommentId(null)
+      setEditingCommentBody('')
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  const deleteComment = async (commentId: string) => {
+    if (!editable || !onDeleteComment) return
+    setCommentBusy(true)
+    try {
+      await onDeleteComment(commentId)
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  const formatCommentTime = (comment: TaskComment) => {
+    const date = new Date(comment.updatedAt ?? comment.createdAt)
+    const label = Number.isNaN(date.getTime())
+      ? (comment.updatedAt ?? comment.createdAt)
+      : date.toLocaleString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).replace(/:(\d{2})\s/, '.$1 ')
+    return comment.updatedAt ? `${label} edited` : label
   }
 
   return createPortal(
@@ -245,6 +313,65 @@ export function KanbanCardDialog({
               />
             </Suspense>
           </div>
+
+          <section className="mt-5 border-t border-border pt-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-text">Comments</h3>
+              <span className="text-xs text-text-muted">{comments.length.toLocaleString()} total</span>
+            </div>
+            <div className="space-y-3">
+              {comments.map((comment) => (
+                <article key={comment.id} className="rounded-md border border-border bg-card p-3">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <UserIconBadge username={comment.author || 'Unknown'} className="size-7 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-text">{comment.author || 'Unknown'}</div>
+                        <div className="text-xs text-text-muted">{formatCommentTime(comment)}</div>
+                      </div>
+                    </div>
+                    {editable && (
+                      <span className="flex shrink-0 gap-2 text-xs">
+                        <button className="text-accent hover:underline disabled:opacity-60" disabled={commentBusy} onClick={() => { setEditingCommentId(comment.id); setEditingCommentBody(comment.body) }} type="button">Edit</button>
+                        <button className="text-danger hover:underline disabled:opacity-60" disabled={commentBusy} onClick={() => deleteComment(comment.id)} type="button">Remove</button>
+                      </span>
+                    )}
+                  </div>
+                  {editingCommentId === comment.id ? (
+                    <div className="grid gap-2">
+                      <textarea
+                        className="min-h-24 rounded-md border border-border bg-input px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                        disabled={commentBusy}
+                        onChange={(event) => setEditingCommentBody(event.target.value)}
+                        value={editingCommentBody}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button onClick={() => { setEditingCommentId(null); setEditingCommentBody('') }} type="button">Cancel</Button>
+                        <Button disabled={commentBusy || !editingCommentBody.trim()} onClick={() => saveComment(comment.id)} type="button" variant="primary">Save</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm text-text">{comment.body}</p>
+                  )}
+                </article>
+              ))}
+              {!comments.length && <p className="rounded-md border border-dashed border-border p-3 text-sm text-text-muted">No comments yet.</p>}
+            </div>
+            {editable && onAddComment && (
+              <div className="mt-3 grid gap-2">
+                <textarea
+                  className="min-h-24 rounded-md border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent disabled:opacity-70"
+                  disabled={commentBusy}
+                  onChange={(event) => setCommentBody(event.target.value)}
+                  placeholder="Add a comment"
+                  value={commentBody}
+                />
+                <div className="flex justify-end">
+                  <Button disabled={commentBusy || !commentBody.trim()} onClick={addComment} type="button" variant="primary">Add comment</Button>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
 
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-panel px-4 py-3">

@@ -12,10 +12,12 @@ import {
   normalizeKanbanBoard,
   parseKanban,
   parseKanbanColumnMetadata,
+  parseTaskComments,
   parseTaskIdSettings,
   serializeKanban,
   withKanbanColumnMetadata,
   type CardPriority,
+  type TaskComment,
   type KanbanColumnStatus,
 } from './kanban.js'
 
@@ -63,9 +65,11 @@ export interface BoardSummary {
 }
 
 export interface TaskInfo {
+  uid?: string
   id?: string
   title: string
   description?: string
+  comments?: TaskComment[]
   priority?: CardPriority
   assignees: string[]
   labels: string[]
@@ -354,7 +358,7 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
   if (file.frontmatter.kanban !== true) return null
 
   const board = parseKanban(file.content)
-  const normalizedBoard = normalizeKanbanBoard(board, parseTaskIdSettings(file.frontmatter), parseKanbanColumnMetadata(file.frontmatter))
+  const normalizedBoard = normalizeKanbanBoard(board, parseTaskIdSettings(file.frontmatter), parseKanbanColumnMetadata(file.frontmatter), true, parseTaskComments(file.frontmatter))
   const boardPath = normalizePagePath(pagePath)
   const boardId = pageIdFromFrontmatter(file.frontmatter)
   const boardTitle = String(file.frontmatter.title ?? pageTitleFromPath(pagePath))
@@ -371,8 +375,10 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
   const tasks = normalizedBoard.columns.flatMap((column) =>
     column.cards.map((card) => ({
       id: card.id,
+      uid: card.uid,
       title: card.title,
       description: card.description,
+      comments: card.comments,
       priority: card.priority,
       assignees: [...card.assignees],
       labels: [...card.labels],
@@ -512,7 +518,7 @@ export async function updatePageMeta(pagePath: string, patch: Record<string, unk
     (Object.hasOwn(patch, 'kanbanColumns') || taskIdsChanged || page.frontmatter.kanban !== true)
 
   if (shouldRewriteBoard) {
-    const board = normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(nextFrontmatter), parseKanbanColumnMetadata(nextFrontmatter))
+    const board = normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(nextFrontmatter), parseKanbanColumnMetadata(nextFrontmatter), true, parseTaskComments(nextFrontmatter))
     return writePage(page.path, serializeKanban(board), withKanbanColumnMetadata(nextFrontmatter, board))
   }
   return writePage(page.path, page.content, nextFrontmatter)

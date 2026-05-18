@@ -20,6 +20,9 @@ export function KanbanColumn({
   users,
   onUpdate,
   onMove,
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
 }: {
   column: Column
   columnIndex: number
@@ -30,6 +33,9 @@ export function KanbanColumn({
   users: string[]
   onUpdate: (board: KanbanBoard) => void
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
+  onAddComment: (input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) => Promise<void>
+  onUpdateComment: (commentId: string, body: string) => Promise<void>
+  onDeleteComment: (commentId: string) => Promise<void>
 }) {
   const [addingCard, setAddingCard] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
@@ -213,6 +219,9 @@ export function KanbanColumn({
             users={users}
             onMove={onMove}
             onUpdate={onUpdate}
+            onAddComment={onAddComment}
+            onUpdateComment={onUpdateComment}
+            onDeleteComment={onDeleteComment}
           />
         ))}
       </div>

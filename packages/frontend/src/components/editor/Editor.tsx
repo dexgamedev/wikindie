@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Eye, ListChecks, Pencil, Plus, Save, Settings } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Eye, ListChecks, Pencil, Plus, Save, Settings } from 'lucide-react'
 import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
@@ -76,6 +76,7 @@ export function Editor({
   const [editing, setEditing] = useState(false)
   const [status, setStatus] = useState<'saved' | 'saving' | 'dirty'>('saved')
   const [externalChange, setExternalChange] = useState(false)
+  const [childPagesOpen, setChildPagesOpen] = useState(false)
 
   const [title, setTitle] = useState(String(page.frontmatter.title ?? pageNameFromPath(page.path)))
   const [icon, setIcon] = useState(typeof page.frontmatter.icon === 'string' ? page.frontmatter.icon : '')
@@ -385,27 +386,37 @@ export function Editor({
           )}
 
           {childPages.length > 0 && (
-        <div className="mb-6 rounded-md border border-border bg-card p-5 shadow-sm shadow-shadow">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-text-muted">Pages</h3>
-            <span className="text-xs text-text-muted">{childPages.length} linked automatically</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {childPages.map((child) => (
-              <Link
-                key={child.path}
-                to={pageUrl(child.path)}
-                className="group rounded-md border border-border bg-card p-4 transition hover:border-accent hover:bg-accent/10"
+            <div className="mb-6 rounded-md border border-border bg-card shadow-sm shadow-shadow">
+              <button
+                aria-expanded={childPagesOpen}
+                className="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition hover:bg-accent/8"
+                onClick={() => setChildPagesOpen((open) => !open)}
+                type="button"
               >
-                <div className="mb-1 flex min-w-0 items-center gap-2">
-                  <PageIcon icon={child.icon} fallback={child.type === 'board' ? 'board' : 'page'} />
-                  <span className="min-w-0 truncate font-medium text-text group-hover:text-text">{child.title}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  {childPagesOpen ? <ChevronDown size={16} className="shrink-0 text-text-muted" /> : <ChevronRight size={16} className="shrink-0 text-text-muted" />}
+                  <span className="text-sm font-semibold uppercase tracking-wide text-text-muted">Pages</span>
+                </span>
+                <span className="shrink-0 text-xs text-text-muted">{childPages.length} linked automatically</span>
+              </button>
+              {childPagesOpen && (
+                <div className="grid grid-cols-1 gap-4 border-t border-border p-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {childPages.map((child) => (
+                    <Link
+                      key={child.path}
+                      to={pageUrl(child.path)}
+                      className="group rounded-md border border-border bg-card p-4 transition hover:border-accent hover:bg-accent/10"
+                    >
+                      <div className="mb-1 flex min-w-0 items-center gap-2">
+                        <PageIcon icon={child.icon} fallback={child.type === 'board' ? 'board' : 'page'} />
+                        <span className="min-w-0 truncate font-medium text-text group-hover:text-text">{child.title}</span>
+                      </div>
+                      <p className="truncate text-xs text-text-muted">{child.path}</p>
+                    </Link>
+                  ))}
                 </div>
-                <p className="truncate text-xs text-text-muted">{child.path}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
+              )}
+            </div>
           )}
 
           {mayWrite && editing ? (

@@ -27,10 +27,15 @@ import {
   type TaskInfo,
 } from '../lib/files.js'
 import {
+  createTaskComment,
+  findKanbanCard,
+  findKanbanComment,
+  generateCardUid,
   isReservedLabelName,
   normalizeKanbanBoard,
   parseKanban,
   parseKanbanColumnMetadata,
+  parseTaskComments,
   parseTaskIdSettings,
   serializeKanban,
   withKanbanColumnMetadata,
@@ -90,7 +95,7 @@ async function boardPathFromLocation(input: BoardLocation) {
 
 function boardForPage(page: PageBundle) {
   if (page.type !== 'board') throw new AppError(400, 'Page is not a kanban board')
-  return normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter))
+  return normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter), true, parseTaskComments(page.frontmatter))
 }
 
 function assertNoReservedLabels(labels: string[]) {
@@ -104,7 +109,7 @@ async function writeBoard(page: PageBundle, board: KanbanBoard) {
   }
 
   const frontmatter = { ...page.frontmatter, kanban: true }
-  const normalized = normalizeKanbanBoard(board, parseTaskIdSettings(frontmatter), parseKanbanColumnMetadata(frontmatter), false)
+  const normalized = normalizeKanbanBoard(board, parseTaskIdSettings(frontmatter), parseKanbanColumnMetadata(frontmatter), false, parseTaskComments(frontmatter))
   const updated = await writePage(page.path, serializeKanban(normalized), withKanbanColumnMetadata(frontmatter, normalized))
   return { ...updated, board: normalized }
 }
@@ -152,6 +157,12 @@ function findCard(board: KanbanBoard, taskId: string) {
     if (cardIndex >= 0) return { column, card: column.cards[cardIndex], cardIndex }
   }
   return null
+}
+
+function requireCommentBody(body: string) {
+  const cleanBody = body.trim()
+  if (!cleanBody) throw new AppError(400, 'Missing comment body')
+  return cleanBody
 }
 
 async function resolveTaskBoard(taskId: string, location: BoardLocation = {}) {
@@ -396,10 +407,21 @@ export function createWikindieMcpServer(user: SessionUser) {
     },
   )
 
+  const taskCommentSchema = z.object({
+    id: z.string().optional(),
+    author: z.string().optional(),
+    body: z.string(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+    editedBy: z.string().optional(),
+  })
+
   const kanbanCardSchema = z.object({
+    uid: z.string().optional(),
     id: z.string().optional(),
     title: z.string(),
     description: z.string().optional(),
+    comments: z.array(taskCommentSchema).optional(),
     priority: prioritySchema.optional(),
     assignees: z.array(z.string()).default([]),
     labels: z.array(z.string()).default([]),
@@ -425,7 +447,7 @@ export function createWikindieMcpServer(user: SessionUser) {
       assertPermission(user, 'write')
       const page = await readPageFromIdentifier(input)
       boardForPage(page)
-      return toolResult(await writeBoard(page, board))
+      return toolResult(await writeBoard(page, board as KanbanBoard))
     },
   )
 
@@ -513,6 +535,76 @@ export function createWikindieMcpServer(user: SessionUser) {
       if (labels !== undefined) result.card.labels = labels
       if (archived !== undefined) result.card.archived = archived || undefined
       return toolResult(await writeBoard(result.page, result.board))
+    },
+  )
+
+  const taskCommentLocatorSchema = {
+    ...boardLocationSchema,
+    taskId: z.string().optional(),
+    cardUid: z.string().optional(),
+    columnId: z.string().optional(),
+    index: z.number().int().min(0).optional(),
+  }
+
+  server.registerTool(
+    'add_task_comment',
+    {
+      title: 'Add Task Comment',
+      description: 'Add a generic comment to a kanban task. Requires editor role.',
+      inputSchema: { ...taskCommentLocatorSchema, body: z.string().min(1) },
+    },
+    async ({ body, ...input }) => {
+      assertPermission(user, 'write')
+      const page = await readPage(await boardPathFromLocation(input))
+      const board = boardForPage(page)
+      const match = findKanbanCard(board, input)
+      if (!match) throw notFound('Task not found')
+      if (!match.card.uid) match.card.uid = generateCardUid()
+      const comment = createTaskComment(requireCommentBody(body), user.username)
+      match.card.comments = [...(match.card.comments ?? []), comment]
+      const updated = await writeBoard(page, board)
+      return toolResult({ comment, task: match.card, boardPath: page.path, boardId: page.id, columnId: match.column.id, page: updated })
+    },
+  )
+
+  server.registerTool(
+    'update_task_comment',
+    {
+      title: 'Update Task Comment',
+      description: 'Edit a task comment by comment id. Requires editor role.',
+      inputSchema: { ...boardLocationSchema, commentId: z.string().min(1), body: z.string().min(1) },
+    },
+    async ({ commentId, body, ...location }) => {
+      assertPermission(user, 'write')
+      const page = await readPage(await boardPathFromLocation(location))
+      const board = boardForPage(page)
+      const match = findKanbanComment(board, commentId)
+      if (!match) throw notFound('Comment not found')
+      match.comment.body = requireCommentBody(body)
+      match.comment.updatedAt = new Date().toISOString()
+      match.comment.editedBy = user.username
+      const updated = await writeBoard(page, board)
+      return toolResult({ comment: match.comment, task: match.card, boardPath: page.path, boardId: page.id, columnId: match.column.id, page: updated })
+    },
+  )
+
+  server.registerTool(
+    'delete_task_comment',
+    {
+      title: 'Delete Task Comment',
+      description: 'Remove a task comment by comment id. Requires editor role.',
+      inputSchema: { ...boardLocationSchema, commentId: z.string().min(1) },
+    },
+    async ({ commentId, ...location }) => {
+      assertPermission(user, 'write')
+      const page = await readPage(await boardPathFromLocation(location))
+      const board = boardForPage(page)
+      const match = findKanbanComment(board, commentId)
+      if (!match || !match.card.comments) throw notFound('Comment not found')
+      const [comment] = match.card.comments.splice(match.commentIndex, 1)
+      if (!match.card.comments.length) match.card.comments = undefined
+      const updated = await writeBoard(page, board)
+      return toolResult({ comment, task: match.card, boardPath: page.path, boardId: page.id, columnId: match.column.id, page: updated })
     },
   )
 

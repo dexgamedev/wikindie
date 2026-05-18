@@ -34,10 +34,21 @@ export interface PageBundle extends MarkdownFile {
 export type CardPriority = 'high' | 'medium' | 'low'
 export type KanbanColumnStatus = 'backlog' | 'next' | 'in_progress' | 'done' | 'custom'
 
+export interface TaskComment {
+  id: string
+  author?: string
+  body: string
+  createdAt: string
+  updatedAt?: string
+  editedBy?: string
+}
+
 export interface KanbanCard {
+  uid?: string
   id?: string
   title: string
   description?: string
+  comments?: TaskComment[]
   priority?: CardPriority
   assignees: string[]
   labels: string[]
@@ -80,9 +91,11 @@ export interface BoardSummary {
 }
 
 export interface TaskInfo {
+  uid?: string
   id?: string
   title: string
   description?: string
+  comments?: TaskComment[]
   priority?: CardPriority
   assignees: string[]
   labels: string[]
@@ -222,6 +235,12 @@ export const api = {
   kanban: (path: string) => request<PageBundle & { board: KanbanBoard }>(`/api/kanban/${encodePath(path)}`),
   saveKanban: (path: string, board: KanbanBoard) =>
     request<PageBundle & { board: KanbanBoard }>(`/api/kanban/${encodePath(path)}`, { method: 'PUT', body: JSON.stringify({ board }) }),
+  addTaskComment: (path: string, input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) =>
+    request<PageBundle & { board: KanbanBoard; comment: TaskComment; card: KanbanCard }>(`/api/kanban-comments/${encodePath(path)}`, { method: 'POST', body: JSON.stringify(input) }),
+  updateTaskComment: (path: string, commentId: string, body: string) =>
+    request<PageBundle & { board: KanbanBoard; comment: TaskComment; card: KanbanCard }>(`/api/kanban-comments/${encodePath(path)}`, { method: 'PATCH', body: JSON.stringify({ commentId, body }) }),
+  deleteTaskComment: (path: string, commentId: string) =>
+    request<PageBundle & { board: KanbanBoard; comment: TaskComment; card: KanbanCard }>(`/api/kanban-comments/${encodePath(path)}`, { method: 'DELETE', body: JSON.stringify({ commentId }) }),
   recents: (limit = 10) => request<{ pages: RecentPage[] }>(`/api/recents?limit=${limit}`),
   stats: () => request<{ stats: WorkspaceStats }>('/api/stats'),
 }

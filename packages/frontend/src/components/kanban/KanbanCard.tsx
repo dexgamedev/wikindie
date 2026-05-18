@@ -18,6 +18,9 @@ export function KanbanCard({
   users,
   onMove,
   onUpdate,
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
 }: {
   card: Card
   cardIndex: number
@@ -28,11 +31,15 @@ export function KanbanCard({
   users: string[]
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
   onUpdate: (board: KanbanBoard) => void
+  onAddComment: (input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) => Promise<void>
+  onUpdateComment: (commentId: string, body: string) => Promise<void>
+  onDeleteComment: (commentId: string) => Promise<void>
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const suppressNextClick = useRef(false)
   const assignees = card.assignees ?? []
   const labels = card.labels ?? []
+  const commentCount = card.comments?.length ?? 0
 
   const updateCard = (patch: Partial<Card>) => {
     if (!editable) return
@@ -99,7 +106,12 @@ export function KanbanCard({
                 </span>
               )}
               <span className="block min-w-0 break-words">{card.title}</span>
-              {card.description && <span className="mt-1 block text-xs text-text-muted">Has details</span>}
+              {(card.description || commentCount > 0) && (
+                <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-text-muted">
+                  {card.description && <span className="whitespace-nowrap">Has details</span>}
+                  {commentCount > 0 && <span className="whitespace-nowrap">{commentCount} comment{commentCount === 1 ? '' : 's'}</span>}
+                </span>
+              )}
             </div>
           </div>
           {(editable || assignees.length > 0) && (
@@ -159,6 +171,9 @@ export function KanbanCard({
         editable={editable}
         availableLabels={availableLabels}
         onClose={() => setDialogOpen(false)}
+        onAddComment={(body) => onAddComment({ taskId: card.id, cardUid: card.uid, columnId: board.columns[columnIndex].id, index: cardIndex, body })}
+        onUpdateComment={onUpdateComment}
+        onDeleteComment={onDeleteComment}
         onSave={updateCard}
         open={dialogOpen}
         users={users}
