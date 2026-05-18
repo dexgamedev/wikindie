@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request } from 'express'
 import { buildTree } from '../lib/tree.js'
 import {
   createChildPage,
@@ -17,6 +17,7 @@ import {
   findKanbanCard,
   findKanbanComment,
   generateCardUid,
+  type KanbanBoard,
   isReservedLabelName,
   normalizeKanbanBoard,
   parseKanban,
@@ -36,6 +37,29 @@ const joinedPath = (value: unknown) => (Array.isArray(value) ? value.join('/') :
 
 const boardForPage = (page: Awaited<ReturnType<typeof readPage>>) =>
   normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter), true, parseTaskComments(page.frontmatter))
+
+const isGuestRequest = (req: Request) => req.user?.id === 'guest'
+
+function redactBoardForGuest(board: KanbanBoard): KanbanBoard {
+  return {
+    columns: board.columns.map((column) => ({
+      ...column,
+      cards: column.cards.map((card) => ({
+        ...card,
+        assignees: [],
+        comments: card.comments?.map((comment) => ({ ...comment, author: undefined, editedBy: undefined })),
+      })),
+    })),
+  }
+}
+
+function pageWithBoardForRequest(page: Awaited<ReturnType<typeof readPage>>, req: Request) {
+  const board = boardForPage(page)
+  if (!isGuestRequest(req)) return { ...page, board }
+
+  const redactedBoard = redactBoardForGuest(board)
+  return { ...page, content: serializeKanban(redactedBoard), board: redactedBoard }
+}
 
 async function writeBoard(page: Awaited<ReturnType<typeof readPage>>, board: ReturnType<typeof parseKanban>) {
   assertNoReservedLabels(board)
@@ -64,14 +88,19 @@ filesRouter.get('/tree', requirePermission('read'), async (_req, res) => {
   res.json({ tree: await buildTree() })
 })
 
-filesRouter.get('/users', requirePermission('read'), async (_req, res) => {
+filesRouter.get('/users', requirePermission('read'), async (req, res) => {
+  if (isGuestRequest(req)) {
+    res.json({ users: [] })
+    return
+  }
+
   const users = await listUsers()
   res.json({ users: users.map((user) => ({ username: user.username })) })
 })
 
 filesRouter.get('/kanban/*path', requirePermission('read'), async (req, res) => {
   const page = await readPage(joinedPath(req.params.path))
-  res.json({ ...page, board: boardForPage(page) })
+  res.json(pageWithBoardForRequest(page, req))
 })
 
 filesRouter.put('/kanban/*path', requirePermission('write'), async (req, res) => {
@@ -122,13 +151,26 @@ filesRouter.delete('/kanban-comments/*path', requirePermission('write'), async (
 })
 
 filesRouter.get('/page/*path/tasks', requirePermission('read'), async (req, res) => {
-  res.json(await readTaskOverview(joinedPath(req.params.path)))
+  const overview = await readTaskOverview(joinedPath(req.params.path))
+  if (!isGuestRequest(req)) {
+    res.json(overview)
+    return
+  }
+
+  res.json({
+    ...overview,
+    tasks: overview.tasks.map((task) => ({
+      ...task,
+      assignees: [],
+      comments: task.comments?.map((comment) => ({ ...comment, author: undefined, editedBy: undefined })),
+    })),
+  })
 })
 
 filesRouter.get('/page/*path', requirePermission('read'), async (req, res) => {
   const page = await readPage(joinedPath(req.params.path))
   if (page.type === 'board') {
-    res.json({ ...page, board: boardForPage(page) })
+    res.json(pageWithBoardForRequest(page, req))
     return
   }
   res.json(page)

@@ -17,6 +17,7 @@ export function KanbanColumn({
   editable,
   availableLabels,
   visibleCards,
+  showAssignees,
   users,
   onUpdate,
   onMove,
@@ -30,6 +31,7 @@ export function KanbanColumn({
   editable: boolean
   availableLabels: string[]
   visibleCards?: Array<{ card: Card; cardIndex: number }>
+  showAssignees: boolean
   users: string[]
   onUpdate: (board: KanbanBoard) => void
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
@@ -216,6 +218,7 @@ export function KanbanColumn({
             board={board}
             editable={editable}
             availableLabels={availableLabels}
+            showAssignees={showAssignees}
             users={users}
             onMove={onMove}
             onUpdate={onUpdate}

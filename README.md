@@ -205,7 +205,7 @@ For clients that only support stdio MCP servers, build the backend and use the s
 }
 ```
 
-The MCP server exposes page/tree/search tools, page and section mutation tools, kanban task tools, workspace resources, and prompt templates. Use `readonly` keys for browsing and `editor` keys for agents that should update pages or boards.
+The MCP server exposes page/tree/search tools, page and section mutation tools, kanban task tools, task comment tools, workspace resources, and prompt templates. Use `readonly` keys for browsing and `editor` keys for agents that should update pages or boards.
 
 ## Project Layout
 

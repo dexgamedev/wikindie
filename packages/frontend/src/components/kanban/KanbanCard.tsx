@@ -15,6 +15,7 @@ export function KanbanCard({
   board,
   editable,
   availableLabels,
+  showAssignees,
   users,
   onMove,
   onUpdate,
@@ -28,6 +29,7 @@ export function KanbanCard({
   board: KanbanBoard
   editable: boolean
   availableLabels: string[]
+  showAssignees: boolean
   users: string[]
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
   onUpdate: (board: KanbanBoard) => void
@@ -37,7 +39,7 @@ export function KanbanCard({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const suppressNextClick = useRef(false)
-  const assignees = card.assignees ?? []
+  const assignees = showAssignees ? card.assignees ?? [] : []
   const labels = card.labels ?? []
   const commentCount = card.comments?.length ?? 0
 
@@ -176,6 +178,7 @@ export function KanbanCard({
         onDeleteComment={onDeleteComment}
         onSave={updateCard}
         open={dialogOpen}
+        showAssignees={showAssignees}
         users={users}
       />
     </>

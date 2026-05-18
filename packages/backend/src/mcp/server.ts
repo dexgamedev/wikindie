@@ -51,6 +51,7 @@ import { readWorkspaceStats } from '../routes/stats.js'
 
 type PageIdentifier = { path?: string; id?: string }
 type BoardLocation = { boardPath?: string; boardId?: string }
+type TaskCommentLocator = BoardLocation & { taskId?: string; cardUid?: string; columnId?: string; index?: number }
 
 const prioritySchema = z.enum(['high', 'medium', 'low'])
 const pageIdentifierSchema = {
@@ -176,6 +177,30 @@ async function resolveTaskBoard(taskId: string, location: BoardLocation = {}) {
   }
   if (matches.length === 0) throw notFound('Task not found')
   if (matches.length > 1) throw new AppError(409, `Duplicate task id: ${taskId}`)
+  return matches[0]
+}
+
+async function resolveTaskCommentTarget(input: TaskCommentLocator) {
+  if (input.taskId) return resolveTaskBoard(input.taskId, input)
+
+  const page = await readPage(await boardPathFromLocation(input))
+  const board = boardForPage(page)
+  const match = findKanbanCard(board, input)
+  if (!match) throw notFound('Task not found')
+  return { page, board, ...match }
+}
+
+async function resolveTaskComment(commentId: string, location: BoardLocation = {}) {
+  const pages = location.boardId || location.boardPath ? [await readPage(await boardPathFromLocation(location))] : await readAllBoardPages()
+  const matches = []
+  for (const page of pages) {
+    if (page.type !== 'board') continue
+    const board = boardForPage(page)
+    const match = findKanbanComment(board, commentId)
+    if (match) matches.push({ page, board, ...match })
+  }
+  if (matches.length === 0) throw notFound('Comment not found')
+  if (matches.length > 1) throw new AppError(409, `Duplicate comment id: ${commentId}`)
   return matches[0]
 }
 
@@ -550,15 +575,12 @@ export function createWikindieMcpServer(user: SessionUser) {
     'add_task_comment',
     {
       title: 'Add Task Comment',
-      description: 'Add a generic comment to a kanban task. Requires editor role.',
+      description: 'Add a generic comment to a kanban task. A unique taskId can be used without a board location; otherwise provide boardPath or boardId with cardUid or columnId and index. Requires editor role.',
       inputSchema: { ...taskCommentLocatorSchema, body: z.string().min(1) },
     },
     async ({ body, ...input }) => {
       assertPermission(user, 'write')
-      const page = await readPage(await boardPathFromLocation(input))
-      const board = boardForPage(page)
-      const match = findKanbanCard(board, input)
-      if (!match) throw notFound('Task not found')
+      const { page, board, ...match } = await resolveTaskCommentTarget(input)
       if (!match.card.uid) match.card.uid = generateCardUid()
       const comment = createTaskComment(requireCommentBody(body), user.username)
       match.card.comments = [...(match.card.comments ?? []), comment]
@@ -571,15 +593,12 @@ export function createWikindieMcpServer(user: SessionUser) {
     'update_task_comment',
     {
       title: 'Update Task Comment',
-      description: 'Edit a task comment by comment id. Requires editor role.',
+      description: 'Edit a task comment by comment id, optionally constrained to one board. Requires editor role.',
       inputSchema: { ...boardLocationSchema, commentId: z.string().min(1), body: z.string().min(1) },
     },
     async ({ commentId, body, ...location }) => {
       assertPermission(user, 'write')
-      const page = await readPage(await boardPathFromLocation(location))
-      const board = boardForPage(page)
-      const match = findKanbanComment(board, commentId)
-      if (!match) throw notFound('Comment not found')
+      const { page, board, ...match } = await resolveTaskComment(commentId, location)
       match.comment.body = requireCommentBody(body)
       match.comment.updatedAt = new Date().toISOString()
       match.comment.editedBy = user.username
@@ -592,17 +611,15 @@ export function createWikindieMcpServer(user: SessionUser) {
     'delete_task_comment',
     {
       title: 'Delete Task Comment',
-      description: 'Remove a task comment by comment id. Requires editor role.',
+      description: 'Remove a task comment by comment id, optionally constrained to one board. Requires editor role.',
       inputSchema: { ...boardLocationSchema, commentId: z.string().min(1) },
     },
     async ({ commentId, ...location }) => {
       assertPermission(user, 'write')
-      const page = await readPage(await boardPathFromLocation(location))
-      const board = boardForPage(page)
-      const match = findKanbanComment(board, commentId)
-      if (!match || !match.card.comments) throw notFound('Comment not found')
-      const [comment] = match.card.comments.splice(match.commentIndex, 1)
-      if (!match.card.comments.length) match.card.comments = undefined
+      const { page, board, ...match } = await resolveTaskComment(commentId, location)
+      const comments = match.card.comments!
+      const [comment] = comments.splice(match.commentIndex, 1)
+      if (!comments.length) match.card.comments = undefined
       const updated = await writeBoard(page, board)
       return toolResult({ comment, task: match.card, boardPath: page.path, boardId: page.id, columnId: match.column.id, page: updated })
     },

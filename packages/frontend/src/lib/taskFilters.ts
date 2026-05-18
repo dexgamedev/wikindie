@@ -67,25 +67,27 @@ function matchesRegex(regex: RegExp | undefined, values: Array<string | undefine
   return regex.test(values.filter(Boolean).join('\n'))
 }
 
-export function matchesTaskInfoFilters(task: TaskInfo, filters: TaskFilterValues, regex?: RegExp) {
+export function matchesTaskInfoFilters(task: TaskInfo, filters: TaskFilterValues, regex?: RegExp, includeAssignees = true) {
   const commentValues = (task.comments ?? []).flatMap((comment) => [comment.author, comment.body, comment.editedBy])
+  const assigneeValues = includeAssignees ? task.assignees : []
   return (
     matchesPriority(task.priority, filters.priorityFilter) &&
-    matchesAssignee(task.assignees, filters.assigneeFilter) &&
+    matchesAssignee(includeAssignees ? task.assignees : undefined, includeAssignees ? filters.assigneeFilter : 'all') &&
     matchesLabel(task.labels, filters.labelFilter) &&
     matchesState(task.archived, filters.stateFilter) &&
-    matchesRegex(regex, [task.id, task.uid, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...task.assignees, ...(task.labels ?? []), ...commentValues])
+    matchesRegex(regex, [task.id, task.uid, task.title, task.description, task.columnId, task.columnTitle, task.columnStatus, task.columnIcon, task.priority, ...assigneeValues, ...(task.labels ?? []), ...commentValues])
   )
 }
 
-export function matchesKanbanCardFilters(card: KanbanCard, column: Pick<KanbanColumn, 'id' | 'title' | 'status'>, filters: TaskFilterValues, regex?: RegExp) {
+export function matchesKanbanCardFilters(card: KanbanCard, column: Pick<KanbanColumn, 'id' | 'title' | 'status'>, filters: TaskFilterValues, regex?: RegExp, includeAssignees = true) {
   const commentValues = (card.comments ?? []).flatMap((comment) => [comment.author, comment.body, comment.editedBy])
+  const assigneeValues = includeAssignees ? card.assignees ?? [] : []
   return (
     matchesPriority(card.priority, filters.priorityFilter) &&
-    matchesAssignee(card.assignees, filters.assigneeFilter) &&
+    matchesAssignee(includeAssignees ? card.assignees : undefined, includeAssignees ? filters.assigneeFilter : 'all') &&
     matchesLabel(card.labels, filters.labelFilter) &&
     matchesState(card.archived, filters.stateFilter) &&
-    matchesRegex(regex, [card.id, card.uid, card.title, card.description, column.id, column.title, column.status, card.priority, ...(card.assignees ?? []), ...(card.labels ?? []), ...commentValues])
+    matchesRegex(regex, [card.id, card.uid, card.title, card.description, column.id, column.title, column.status, card.priority, ...assigneeValues, ...(card.labels ?? []), ...commentValues])
   )
 }
 

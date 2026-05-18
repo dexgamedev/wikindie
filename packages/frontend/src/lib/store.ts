@@ -73,6 +73,12 @@ export const useRuntimeConfigStore = create<RuntimeConfigState>((set) => ({
   setConfig: (config) => set({ config }),
 }))
 
+export function useGuestMode() {
+  const token = useAuthStore((state) => state.token)
+  const publicReadonly = useRuntimeConfigStore((state) => state.config?.publicReadonly)
+  return !token && publicReadonly === true
+}
+
 export const useFilesStore = create<FilesState>((set) => ({
   tree: [],
   setTree: (tree) => set({ tree }),

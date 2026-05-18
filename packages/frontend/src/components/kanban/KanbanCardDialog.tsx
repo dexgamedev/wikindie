@@ -41,6 +41,7 @@ export function KanbanCardDialog({
   onUpdateComment,
   onDeleteComment,
   open,
+  showAssignees,
   users,
 }: {
   card: Card
@@ -52,6 +53,7 @@ export function KanbanCardDialog({
   onUpdateComment?: (commentId: string, body: string) => Promise<void>
   onDeleteComment?: (commentId: string) => Promise<void>
   open: boolean
+  showAssignees: boolean
   users: string[]
 }) {
   const backdropPointerDown = useRef(false)
@@ -245,31 +247,33 @@ export function KanbanCardDialog({
               </div>
             </label>
 
-            <div className="grid gap-1.5 text-sm font-medium text-text">
-              Assignees
-              {users.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {users.map((username) => {
-                    const selected = assignees.includes(username)
-                    return (
-                      <button
-                        key={username}
-                        className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-normal transition disabled:cursor-default ${selected ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:border-accent hover:text-text'}`}
-                        disabled={!editable}
-                        onClick={() => toggleAssignee(username)}
-                        type="button"
-                      >
-                        <UserIconBadge username={username} className="size-5" />
-                        <span>{username}</span>
-                        {selected && <Check size={12} className="text-accent" />}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm font-normal text-text-muted">No users found.</p>
-              )}
-            </div>
+            {showAssignees && (
+              <div className="grid gap-1.5 text-sm font-medium text-text">
+                Assignees
+                {users.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {users.map((username) => {
+                      const selected = assignees.includes(username)
+                      return (
+                        <button
+                          key={username}
+                          className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-normal transition disabled:cursor-default ${selected ? 'border-accent bg-accent/15 text-text' : 'border-border text-text-muted hover:border-accent hover:text-text'}`}
+                          disabled={!editable}
+                          onClick={() => toggleAssignee(username)}
+                          type="button"
+                        >
+                          <UserIconBadge username={username} className="size-5" />
+                          <span>{username}</span>
+                          {selected && <Check size={12} className="text-accent" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm font-normal text-text-muted">No users found.</p>
+                )}
+              </div>
+            )}
           </div>
 
           <label className="mb-4 grid gap-1.5 text-sm font-medium text-text">

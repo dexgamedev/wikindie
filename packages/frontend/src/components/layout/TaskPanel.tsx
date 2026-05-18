@@ -5,7 +5,7 @@ import { api, type BoardSummary, type TaskInfo, type TaskOverviewScope } from '.
 import { isDoneColumn } from '../../lib/kanban'
 import { pageUrl } from '../../lib/paths'
 import { priorityColor, priorityLabel, priorityRank } from '../../lib/priority'
-import { canWrite, useAuthStore, useFilesStore, useTaskFiltersStore } from '../../lib/store'
+import { canWrite, useAuthStore, useFilesStore, useGuestMode, useTaskFiltersStore } from '../../lib/store'
 import { compileSearchRegex, hasAppliedFilters, hasFilterValues, matchesBoardSearch, matchesTaskInfoFilters, type TaskFilterValues } from '../../lib/taskFilters'
 import type { WikiEvent } from '../../lib/websocket'
 import { AssigneeCorner } from '../ui/AssigneeBadges'
@@ -68,7 +68,9 @@ export function TaskPanel({
   const [newBoardTitle, setNewBoardTitle] = useState('')
   const [creatingBoard, setCreatingBoard] = useState(false)
   const role = useAuthStore((state) => state.role)
+  const isGuestMode = useGuestMode()
   const mayWrite = canWrite(role)
+  const showAssignees = !isGuestMode
   const setTree = useFilesStore((state) => state.setTree)
   const priorityFilter = useTaskFiltersStore((state) => state.priorityFilter)
   const assigneeFilter = useTaskFiltersStore((state) => state.assigneeFilter)
@@ -143,24 +145,24 @@ export function TaskPanel({
   }, [pagePath])
 
   const isBoardScope = scope === 'board'
-  const assigneeOptions = useMemo(() => uniqueAssignees(tasks), [tasks])
+  const assigneeOptions = useMemo(() => (showAssignees ? uniqueAssignees(tasks) : []), [showAssignees, tasks])
   const labelOptions = useMemo(() => uniqueLabels(tasks), [tasks])
-  const taskFilters = useMemo<TaskFilterValues>(() => ({ priorityFilter, assigneeFilter, labelFilter, stateFilter, searchPattern }), [assigneeFilter, labelFilter, priorityFilter, searchPattern, stateFilter])
+  const taskFilters = useMemo<TaskFilterValues>(() => ({ priorityFilter, assigneeFilter: showAssignees ? assigneeFilter : 'all', labelFilter, stateFilter, searchPattern }), [assigneeFilter, labelFilter, priorityFilter, searchPattern, showAssignees, stateFilter])
   const search = useMemo(() => compileSearchRegex(searchPattern), [searchPattern])
   const searchRegex = search.regex
   const searchError = search.error
   const hasFilterInput = hasFilterValues(taskFilters)
   const filtersApplied = hasAppliedFilters(taskFilters, searchRegex)
-  const hasTaskFilters = priorityFilter !== 'all' || assigneeFilter !== 'all' || labelFilter !== 'all' || stateFilter !== 'active'
+  const hasTaskFilters = taskFilters.priorityFilter !== 'all' || taskFilters.assigneeFilter !== 'all' || taskFilters.labelFilter !== 'all' || taskFilters.stateFilter !== 'active'
   const hasSearchFilter = Boolean(searchRegex)
   const allTasksByBoard = useMemo(() => taskGroupsByBoard(tasks), [tasks])
   const filteredTasks = useMemo(
     () => tasks.filter((task) => {
-        if (matchesTaskInfoFilters(task, taskFilters, searchRegex)) return true
-        if (hasSearchFilter && hasTaskFilters && matchesBoardSearch(searchRegex, task.boardTitle, task.boardPath)) return matchesTaskInfoFilters(task, taskFilters)
+        if (matchesTaskInfoFilters(task, taskFilters, searchRegex, showAssignees)) return true
+        if (hasSearchFilter && hasTaskFilters && matchesBoardSearch(searchRegex, task.boardTitle, task.boardPath)) return matchesTaskInfoFilters(task, taskFilters, undefined, showAssignees)
         return false
       }),
-    [hasSearchFilter, hasTaskFilters, searchRegex, taskFilters, tasks],
+    [hasSearchFilter, hasTaskFilters, searchRegex, showAssignees, taskFilters, tasks],
   )
   const filteredTasksByBoard = useMemo(() => taskGroupsByBoard(filteredTasks), [filteredTasks])
   const visibleBoards = useMemo(() => {
@@ -168,15 +170,15 @@ export function TaskPanel({
 
     return boards.filter((board) => {
       const boardTasks = allTasksByBoard.get(board.path) ?? []
-      if (!hasSearchFilter) return boardTasks.some((task) => matchesTaskInfoFilters(task, taskFilters))
+      if (!hasSearchFilter) return boardTasks.some((task) => matchesTaskInfoFilters(task, taskFilters, undefined, showAssignees))
 
       const boardMatchesSearch = matchesBoardSearch(searchRegex, board.title, board.path)
-      if (boardTasks.some((task) => matchesTaskInfoFilters(task, taskFilters, searchRegex))) return true
+      if (boardTasks.some((task) => matchesTaskInfoFilters(task, taskFilters, searchRegex, showAssignees))) return true
       if (!boardMatchesSearch) return false
       if (!hasTaskFilters) return true
-      return boardTasks.some((task) => matchesTaskInfoFilters(task, taskFilters))
+      return boardTasks.some((task) => matchesTaskInfoFilters(task, taskFilters, undefined, showAssignees))
     })
-  }, [allTasksByBoard, boards, filtersApplied, hasSearchFilter, hasTaskFilters, isBoardScope, searchRegex, taskFilters])
+  }, [allTasksByBoard, boards, filtersApplied, hasSearchFilter, hasTaskFilters, isBoardScope, searchRegex, showAssignees, taskFilters])
   const visibleBoardPaths = useMemo(() => new Set(visibleBoards.map((board) => board.path)), [visibleBoards])
   const visibleScopeTasks = useMemo(
     () => (isBoardScope ? filteredTasks : filteredTasks.filter((task) => visibleBoardPaths.has(task.boardPath))),
@@ -327,6 +329,7 @@ export function TaskPanel({
               priorityFilter={priorityFilter}
               searchError={searchError}
               searchPattern={searchPattern}
+              showAssignees={showAssignees}
               stateFilter={stateFilter}
               scope={scope}
             />
@@ -352,6 +355,7 @@ export function TaskPanel({
                         board={board}
                         filteredTasks={filteredTasksByBoard.get(board.path) ?? []}
                         showFilteredTasks={filtersApplied}
+                        showAssignees={showAssignees}
                         tasks={allTasksByBoard.get(board.path) ?? []}
                       />
                     ))}
@@ -448,6 +452,7 @@ function FilteringPanel({
   priorityFilter,
   searchError,
   searchPattern,
+  showAssignees,
   stateFilter,
   scope,
 }: {
@@ -465,6 +470,7 @@ function FilteringPanel({
   priorityFilter: TaskFilterValues['priorityFilter']
   searchError: string
   searchPattern: string
+  showAssignees: boolean
   stateFilter: TaskFilterValues['stateFilter']
   scope: TaskOverviewScope
 }) {
@@ -507,19 +513,21 @@ function FilteringPanel({
             <option value="none">No priority</option>
           </select>
         </label>
-        <label className="grid gap-1 text-xs text-text-muted">
-          Assignee
-          <select
-            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
-            value={assigneeFilter}
-            onChange={(event) => onAssigneeChange(event.target.value)}
-          >
-            <option value="all">All assignees</option>
-            {assignees.map((assignee) => (
-              <option key={assignee} value={assignee}>@{assignee}</option>
-            ))}
-          </select>
-        </label>
+        {showAssignees && (
+          <label className="grid gap-1 text-xs text-text-muted">
+            Assignee
+            <select
+              className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+              value={assigneeFilter}
+              onChange={(event) => onAssigneeChange(event.target.value)}
+            >
+              <option value="all">All assignees</option>
+              {assignees.map((assignee) => (
+                <option key={assignee} value={assignee}>@{assignee}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="grid gap-1 text-xs text-text-muted">
           Label / sprint
           <select
@@ -542,13 +550,13 @@ function FilteringPanel({
               className={`w-full rounded-md border bg-input py-1.5 pl-8 pr-2 text-sm text-text outline-none transition focus:border-accent ${searchError ? 'border-danger' : 'border-border'}`}
               value={searchPattern}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder={scope === 'board' ? 'Card, column, assignee, label' : 'Board or card regex'}
+              placeholder={scope === 'board' ? (showAssignees ? 'Card, column, assignee, label' : 'Card, column, label') : 'Board or card regex'}
             />
           </div>
           {searchError && <span className="text-danger">Regex ignored: {searchError}</span>}
         </label>
       </div>
-      {!assignees.length && (
+      {showAssignees && !assignees.length && (
         <p className="mt-1.5 text-xs text-text-muted">No assigned cards found {scope === 'board' ? 'in this board.' : 'in nested boards.'}</p>
       )}
       {!labels.length && (
@@ -646,11 +654,13 @@ function BoardOverview({
   board,
   filteredTasks,
   showFilteredTasks,
+  showAssignees,
   tasks,
 }: {
   board: BoardSummary
   filteredTasks: TaskInfo[]
   showFilteredTasks: boolean
+  showAssignees: boolean
   tasks: TaskInfo[]
 }) {
   const totalCards = board.activeCards
@@ -702,7 +712,7 @@ function BoardOverview({
           {previewTasks.length > 0 ? (
             <>
               {previewTasks.map((task, index) => (
-                <TaskPreview key={task.id ?? `${task.title}-${task.columnTitle}-${index}`} task={task} />
+                <TaskPreview key={task.id ?? `${task.title}-${task.columnTitle}-${index}`} showAssignees={showAssignees} task={task} />
               ))}
               {matchingTasks.length > previewTasks.length && (
                 <Link to={pageUrl(board.path)} className="block rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text">
@@ -719,8 +729,8 @@ function BoardOverview({
   )
 }
 
-function TaskPreview({ task }: { task: TaskInfo }) {
-  const assignees = task.assignees ?? []
+function TaskPreview({ showAssignees, task }: { showAssignees: boolean; task: TaskInfo }) {
+  const assignees = showAssignees ? task.assignees ?? [] : []
 
   return (
     <Link to={pageUrl(task.boardPath)} className={`relative block rounded-md px-2 pt-1 transition hover:bg-accent/10 ${assignees.length ? 'pb-7' : 'pb-1'}`}>
@@ -734,7 +744,7 @@ function TaskPreview({ task }: { task: TaskInfo }) {
           </p>
         </div>
       </div>
-      <AssigneeCorner assignees={assignees} />
+      {showAssignees && <AssigneeCorner assignees={assignees} />}
     </Link>
   )
 }

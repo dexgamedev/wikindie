@@ -6,7 +6,7 @@ import { wikiIcons } from '../../lib/icons'
 import { createKanbanColumn, isDoneColumn, sortBoardByPriority } from '../../lib/kanban'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { priorityColor, priorityLabel, priorityRank } from '../../lib/priority'
-import { canWrite, useAuthStore, useFilesStore, useTaskFiltersStore } from '../../lib/store'
+import { canWrite, useAuthStore, useFilesStore, useGuestMode, useTaskFiltersStore } from '../../lib/store'
 import { compileSearchRegex, defaultTaskFilters, hasAppliedFilters, matchesKanbanCardFilters, type TaskFilterValues } from '../../lib/taskFilters'
 import { useMobileTaskPanel } from '../layout/AppLayout'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
@@ -72,6 +72,7 @@ export function KanbanBoard({
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
   const role = useAuthStore((state) => state.role)
+  const isGuestMode = useGuestMode()
   const filterPagePath = useTaskFiltersStore((state) => state.pagePath)
   const priorityFilter = useTaskFiltersStore((state) => state.priorityFilter)
   const assigneeFilter = useTaskFiltersStore((state) => state.assigneeFilter)
@@ -79,6 +80,7 @@ export function KanbanBoard({
   const stateFilter = useTaskFiltersStore((state) => state.stateFilter)
   const searchPattern = useTaskFiltersStore((state) => state.searchPattern)
   const mayWrite = canWrite(role)
+  const showAssignees = !isGuestMode
   const { openTasks } = useMobileTaskPanel()
   const [board, setBoard] = useState(initial)
   const [saving, setSaving] = useState(false)
@@ -105,14 +107,14 @@ export function KanbanBoard({
   const archivedCount = useMemo(() => board.columns.reduce((sum, column) => sum + column.cards.filter((card) => card.archived).length, 0), [board])
   const labelOptions = useMemo(() => uniqueLabels(board), [board])
   const taskFilters = useMemo<TaskFilterValues>(
-    () => (filterPagePath === path ? { priorityFilter, assigneeFilter, labelFilter, stateFilter, searchPattern } : defaultTaskFilters),
-    [assigneeFilter, filterPagePath, labelFilter, path, priorityFilter, searchPattern, stateFilter],
+    () => (filterPagePath === path ? { priorityFilter, assigneeFilter: showAssignees ? assigneeFilter : 'all', labelFilter, stateFilter, searchPattern } : defaultTaskFilters),
+    [assigneeFilter, filterPagePath, labelFilter, path, priorityFilter, searchPattern, showAssignees, stateFilter],
   )
   const search = useMemo(() => compileSearchRegex(taskFilters.searchPattern), [taskFilters.searchPattern])
   const filtersApplied = hasAppliedFilters(taskFilters, search.regex)
   const cardMatchesFilter = useMemo(
-    () => (card: Card, column: Board['columns'][number]) => matchesKanbanCardFilters(card, column, taskFilters, search.regex),
-    [search.regex, taskFilters],
+    () => (card: Card, column: Board['columns'][number]) => matchesKanbanCardFilters(card, column, taskFilters, search.regex, showAssignees),
+    [search.regex, showAssignees, taskFilters],
   )
   const visibleColumns = useMemo(
     () => board.columns
@@ -151,6 +153,11 @@ export function KanbanBoard({
   }, [frontmatter, icon, path, title])
 
   useEffect(() => {
+    if (!showAssignees) {
+      setUsers([])
+      return
+    }
+
     let cancelled = false
     api.users()
       .then((result) => {
@@ -162,7 +169,7 @@ export function KanbanBoard({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [showAssignees])
 
   const update = async (next: Board) => {
     if (!mayWrite) return
@@ -445,6 +452,7 @@ export function KanbanBoard({
                 editable={mayWrite}
                 availableLabels={labelOptions}
                 visibleCards={cards}
+                showAssignees={showAssignees}
                 users={users}
                 onUpdate={update}
                 onMove={moveCard}
@@ -456,7 +464,7 @@ export function KanbanBoard({
           </div>
         </div>
       ) : (
-        <KanbanTableView board={board} editable={mayWrite} availableLabels={labelOptions} rows={tableCards} users={users} onUpdate={update} onAddComment={addComment} onUpdateComment={updateComment} onDeleteComment={deleteComment} />
+        <KanbanTableView board={board} editable={mayWrite} availableLabels={labelOptions} rows={tableCards} showAssignees={showAssignees} users={users} onUpdate={update} onAddComment={addComment} onUpdateComment={updateComment} onDeleteComment={deleteComment} />
       )}
       {shownCardCount === 0 && (
         <div className="mt-5 rounded-md border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-text-muted">
@@ -488,6 +496,7 @@ function KanbanTableView({
   editable,
   availableLabels,
   rows,
+  showAssignees,
   users,
   onUpdate,
   onAddComment,
@@ -498,6 +507,7 @@ function KanbanTableView({
   editable: boolean
   availableLabels: string[]
   rows: Array<{ card: Card; cardIndex: number; column: Board['columns'][number]; columnIndex: number }>
+  showAssignees: boolean
   users: string[]
   onUpdate: (board: Board) => void
   onAddComment: (input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) => Promise<void>
@@ -557,7 +567,7 @@ function KanbanTableView({
             <th className="border-b border-border px-3 py-2 font-semibold">Task</th>
             <th className="border-b border-border px-3 py-2 font-semibold">Column</th>
             <th className="border-b border-border px-3 py-2 font-semibold">Priority</th>
-            <th className="border-b border-border px-3 py-2 font-semibold">Assignees</th>
+            {showAssignees && <th className="border-b border-border px-3 py-2 font-semibold">Assignees</th>}
             <th className="border-b border-border px-3 py-2 font-semibold">State</th>
           </tr>
         </thead>
@@ -591,7 +601,7 @@ function KanbanTableView({
                   <span className={`size-2 rounded-full ${priorityColor(card.priority)}`} /> {priorityLabel(card.priority)}
                 </span>
               </td>
-              <td className="px-3 py-2 align-middle text-text-muted">{card.assignees?.length ? card.assignees.map((assignee) => `@${assignee}`).join(', ') : 'Unassigned'}</td>
+              {showAssignees && <td className="px-3 py-2 align-middle text-text-muted">{card.assignees?.length ? card.assignees.map((assignee) => `@${assignee}`).join(', ') : 'Unassigned'}</td>}
               <td className="px-3 py-2 align-middle text-text-muted">{card.archived ? 'Archived' : 'Active'}</td>
             </tr>
           ))}
@@ -647,7 +657,7 @@ function KanbanTableView({
                   </div>
                 </label>
               </div>
-              {users.length > 0 && (
+              {showAssignees && users.length > 0 && (
                 <div className="grid gap-1.5 text-sm font-medium text-text">
                   Assignees
                   <div className="flex flex-wrap gap-1.5">
@@ -696,6 +706,7 @@ function KanbanTableView({
           onDeleteComment={onDeleteComment}
           onSave={updateCard}
           open
+          showAssignees={showAssignees}
           users={users}
         />
       )}
