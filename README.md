@@ -26,6 +26,7 @@ If you are tired of juggling a wiki, a task board, a docs tool, and a pile of pr
 - Modular page sections stored as separate Markdown files.
 - Kanban boards serialized as plain Markdown bullet lists.
 - HTTP API for managing the tree, pages, sections, metadata, and kanban boards.
+- MCP server for local/dev agents at `/mcp`, plus a stdio bridge command for clients that only launch local MCP subprocesses.
 - Token-based login with WebSocket refresh events for file changes.
 - Docker image that serves the built frontend from the backend.
 
@@ -176,6 +177,36 @@ Set these variables in your shell, Docker environment, or deployment host:
 | `npm run start` | Start the built backend, serving the copied frontend assets. |
 | `npm run typecheck` | Type-check backend and frontend workspaces. |
 
+## MCP
+
+Wikindie exposes a local/dev Model Context Protocol server at `/mcp`. Initial MCP auth uses existing `wk_` API keys as bearer tokens; OAuth is intentionally out of scope for the first version.
+
+Use the account menu **Connect to AI** entry to generate a personal API key and copy agent configuration snippets. Admins are taken to **Admin Console → AI Connection**; non-admin users get the same self-service dashboard without access to the admin-only user/key tables. Streamable HTTP clients can connect directly to:
+
+```text
+http://localhost:3000/mcp
+Authorization: Bearer wk_...
+```
+
+For clients that only support stdio MCP servers, build the backend and use the stdio bridge:
+
+```json
+{
+  "mcpServers": {
+    "wikindie": {
+      "command": "node",
+      "args": ["/absolute/path/to/wikindie/packages/backend/dist/mcp-stdio.js"],
+      "env": {
+        "WIKINDIE_URL": "http://localhost:3000/mcp",
+        "WIKINDIE_API_KEY": "wk_..."
+      }
+    }
+  }
+}
+```
+
+The MCP server exposes page/tree/search tools, page and section mutation tools, kanban task tools, workspace resources, and prompt templates. Use `readonly` keys for browsing and `editor` keys for agents that should update pages or boards.
+
 ## Project Layout
 
 ```text
@@ -186,7 +217,7 @@ scripts            Small repository maintenance scripts
 
 ## Data Model
 
-Pages are Markdown files. Nested pages can be stored as either `Page.md` leaf files or `Page/_Index.md` index files with children. Frontmatter controls display metadata and board behavior.
+Pages are Markdown files. Nested pages can be stored as either `Page.md` leaf files or `Page/_Index.md` index files with children. Frontmatter controls display metadata and board behavior. Wikindie also stores stable page IDs in frontmatter as `id: pg_...`; these IDs survive page moves and are preferred for agent references.
 
 Sections are declared in page frontmatter and stored as additional Markdown files, usually under `_sections/` inside the page folder.
 

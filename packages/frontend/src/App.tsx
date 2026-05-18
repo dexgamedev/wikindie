@@ -9,6 +9,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { WelcomePage } from './pages/WelcomePage'
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })))
+const ConnectPage = lazy(() => import('./pages/ConnectPage').then((module) => ({ default: module.ConnectPage })))
 const PageView = lazy(() => import('./pages/PageView').then((module) => ({ default: module.PageView })))
 
 function RouteFallback() {
@@ -30,6 +31,11 @@ function AdminOnly({ children }: { children: ReactNode }) {
   const role = useAuthStore((state) => state.role)
   if (!token) return <Navigate to="/login" replace />
   return role === 'admin' ? children : <Navigate to="/" replace />
+}
+
+function SignedIn({ children }: { children: ReactNode }) {
+  const token = useAuthStore((state) => state.token)
+  return token ? children : <Navigate to="/login" replace />
 }
 
 function HomeRoute() {
@@ -99,6 +105,18 @@ export default function App() {
               </LazyRoute>
             </AppLayout>
           </AdminOnly>
+        }
+      />
+      <Route
+        path="/connect"
+        element={
+          <SignedIn>
+            <AppLayout>
+              <LazyRoute>
+                <ConnectPage />
+              </LazyRoute>
+            </AppLayout>
+          </SignedIn>
         }
       />
       <Route path="*" element={<NotFoundPage />} />

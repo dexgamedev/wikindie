@@ -147,6 +147,16 @@ export async function revokeApiKey(id: string) {
   })
 }
 
+export async function deleteApiKey(id: string) {
+  return withApiKeyWriteLock(async () => {
+    const store = await loadApiKeyStore()
+    const record = store.keys.find((item) => item.id === id)
+    if (!record) throw notFound('API key not found')
+    if (!record.revokedAt) throw new AppError(400, 'Revoke the key before deleting it')
+    await saveApiKeyStore({ ...store, keys: store.keys.filter((item) => item.id !== id) })
+  })
+}
+
 export async function revokeApiKeysForUser(userId: string) {
   return withApiKeyWriteLock(async () => {
     const store = await loadApiKeyStore()

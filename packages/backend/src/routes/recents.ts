@@ -1,12 +1,12 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import matter from 'gray-matter'
 import { Router } from 'express'
-import { SPACE_DIR, normalizePagePath } from '../lib/files.js'
+import { SPACE_DIR, normalizePagePath, pageIdFromFrontmatter, readPageMarkdownByPath } from '../lib/files.js'
 
 export const recentsRouter = Router()
 
-interface RecentPage {
+export interface RecentPage {
+  id?: string
   path: string
   title: string
   icon?: string
@@ -37,22 +37,24 @@ async function collectPages(dir: string, pages: RecentPage[]) {
     if (!pagePath) continue
 
     try {
-      const [raw, stat] = await Promise.all([fs.readFile(full, 'utf8'), fs.stat(full)])
-      const parsed = matter(raw)
-      const title = String(parsed.data.title ?? pagePath.split('/').at(-1) ?? pagePath)
-      const type = parsed.data.kanban === true ? 'board' : 'page'
-      const icon = typeof parsed.data.icon === 'string' ? parsed.data.icon : undefined
-      pages.push({ path: pagePath, title, icon, mtime: stat.mtime.toISOString(), type })
+      const [file, stat] = await Promise.all([readPageMarkdownByPath(rel, false), fs.stat(full)])
+      const title = String(file.frontmatter.title ?? pagePath.split('/').at(-1) ?? pagePath)
+      const type = file.frontmatter.kanban === true ? 'board' : 'page'
+      const icon = typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined
+      pages.push({ id: pageIdFromFrontmatter(file.frontmatter), path: pagePath, title, icon, mtime: stat.mtime.toISOString(), type })
     } catch {
-      // skip unreadable files
     }
   }
 }
 
-recentsRouter.get('/', async (req, res) => {
-  const limit = Math.min(Number(req.query.limit ?? 10), 50)
+export async function readRecentPages(limit = 10) {
   const pages: RecentPage[] = []
   await collectPages(SPACE_DIR, pages)
   pages.sort((a, b) => b.mtime.localeCompare(a.mtime))
-  res.json({ pages: pages.slice(0, limit) })
+  return pages.slice(0, Math.min(limit, 50))
+}
+
+recentsRouter.get('/', async (req, res) => {
+  const limit = Math.min(Number(req.query.limit ?? 10), 50)
+  res.json({ pages: await readRecentPages(limit) })
 })

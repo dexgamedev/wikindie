@@ -1,16 +1,19 @@
 import { Copy, KeyRound, RefreshCw, Shield, Trash2, UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { McpConnectionPanel } from '../components/integrations/McpConnectionPanel'
 import { adminApi, type AdminApiKey, type AdminUser } from '../lib/adminApi'
 import { roleBadgeClass } from '../lib/badges'
+import { formatDate } from '../lib/format'
 import type { Role } from '../lib/store'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 
 const roles: Role[] = ['admin', 'editor', 'readonly']
+type AdminTab = 'users' | 'keys' | 'ai'
 
-function formatDate(value: string | null) {
-  if (!value) return 'Never'
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+function parseTab(value: string | null): AdminTab {
+  return value === 'keys' || value === 'ai' ? value : 'users'
 }
 
 function RoleSelect({ value, onChange }: { value: Role; onChange: (role: Role) => void }) {
@@ -28,7 +31,8 @@ function RoleSelect({ value, onChange }: { value: Role; onChange: (role: Role) =
 }
 
 export function AdminPage() {
-  const [tab, setTab] = useState<'users' | 'keys'>('users')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = parseTab(searchParams.get('tab'))
   const [users, setUsers] = useState<AdminUser[]>([])
   const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([])
   const [loading, setLoading] = useState(false)
@@ -43,6 +47,10 @@ export function AdminPage() {
   const [keyRole, setKeyRole] = useState<Role>('readonly')
 
   const userById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users])
+
+  const setTab = (nextTab: AdminTab) => {
+    setSearchParams(nextTab === 'users' ? {} : { tab: nextTab })
+  }
 
   const refresh = async () => {
     setError('')
@@ -129,6 +137,17 @@ export function AdminPage() {
     }
   }
 
+  const deleteKey = async (key: AdminApiKey) => {
+    if (!window.confirm(`Permanently delete API key ${key.prefix}? This cannot be undone.`)) return
+    setError('')
+    try {
+      await adminApi.deleteApiKey(key.id)
+      await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete API key')
+    }
+  }
+
   return (
     <section className="workspace-scroll h-full overflow-y-auto">
       <div className="mx-auto max-w-6xl p-4 md:p-8">
@@ -137,8 +156,8 @@ export function AdminPage() {
           <div className="mb-2 inline-flex items-center gap-2 rounded border border-info/30 bg-info/10 px-3 py-1 text-sm text-info">
             <Shield size={15} /> Admin Console
           </div>
-          <h2 className="text-2xl font-semibold text-text">Users and API keys</h2>
-          <p className="mt-1 max-w-2xl text-sm text-text-muted">Manage local Wikindie accounts, role permissions, and bearer keys for integrations.</p>
+          <h2 className="text-2xl font-semibold text-text">Users, API keys, and AI connection</h2>
+          <p className="mt-1 max-w-2xl text-sm text-text-muted">Manage local accounts, bearer keys, and Wikindie MCP connection snippets.</p>
         </div>
         <Button onClick={() => void refresh()} disabled={loading}>
           <RefreshCw size={14} /> {loading ? 'Refreshing...' : 'Refresh'}
@@ -148,11 +167,14 @@ export function AdminPage() {
       <div className="mb-5 flex gap-2 rounded-md border border-border bg-surface p-1">
         <button className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${tab === 'users' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('users')}>Users</button>
         <button className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${tab === 'keys' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('keys')}>API Keys</button>
+        <button className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${tab === 'ai' ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`} onClick={() => setTab('ai')}>AI Connection</button>
       </div>
 
       {error && <div className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 
-      {tab === 'users' ? (
+      {tab === 'ai' ? (
+        <McpConnectionPanel showHeader={false} />
+      ) : tab === 'users' ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="overflow-hidden rounded-md border border-border bg-surface">
             <div className="overflow-x-auto">
@@ -223,7 +245,7 @@ export function AdminPage() {
 
             <div className="overflow-hidden rounded-md border border-border bg-surface">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
+                <table className="w-full min-w-[600px] text-left text-sm">
                   <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
                     <tr>
                       <th className="px-4 py-3">Key</th>
@@ -231,7 +253,7 @@ export function AdminPage() {
                       <th className="px-4 py-3">Role</th>
                       <th className="px-4 py-3">Last used</th>
                       <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -246,9 +268,15 @@ export function AdminPage() {
                         <td className="px-4 py-3 text-text-muted">{formatDate(key.lastUsedAt)}</td>
                         <td className="px-4 py-3 text-text-muted">{key.revokedAt ? `Revoked ${formatDate(key.revokedAt)}` : 'Active'}</td>
                         <td className="px-4 py-3 text-right">
-                          <Button variant="danger" onClick={() => void revokeKey(key)} disabled={Boolean(key.revokedAt)}>
-                            <Trash2 size={14} /> Revoke
-                          </Button>
+                          {key.revokedAt ? (
+                            <Button variant="ghost" onClick={() => void deleteKey(key)}>
+                              <Trash2 size={14} /> Delete
+                            </Button>
+                          ) : (
+                            <Button variant="danger" onClick={() => void revokeKey(key)}>
+                              <Trash2 size={14} /> Revoke
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}

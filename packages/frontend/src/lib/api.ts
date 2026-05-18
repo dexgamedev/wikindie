@@ -7,6 +7,7 @@ export interface MarkdownFile {
 }
 
 export interface TreeNode {
+  id?: string
   name: string
   title: string
   path: string
@@ -22,6 +23,7 @@ export interface PageSection {
 }
 
 export interface PageBundle extends MarkdownFile {
+  id: string
   path: string
   type: 'page' | 'board'
   diskSizeBytes: number
@@ -66,6 +68,7 @@ export interface BoardSummaryColumn {
 }
 
 export interface BoardSummary {
+  id?: string
   path: string
   title: string
   icon?: string
@@ -84,6 +87,7 @@ export interface TaskInfo {
   assignees: string[]
   labels: string[]
   archived?: boolean
+  boardId?: string
   boardPath: string
   boardTitle: string
   columnId: string
@@ -115,11 +119,23 @@ export interface TaskIdSettings {
 }
 
 export interface RecentPage {
+  id?: string
   path: string
   title: string
   icon?: string
   mtime: string
   type: 'page' | 'board'
+}
+
+export interface ApiKeyRecord {
+  id: string
+  prefix: string
+  userId: string
+  role: Role
+  label: string
+  createdAt: string
+  lastUsedAt: string | null
+  revokedAt: string | null
 }
 
 export function encodePath(path: string) {
@@ -160,6 +176,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
+  apiKeys: () => request<{ keys: ApiKeyRecord[] }>('/api/auth/apikeys'),
+  generateApiKey: (label: string, role: Role) =>
+    request<{ key: string; record: ApiKeyRecord }>('/api/auth/apikeys', {
+      method: 'POST',
+      body: JSON.stringify({ label, role }),
+    }),
+  revokeApiKey: (id: string) => request<{ ok: true }>(`/api/auth/apikeys/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  deleteApiKey: (id: string) => request<{ ok: true }>(`/api/auth/apikeys/${encodeURIComponent(id)}/permanent`, { method: 'DELETE' }),
   tree: () => request<{ tree: TreeNode[] }>('/api/tree'),
   users: () => request<{ users: { username: string }[] }>('/api/users'),
   page: (path: string) => request<PageBundle>(`/api/page/${encodePath(path)}`),

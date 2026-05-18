@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - npm workspaces with the root `package-lock.json`; do not switch to pnpm/yarn. Node.js 22+.
-- `npm run dev` (root) runs backend + frontend concurrently. Frontend at `http://localhost:5173`, backend at `http://localhost:3000` with Vite proxying `/api` and `/ws`.
+- `npm run dev` (root) runs backend + frontend concurrently. Frontend at `http://localhost:5173`, backend at `http://localhost:3000` with Vite proxying `/api`, `/mcp`, and `/ws`.
 - Per-workspace: `npm run dev -w packages/backend`, `npm run dev -w packages/frontend`, `npm run typecheck -w packages/<pkg>`.
 - Verification is `npm run typecheck` + `npm run build`. There is **no test, lint, or formatter** configured.
 - `npm run build` builds backend, builds frontend, then `scripts/copy-frontend.mjs` copies `packages/frontend/dist` to `packages/backend/public`. `npm run start` requires that build output to exist.
@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - All workspace data is Markdown under `SPACE_DIR`. There is no database.
 - A page is either a **leaf** `Page.md` or an **index** `Page/_Index.md` (the latter when it has children). Creating a child page may convert a leaf into an `_Index.md` container — see `ensurePageContainer` in `packages/backend/src/lib/files.ts`.
+- Pages have stable frontmatter IDs (`id: pg_...`) generated on creation and lazily for existing pages. Prefer IDs for agent/MCP references; paths remain the human-readable handles.
 - All path handling must go through `safePath`, `normalizePagePath`, `normalizeFilePath`, `pageToLeafPath`, `pageToIndexPath`, `resolvePageStoragePath` in `packages/backend/src/lib/files.ts`. `safePath` enforces traversal protection — never bypass it.
 - **Frontmatter is the schema.** It carries `title`, `icon`, `sections` (array of `{title, path}`), and `kanban: true` for boards. Sections are separate Markdown files (typically under `_sections/` inside the page folder) referenced from frontmatter — `readPage` loads and inlines them.
 - **Kanban boards are Markdown.** `##` headings are columns and plain bullet items are cards. `kanbanColumns` frontmatter stores stable column IDs and workflow statuses. Completion is represented by moving cards into a column with `status: done`. Archived cards use a trailing `!archived` metadata token. Labels use `#label`, while `#high`, `#medium`, and `#low` are reserved for priority. Parser/serializer is `packages/backend/src/lib/kanban.ts`. Saving a board always sets `kanban: true` and refreshes `kanbanColumns` in frontmatter.
@@ -29,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Backend (Express 5)
 
 - Entry: `packages/backend/src/index.ts` wires CORS, JSON parsing, `authRouter` (public), `filesRouter` (under `requireAuth`), static frontend serving from `../public`, and a WebSocket upgrade handler at `/ws` that verifies a JWT from the `?token=` query param.
+- MCP: `packages/backend/src/routes/mcp.ts` exposes authenticated Streamable HTTP at `/mcp`; `packages/backend/src/mcp/server.ts` defines tools/resources/prompts; `packages/backend/src/mcp-stdio.ts` bridges stdio clients to `/mcp` using `WIKINDIE_URL` and `WIKINDIE_API_KEY`. The MCP server reads `SPACE_DIR/_AGENT.md` as workspace-level agent instructions when present.
 - Routes use **Express 5 wildcard syntax** like `/page/*path` — `req.params.path` may be an array, normalize with `joinedPath = (v) => Array.isArray(v) ? v.join('/') : String(v ?? '')` (see `routes/files.ts`).
 - The catch-all is `app.get('*splat', ...)` — also Express 5 syntax.
 - `chokidar` watches `SPACE_DIR` and broadcasts `tree:changed` and `file:changed` (with relative `.md` path) over the WS to all connected clients (`lib/watcher.ts`).

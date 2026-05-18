@@ -14,6 +14,7 @@ import { authenticateToken, requireAuth, requireAuthOrPublicRead } from './middl
 import { adminRouter } from './routes/admin.js'
 import { authRouter } from './routes/auth.js'
 import { filesRouter } from './routes/files.js'
+import { mcpRouter } from './routes/mcp.js'
 import { recentsRouter } from './routes/recents.js'
 
 import { statsRouter } from './routes/stats.js'
@@ -48,6 +49,7 @@ app.use('/api/recents', requireAuthOrPublicRead, recentsRouter)
 app.use('/api/stats', requireAuthOrPublicRead, statsRouter)
 
 app.use('/api', requireAuthOrPublicRead, filesRouter)
+app.use('/mcp', requireAuth, mcpRouter)
 app.use(express.static(publicDir))
 app.get('*splat', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')))
 app.use(errorHandler)

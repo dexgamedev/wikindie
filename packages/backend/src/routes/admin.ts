@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { generateApiKey, listApiKeys, revokeApiKey } from '../lib/apikeys.js'
+import { deleteApiKey, generateApiKey, listApiKeys, revokeApiKey } from '../lib/apikeys.js'
 import { AppError } from '../lib/errors.js'
 import { capRole, isRole } from '../lib/jwt.js'
 import { createUser, deleteUser, findUserById, listUsers, updateUserRole } from '../lib/users.js'
@@ -49,5 +49,10 @@ adminRouter.post('/apikeys', async (req, res) => {
 
 adminRouter.delete('/apikeys/:id', async (req, res) => {
   await revokeApiKey(req.params.id)
+  res.json({ ok: true })
+})
+
+adminRouter.delete('/apikeys/:id/permanent', async (req, res) => {
+  await deleteApiKey(req.params.id)
   res.json({ ok: true })
 })

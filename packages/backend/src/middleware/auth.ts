@@ -34,6 +34,16 @@ export async function authenticateToken(token: string): Promise<SessionUser> {
   throw new Error('Unsupported authorization token')
 }
 
+export async function authenticateSessionToken(token: string): Promise<SessionUser> {
+  if (token.startsWith('wk_')) throw new Error('API keys cannot manage API keys')
+  if (token.split('.').length !== 3) throw new Error('Unsupported authorization token')
+
+  const session = verifySession(token)
+  const user = await findUserById(session.id)
+  if (!user) throw new Error('Invalid session user')
+  return { id: user.id, username: user.username, role: user.role }
+}
+
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.header('authorization')
   const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined
@@ -44,6 +54,19 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     next()
   } catch {
     throw new AppError(401, 'Invalid authorization token')
+  }
+}
+
+export async function requireSessionAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.header('authorization')
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined
+  if (!token) throw new AppError(401, 'Missing authorization token')
+
+  try {
+    req.user = await authenticateSessionToken(token)
+    next()
+  } catch {
+    throw new AppError(401, 'Invalid session token')
   }
 }
 

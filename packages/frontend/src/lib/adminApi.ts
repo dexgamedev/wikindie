@@ -40,4 +40,5 @@ export const adminApi = {
       body: JSON.stringify({ label, role }),
     }),
   revokeApiKey: (id: string) => request<{ ok: true }>(`/api/admin/apikeys/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  deleteApiKey: (id: string) => request<{ ok: true }>(`/api/admin/apikeys/${encodeURIComponent(id)}/permanent`, { method: 'DELETE' }),
 }

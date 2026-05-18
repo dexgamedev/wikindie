@@ -1,8 +1,13 @@
 import type { NextFunction, Request, Response } from 'express'
 import { AppError } from '../lib/errors.js'
-import { roleExceeds, type Role } from '../lib/jwt.js'
+import { roleExceeds, type Role, type SessionUser } from '../lib/jwt.js'
 
-type PermissionAction = 'read' | 'write' | 'delete'
+export type PermissionAction = 'read' | 'write' | 'delete'
+
+export function assertPermission(user: SessionUser, action: PermissionAction) {
+  const requiredRole = action === 'delete' ? 'admin' : action === 'write' ? 'editor' : 'readonly'
+  if (roleExceeds(requiredRole, user.role)) throw new AppError(403, 'Insufficient permissions')
+}
 
 export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
@@ -15,8 +20,7 @@ export function requireRole(...roles: Role[]) {
 export function requirePermission(action: PermissionAction) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) throw new AppError(401, 'Authentication required')
-    const requiredRole = action === 'delete' ? 'admin' : action === 'write' ? 'editor' : 'readonly'
-    if (roleExceeds(requiredRole, req.user.role)) throw new AppError(403, 'Insufficient permissions')
+    assertPermission(req.user, action)
     next()
   }
 }

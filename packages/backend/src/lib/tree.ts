@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import matter from 'gray-matter'
-import { SPACE_DIR, safePath } from './files.js'
+import { SPACE_DIR, pageIdFromFrontmatter, readPageMarkdownByPath, safePath } from './files.js'
 
 export interface TreeNode {
+  id?: string
   name: string
   title: string
   path: string
@@ -14,8 +14,7 @@ export interface TreeNode {
 
 async function readFrontmatter(relativePath: string) {
   try {
-    const raw = await fs.readFile(safePath(relativePath), 'utf8')
-    return matter(raw).data as Record<string, unknown>
+    return (await readPageMarkdownByPath(relativePath)).frontmatter
   } catch {
     return {}
   }
@@ -47,6 +46,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
         const frontmatter = await readFrontmatter(indexPath)
         const children = await buildTree(rel)
         nodes.push({
+          id: pageIdFromFrontmatter(frontmatter),
           name: entry.name,
           title: String(frontmatter.title ?? entry.name),
           path: rel,
@@ -66,6 +66,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
     const frontmatter = await readFrontmatter(rel)
     const name = displayNameFromPath(pagePath)
     nodes.push({
+      id: pageIdFromFrontmatter(frontmatter),
       name,
       title: String(frontmatter.title ?? name),
       path: pagePath,

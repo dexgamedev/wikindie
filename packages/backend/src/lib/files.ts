@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import type { Dirent } from 'node:fs'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
 import { defaultSpaceFiles } from './defaultSpace.js'
@@ -31,6 +32,7 @@ export interface PageSection {
 }
 
 export interface PageBundle extends MarkdownFile {
+  id: string
   path: string
   type: 'page' | 'board'
   diskSizeBytes: number
@@ -49,6 +51,7 @@ export interface BoardSummaryColumn {
 }
 
 export interface BoardSummary {
+  id?: string
   path: string
   title: string
   icon?: string
@@ -67,6 +70,7 @@ export interface TaskInfo {
   assignees: string[]
   labels: string[]
   archived?: boolean
+  boardId?: string
   boardPath: string
   boardTitle: string
   columnId: string
@@ -81,6 +85,27 @@ export interface TaskOverview {
   scope: TaskOverviewScope
   boards: BoardSummary[]
   tasks: TaskInfo[]
+}
+
+const pageIdPattern = /^pg_[a-f0-9]{32}$/
+
+export function generatePageId() {
+  return `pg_${randomUUID().replaceAll('-', '')}`
+}
+
+export function isPageId(value: unknown): value is string {
+  return typeof value === 'string' && pageIdPattern.test(value)
+}
+
+export function pageIdFromFrontmatter(frontmatter: Record<string, unknown>) {
+  return isPageId(frontmatter.id) ? frontmatter.id : undefined
+}
+
+function withStablePageId(frontmatter: Record<string, unknown>, currentFrontmatter?: Record<string, unknown>) {
+  const currentId = currentFrontmatter ? pageIdFromFrontmatter(currentFrontmatter) : undefined
+  const requestedId = pageIdFromFrontmatter(frontmatter)
+  if (currentId && requestedId && requestedId !== currentId) throw new AppError(400, 'Page id cannot be changed')
+  return { ...frontmatter, id: requestedId ?? currentId ?? generatePageId() }
 }
 
 export function safePath(relativePath = '') {
@@ -136,6 +161,13 @@ async function writeMarkdownByPath(relativePath: string, content: string, frontm
   await fs.writeFile(fullPath, body.trimEnd() + '\n', 'utf8')
 }
 
+export async function readPageMarkdownByPath(relativePath: string, persistId = true): Promise<MarkdownFile & { id: string }> {
+  const file = await readMarkdownByPath(relativePath)
+  const nextFrontmatter = withStablePageId(file.frontmatter)
+  if (persistId && nextFrontmatter.id !== file.frontmatter.id) await writeMarkdownByPath(relativePath, file.content, nextFrontmatter)
+  return { content: file.content, frontmatter: nextFrontmatter, id: String(nextFrontmatter.id) }
+}
+
 async function markdownFileSize(relativePath: string) {
   const stat = await fs.stat(safePath(normalizeFilePath(relativePath)))
   return stat.size
@@ -166,7 +198,7 @@ async function ensurePageContainer(pagePath: string) {
   }
 
   await fs.mkdir(safePath(normalized), { recursive: true })
-  await writeMarkdownByPath(indexPath, `# ${pageTitleFromPath(normalized)}\n`)
+  await writeMarkdownByPath(indexPath, `# ${pageTitleFromPath(normalized)}\n`, { id: generatePageId() })
 }
 
 function pageParent(pagePath: string) {
@@ -245,7 +277,7 @@ export async function writeMarkdown(
 
 export async function readPage(pagePath: string): Promise<PageBundle> {
   const resolved = await resolvePageStoragePath(pagePath)
-  const page = await readMarkdownByPath(resolved.relativePath)
+  const page = await readPageMarkdownByPath(resolved.relativePath)
   const sections = parseSections(page.frontmatter)
   const pageDiskSizeBytes = await markdownFileSize(resolved.relativePath)
 
@@ -265,11 +297,57 @@ export async function readPage(pagePath: string): Promise<PageBundle> {
 
   return {
     ...page,
+    id: page.id,
     path: resolved.pagePath,
     type: page.frontmatter.kanban === true ? 'board' : 'page',
     diskSizeBytes: pageDiskSizeBytes + sectionDiskSizeBytes,
     sections: loadedSections.map((item) => item.section),
   }
+}
+
+export interface PageIdResolution {
+  id: string
+  path: string
+  relativePath: string
+}
+
+async function collectPageIdMatches(dirPath: string, pageId: string, matches: PageIdResolution[]) {
+  let entries: Dirent[]
+  try {
+    entries = await fs.readdir(safePath(dirPath), { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === '_sections') continue
+
+    const rel = joinStoragePath(dirPath, entry.name)
+    if (entry.isDirectory()) {
+      await collectPageIdMatches(rel, pageId, matches)
+      continue
+    }
+
+    if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+    const file = await readMarkdownByPath(rel).catch(() => null)
+    if (!file || pageIdFromFrontmatter(file.frontmatter) !== pageId) continue
+    matches.push({ id: pageId, path: normalizePagePath(rel), relativePath: rel })
+  }
+}
+
+export async function resolvePageId(pageId: string): Promise<PageIdResolution> {
+  if (!isPageId(pageId)) throw new AppError(400, 'Invalid page id')
+
+  const matches: PageIdResolution[] = []
+  await collectPageIdMatches('', pageId, matches)
+  if (matches.length === 0) throw notFound('Page not found')
+  if (matches.length > 1) throw new AppError(409, `Duplicate page id: ${pageId}`)
+  return matches[0]
+}
+
+export async function readPageById(pageId: string) {
+  const resolved = await resolvePageId(pageId)
+  return readPage(resolved.path)
 }
 
 function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summary: BoardSummary; tasks: TaskInfo[] } | null {
@@ -278,6 +356,7 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
   const board = parseKanban(file.content)
   const normalizedBoard = normalizeKanbanBoard(board, parseTaskIdSettings(file.frontmatter), parseKanbanColumnMetadata(file.frontmatter))
   const boardPath = normalizePagePath(pagePath)
+  const boardId = pageIdFromFrontmatter(file.frontmatter)
   const boardTitle = String(file.frontmatter.title ?? pageTitleFromPath(pagePath))
   const columns = normalizedBoard.columns.map((column) => {
     const active = column.cards.filter((card) => !card.archived).length
@@ -298,6 +377,7 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
       assignees: [...card.assignees],
       labels: [...card.labels],
       archived: card.archived,
+      boardId,
       boardPath,
       boardTitle,
       columnId: column.id,
@@ -309,6 +389,7 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
 
   return {
     summary: {
+      id: boardId,
       path: boardPath,
       title: boardTitle,
       icon: typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined,
@@ -322,7 +403,7 @@ function summarizeBoardWithTasks(pagePath: string, file: MarkdownFile): { summar
   }
 }
 
-function joinStoragePath(base: string, child: string) {
+export function joinStoragePath(base: string, child: string) {
   return [base, child].filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
@@ -349,7 +430,7 @@ async function collectBoardsRecursive(
       const childPath = joinStoragePath(dirPath, entry.name)
       const indexPath = joinStoragePath(childPath, '_Index.md')
       if (!(await exists(indexPath))) continue
-      const details = summarizeBoardWithTasks(childPath, await readMarkdownByPath(indexPath))
+      const details = summarizeBoardWithTasks(childPath, await readPageMarkdownByPath(indexPath))
       if (details) {
         boards.push(details.summary)
         tasks?.push(...details.tasks)
@@ -360,7 +441,7 @@ async function collectBoardsRecursive(
 
     if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name === '_Index.md') continue
     const childPath = joinStoragePath(dirPath, entry.name.replace(/\.md$/, ''))
-    const details = summarizeBoardWithTasks(childPath, await readMarkdownByPath(`${childPath}.md`))
+    const details = summarizeBoardWithTasks(childPath, await readPageMarkdownByPath(`${childPath}.md`))
     if (details) {
       boards.push(details.summary)
       tasks?.push(...details.tasks)
@@ -391,14 +472,20 @@ export async function readTaskOverview(pagePath: string): Promise<TaskOverview> 
 
 export async function writePage(pagePath: string, content: string, frontmatter: Record<string, unknown> = {}) {
   const resolved = await resolvePageStoragePath(pagePath, true)
-  await writeMarkdownByPath(resolved.relativePath, content, frontmatter)
+  let currentFrontmatter: Record<string, unknown> | undefined
+  try {
+    currentFrontmatter = (await readMarkdownByPath(resolved.relativePath)).frontmatter
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+  await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(frontmatter, currentFrontmatter))
   return readPage(pagePath)
 }
 
 export async function createPage(pagePath: string, kanban = false) {
   const normalized = normalizePagePath(pagePath)
   const board = defaultKanbanBoard()
-  const frontmatter = kanban ? defaultKanbanFrontmatter() : {}
+  const frontmatter = withStablePageId(kanban ? defaultKanbanFrontmatter() : {})
   const content = kanban ? serializeKanban(board) : `# ${pageTitleFromPath(normalized)}\n`
   await writeMarkdownByPath(pageToLeafPath(normalized), content, frontmatter)
   return normalized
@@ -458,7 +545,7 @@ export async function createFolder(relativePath: string) {
 export async function createFile(relativePath: string, kanban = false) {
   const board = defaultKanbanBoard()
   const content = kanban ? serializeKanban(board) : '# Untitled\n'
-  await writeMarkdown(relativePath, content, kanban ? defaultKanbanFrontmatter() : {})
+  await writeMarkdown(relativePath, content, withStablePageId(kanban ? defaultKanbanFrontmatter() : {}))
 }
 
 export async function deleteItem(relativePath: string) {

@@ -7,7 +7,7 @@ import { isDoneColumn, normalizeKanbanBoard, parseKanban, parseKanbanColumnMetad
 
 export const statsRouter = Router()
 
-interface WorkspaceStats {
+export interface WorkspaceStats {
   totalPages: number
   totalBoards: number
   totalTasks: number
@@ -56,8 +56,13 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
   }
 }
 
-statsRouter.get('/', async (_req, res) => {
+export async function readWorkspaceStats() {
   const stats: WorkspaceStats = { totalPages: 0, totalBoards: 0, totalTasks: 0, doneTasks: 0, archivedTasks: 0, diskSizeBytes: 0 }
   await collectStats(SPACE_DIR, stats)
+  return stats
+}
+
+statsRouter.get('/', async (_req, res) => {
+  const stats = await readWorkspaceStats()
   res.json({ stats })
 })
