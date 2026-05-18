@@ -86,9 +86,17 @@ function renderPageReferences(value: string) {
   }).join('\n')
 }
 
-export function MarkdownPreview({ content, frameless = false }: { content: string; frameless?: boolean }) {
+export function MarkdownPreview({
+  content,
+  compact = false,
+  frameless = false,
+}: {
+  content: string
+  compact?: boolean
+  frameless?: boolean
+}) {
   return (
-    <article className={`markdown-preview text-text ${frameless ? '' : 'rounded-md border border-border bg-surface p-5'}`}>
+    <article className={`markdown-preview ${compact ? 'markdown-preview-compact text-sm' : ''} text-text ${frameless ? '' : 'rounded-md border border-border bg-surface p-5'}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

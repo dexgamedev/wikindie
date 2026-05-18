@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Check, X } from 'lucide-react'
 import type { CardPriority, KanbanCard as Card, TaskComment } from '../../lib/api'
 import { priorityColor } from '../../lib/priority'
+import { MarkdownPreview } from '../editor/MarkdownPreview'
 import { Button } from '../ui/Button'
 import { UserIconBadge } from '../ui/AssigneeBadges'
 
@@ -355,7 +356,7 @@ export function KanbanCardDialog({
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap text-sm text-text">{comment.body}</p>
+                    <MarkdownPreview content={comment.body} compact frameless />
                   )}
                 </article>
               ))}

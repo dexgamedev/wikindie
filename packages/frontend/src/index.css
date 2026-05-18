@@ -192,6 +192,40 @@ textarea {
   margin: 1rem 0;
 }
 
+.markdown-preview-compact {
+  line-height: 1.55;
+}
+
+.markdown-preview-compact h1,
+.markdown-preview-compact h2,
+.markdown-preview-compact h3,
+.markdown-preview-compact h4 {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.markdown-preview-compact h1 {
+  font-size: 1.1rem;
+}
+
+.markdown-preview-compact h2 {
+  border-bottom: 0;
+  font-size: 1rem;
+  padding-bottom: 0;
+}
+
+.markdown-preview-compact h3 {
+  font-size: 0.95rem;
+}
+
+.markdown-preview-compact p,
+.markdown-preview-compact ul,
+.markdown-preview-compact ol,
+.markdown-preview-compact .markdown-table-scroll,
+.markdown-preview-compact blockquote,
+.markdown-preview-compact pre {
+  margin: 0.5rem 0;
+}
+
 .markdown-preview ul,
 .markdown-preview ol {
   padding-left: 1.5rem;
