@@ -7,11 +7,11 @@ function initialsForUsername(username: string) {
     .join('')
 }
 
-export function UserIconBadge({ username, className = 'size-5' }: { username: string; className?: string }) {
+export function UserIconBadge({ username, className = 'size-5', title }: { username: string; className?: string; title?: string }) {
   return (
     <span
       className={`grid place-items-center rounded-full border border-card bg-accent text-[10px] font-bold text-white shadow-sm shadow-shadow ${className}`}
-      title={`Assigned to ${username}`}
+      title={title ?? `Assigned to ${username}`}
     >
       {initialsForUsername(username)}
     </span>
@@ -41,4 +41,3 @@ export function AssigneeStack({ assignees, limit = 3, className = '' }: { assign
 export function AssigneeCorner({ assignees, limit = 3 }: { assignees: string[]; limit?: number }) {
   return <AssigneeStack assignees={assignees} limit={limit} className="absolute bottom-2 right-2" />
 }
-

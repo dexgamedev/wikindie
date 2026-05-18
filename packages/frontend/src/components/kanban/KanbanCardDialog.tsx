@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Check, X } from 'lucide-react'
 import type { CardPriority, KanbanCard as Card, TaskComment } from '../../lib/api'
 import { priorityColor } from '../../lib/priority'
+import { useGuestMode } from '../../lib/store'
 import { MarkdownPreview } from '../editor/MarkdownPreview'
 import { Button } from '../ui/Button'
 import { UserIconBadge } from '../ui/AssigneeBadges'
@@ -32,6 +33,18 @@ function reservedLabelInput(value: string) {
     .find((label) => reservedLabelNames.has(label))
 }
 
+function HiddenAuthorBadge() {
+  return (
+    <span
+      aria-label="Author hidden for guests"
+      className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-input text-[10px] font-bold text-text-muted shadow-sm shadow-shadow"
+      title="Author hidden for guests"
+    >
+      <span aria-hidden className="select-none blur-[2px]">ID</span>
+    </span>
+  )
+}
+
 export function KanbanCardDialog({
   card,
   editable,
@@ -57,6 +70,7 @@ export function KanbanCardDialog({
   showAssignees: boolean
   users: string[]
 }) {
+  const isGuestMode = useGuestMode()
   const backdropPointerDown = useRef(false)
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description ?? '')
@@ -325,41 +339,56 @@ export function KanbanCardDialog({
               <span className="text-xs text-text-muted">{comments.length.toLocaleString()} total</span>
             </div>
             <div className="space-y-3">
-              {comments.map((comment) => (
-                <article key={comment.id} className="rounded-md border border-border bg-card p-3">
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <UserIconBadge username={comment.author || 'Unknown'} className="size-7 shrink-0" />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-text">{comment.author || 'Unknown'}</div>
-                        <div className="text-xs text-text-muted">{formatCommentTime(comment)}</div>
+              {comments.map((comment) => {
+                const authorHidden = isGuestMode && !comment.author
+                const authorLabel = comment.author || 'Unknown author'
+                return (
+                  <article key={comment.id} className="rounded-md border border-border bg-card p-3">
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        {authorHidden ? (
+                          <HiddenAuthorBadge />
+                        ) : (
+                          <UserIconBadge username={authorLabel} className="size-7 shrink-0" title={`Comment by ${authorLabel}`} />
+                        )}
+                        <div className="min-w-0">
+                          {authorHidden ? (
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="truncate text-sm font-medium text-text">Author hidden</span>
+                              <span className="shrink-0 rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Guest view</span>
+                            </div>
+                          ) : (
+                            <div className="truncate text-sm font-medium text-text">{authorLabel}</div>
+                          )}
+                          <div className="text-xs text-text-muted">{formatCommentTime(comment)}</div>
+                        </div>
                       </div>
+                      {editable && (
+                        <span className="flex shrink-0 gap-2 text-xs">
+                          <button className="text-accent hover:underline disabled:opacity-60" disabled={commentBusy} onClick={() => { setEditingCommentId(comment.id); setEditingCommentBody(comment.body) }} type="button">Edit</button>
+                          <button className="text-danger hover:underline disabled:opacity-60" disabled={commentBusy} onClick={() => deleteComment(comment.id)} type="button">Remove</button>
+                        </span>
+                      )}
                     </div>
-                    {editable && (
-                      <span className="flex shrink-0 gap-2 text-xs">
-                        <button className="text-accent hover:underline disabled:opacity-60" disabled={commentBusy} onClick={() => { setEditingCommentId(comment.id); setEditingCommentBody(comment.body) }} type="button">Edit</button>
-                        <button className="text-danger hover:underline disabled:opacity-60" disabled={commentBusy} onClick={() => deleteComment(comment.id)} type="button">Remove</button>
-                      </span>
+                    {editingCommentId === comment.id ? (
+                      <div className="grid gap-2">
+                        <textarea
+                          className="min-h-24 rounded-md border border-border bg-input px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                          disabled={commentBusy}
+                          onChange={(event) => setEditingCommentBody(event.target.value)}
+                          value={editingCommentBody}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button onClick={() => { setEditingCommentId(null); setEditingCommentBody('') }} type="button">Cancel</Button>
+                          <Button disabled={commentBusy || !editingCommentBody.trim()} onClick={() => saveComment(comment.id)} type="button" variant="primary">Save</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <MarkdownPreview content={comment.body} compact frameless />
                     )}
-                  </div>
-                  {editingCommentId === comment.id ? (
-                    <div className="grid gap-2">
-                      <textarea
-                        className="min-h-24 rounded-md border border-border bg-input px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
-                        disabled={commentBusy}
-                        onChange={(event) => setEditingCommentBody(event.target.value)}
-                        value={editingCommentBody}
-                      />
-                      <div className="flex justify-end gap-2">
-                        <Button onClick={() => { setEditingCommentId(null); setEditingCommentBody('') }} type="button">Cancel</Button>
-                        <Button disabled={commentBusy || !editingCommentBody.trim()} onClick={() => saveComment(comment.id)} type="button" variant="primary">Save</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <MarkdownPreview content={comment.body} compact frameless />
-                  )}
-                </article>
-              ))}
+                  </article>
+                )
+              })}
               {!comments.length && <p className="rounded-md border border-dashed border-border p-3 text-sm text-text-muted">No comments yet.</p>}
             </div>
             {editable && onAddComment && (

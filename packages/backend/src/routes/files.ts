@@ -25,6 +25,7 @@ import {
   parseTaskComments,
   parseTaskIdSettings,
   serializeKanban,
+  type TaskComment,
   withKanbanColumnMetadata,
 } from '../lib/kanban.js'
 import { AppError } from '../lib/errors.js'
@@ -53,12 +54,26 @@ function redactBoardForGuest(board: KanbanBoard): KanbanBoard {
   }
 }
 
+function redactFrontmatterForGuest(frontmatter: Record<string, unknown>) {
+  const raw = frontmatter.taskComments
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return frontmatter
+  const redactedComments: Record<string, TaskComment[]> = {}
+  for (const [uid, comments] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(comments)) continue
+    redactedComments[uid] = comments.map((comment) => {
+      const { author: _author, editedBy: _editedBy, ...rest } = comment as TaskComment & Record<string, unknown>
+      return rest as TaskComment
+    })
+  }
+  return { ...frontmatter, taskComments: redactedComments }
+}
+
 function pageWithBoardForRequest(page: Awaited<ReturnType<typeof readPage>>, req: Request) {
   const board = boardForPage(page)
   if (!isGuestRequest(req)) return { ...page, board }
 
   const redactedBoard = redactBoardForGuest(board)
-  return { ...page, content: serializeKanban(redactedBoard), board: redactedBoard }
+  return { ...page, content: serializeKanban(redactedBoard), frontmatter: redactFrontmatterForGuest(page.frontmatter), board: redactedBoard }
 }
 
 async function writeBoard(page: Awaited<ReturnType<typeof readPage>>, board: ReturnType<typeof parseKanban>) {
