@@ -1,8 +1,22 @@
-# Wikindie
+<table width="100%">
+  <tr>
+    <td align="left" width="120">
+      <img src="assets/wikindie_logo.png" alt="Wikindie Logo" width="100" />
+    </td>
+    <td align="right">
+      <h1>Wikindie</h1>
+      <h3 style="margin-top: -10px;">Your wiki. Your files. Your AI.</h3>
+    </td>
+  </tr>
+</table>
 
-**Your wiki. Your files. Your AI.** A self-hosted, MCP-native Markdown wiki and kanban for indie devs and small teams. One container, one folder of `.md` files, no database.
+[![X](https://img.shields.io/badge/follow-%40dexgamedev-000?logo=x&logoColor=fff&style=flat)](https://x.com/dexgamedev)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/dexgamedev/wikindie?style=flat&logo=github)](https://github.com/dexgamedev/wikindie)
 
-[Live showcase](https://wikindie.dexgamedev.com) · [Docker quickstart](#try-it-in-60-seconds) · [Connect your AI](#connect-your-ai-in-30-seconds) · [Follow progress](https://wikindie.dexgamedev.com/page/Wikindie/Roadmap) · MIT
+A self-hosted, MCP-native Markdown wiki and kanban for indie devs and small teams. One container, one folder of `.md` files, no database.
+
+[Live showcase](https://wikindie.dexgamedev.com) · [Docker quickstart](#try-it-in-60-seconds) · [Connect your AI](#connect-your-ai-in-30-seconds) · [Follow progress](https://wikindie.dexgamedev.com/page/Wikindie/Roadmap)
 
 ![Wikindie page view](assets/screenshots/hero-page.png)
 
