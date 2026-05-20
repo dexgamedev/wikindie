@@ -21,18 +21,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Storage model (filesystem, no DB)
 
 - All workspace data is Markdown under `SPACE_DIR`. There is no database.
-- A page is either a **leaf** `Page.md` or an **index** `Page/_Index.md` (the latter when it has children). Creating a child page may convert a leaf into an `_Index.md` container — see `ensurePageContainer` in `packages/backend/src/lib/files.ts`.
+- A page is either a **leaf** `Page.md` or an **index** `Page/_Index.md` (the latter when it has children). Creating a child page may convert a leaf into an `_Index.md` container; see `ensurePageContainer` in `packages/backend/src/lib/files.ts`.
 - Pages have stable frontmatter IDs (`id: pg_...`) generated on creation and lazily for existing pages. Prefer IDs for agent/MCP references; paths remain the human-readable handles.
-- All path handling must go through `safePath`, `normalizePagePath`, `normalizeFilePath`, `pageToLeafPath`, `pageToIndexPath`, `resolvePageStoragePath` in `packages/backend/src/lib/files.ts`. `safePath` enforces traversal protection — never bypass it.
-- **Frontmatter is the schema.** It carries `title`, `icon`, `sections` (array of `{title, path}`), and `kanban: true` for boards. Sections are separate Markdown files (typically under `_sections/` inside the page folder) referenced from frontmatter — `readPage` loads and inlines them.
+- All path handling must go through `safePath`, `normalizePagePath`, `normalizeFilePath`, `pageToLeafPath`, `pageToIndexPath`, `resolvePageStoragePath` in `packages/backend/src/lib/files.ts`. `safePath` enforces traversal protection; never bypass it.
+- **Frontmatter is the schema.** It carries `title`, `icon`, `sections` (array of `{title, path}`), and `kanban: true` for boards. Sections are separate Markdown files (typically under `_sections/` inside the page folder) referenced from frontmatter; `readPage` loads and inlines them.
 - **Kanban boards are Markdown.** `##` headings are columns and plain bullet items are cards. `kanbanColumns` frontmatter stores stable column IDs and workflow statuses. Completion is represented by moving cards into a column with `status: done`. Archived cards use a trailing `!archived` metadata token. Labels use `#label`, while `#high`, `#medium`, and `#low` are reserved for priority. Parser/serializer is `packages/backend/src/lib/kanban.ts`. Saving a board always sets `kanban: true` and refreshes `kanbanColumns` in frontmatter.
 
 ### Backend (Express 5)
 
 - Entry: `packages/backend/src/index.ts` wires CORS, JSON parsing, `authRouter` (public), `filesRouter` (under `requireAuth`), static frontend serving from `../public`, and a WebSocket upgrade handler at `/ws` that verifies a JWT from the `?token=` query param.
 - MCP: `packages/backend/src/routes/mcp.ts` exposes authenticated Streamable HTTP at `/mcp`; `packages/backend/src/mcp/server.ts` defines tools/resources/prompts; `packages/backend/src/mcp-stdio.ts` bridges stdio clients to `/mcp` using `WIKINDIE_URL` and `WIKINDIE_API_KEY`. The MCP server reads `SPACE_DIR/_AGENT.md` as workspace-level agent instructions when present.
-- Routes use **Express 5 wildcard syntax** like `/page/*path` — `req.params.path` may be an array, normalize with `joinedPath = (v) => Array.isArray(v) ? v.join('/') : String(v ?? '')` (see `routes/files.ts`).
-- The catch-all is `app.get('*splat', ...)` — also Express 5 syntax.
+- Routes use **Express 5 wildcard syntax** like `/page/*path`, so `req.params.path` may be an array; normalize with `joinedPath = (v) => Array.isArray(v) ? v.join('/') : String(v ?? '')` (see `routes/files.ts`).
+- The catch-all is `app.get('*splat', ...)`, also Express 5 syntax.
 - `chokidar` watches `SPACE_DIR` and broadcasts `tree:changed` and `file:changed` (with relative `.md` path) over the WS to all connected clients (`lib/watcher.ts`).
 - Backend TS uses `module: NodeNext`. **Relative imports must use `.js` extensions** (e.g., `import { foo } from './lib/files.js'`) even though the source is `.ts`.
 
@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - State: Zustand. `useAuthStore` persists `token`/`username` in `localStorage` under keys `wikindie:token` and `wikindie:username`. `useFilesStore` holds the page tree.
 - WebSocket file events arrive as Markdown paths like `Page.md` or `Page/_Index.md`; refresh logic in `pages/PageView.tsx` matches against those exact forms.
 - Editor stack: TipTap 3 with `tiptap-markdown` for round-tripping; `react-markdown` + `remark-gfm` for rendering; `lowlight` for code highlighting.
-- Page icons are friendly colored IDs from `src/lib/icons.ts` (e.g., `project`, `idea`, `devlog`) — **not** Lucide/icon-library names. Markdown supports matching shortcodes like `:idea:`.
+- Page icons are friendly colored IDs from `src/lib/icons.ts` (e.g., `project`, `idea`, `devlog`), **not** Lucide/icon-library names. Markdown supports matching shortcodes like `:idea:`.
 
 ### Build pipeline
 

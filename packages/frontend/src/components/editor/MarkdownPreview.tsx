@@ -17,7 +17,7 @@ function internalPathFor(href: string): string | null {
       return url.pathname + url.search + url.hash
     }
   } catch {
-    // not a parseable URL — fall through
+    // not a parseable URL, fall through
   }
   // Malformed protocol-only forms (e.g. "https:///page/Foo") can come from
   // typed paths that are missing a recognised scheme. Do not match real hosts.

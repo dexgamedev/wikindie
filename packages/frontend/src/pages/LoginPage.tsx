@@ -8,10 +8,10 @@ import { api } from '../lib/api'
 import { useAuthStore, useRuntimeConfigStore } from '../lib/store'
 
 const features = [
-  { icon: '📝', label: 'Markdown wiki', desc: 'Write durable notes as plain Markdown pages.' },
-  { icon: '🗂️', label: 'Kanban boards', desc: 'Track projects with simple, flexible boards.' },
-  { icon: '🔌', label: 'REST API', desc: 'Automate pages, sections, and workspace flows.' },
-  { icon: '💾', label: 'Plain files', desc: 'No database, no lock-in, easy to back up.' },
+  { icon: '📝', label: 'Markdown wiki', desc: 'Plain .md files on disk. Grep it, git it, back it up.' },
+  { icon: '🗂️', label: 'Kanban boards', desc: 'Columns, cards, labels, comments. All Markdown.' },
+  { icon: '🤖', label: 'AI-native MCP', desc: 'Claude Code, Cursor, OpenCode plug in directly.' },
+  { icon: '💾', label: 'No database', desc: 'One folder, no lock-in, no SaaS. Just files.' },
 ]
 
 export function LoginPage() {
@@ -45,8 +45,11 @@ export function LoginPage() {
         <header className="flex flex-col items-center text-center">
           <img src={logoUrl} alt="" className="h-24 w-auto sm:h-28 md:h-32" />
           <h1 className="mt-4 text-4xl font-bold tracking-tight text-text-heading sm:text-5xl">Wikindie</h1>
-          <p className="mt-3 max-w-md text-balance text-sm leading-6 text-text-muted sm:text-base">
-            Your personal wiki for Markdown pages, project boards, and plain-file knowledge.
+          <p className="mt-3 max-w-md text-balance text-base leading-6 text-text sm:text-lg">
+            Your wiki. Your files. Your AI.
+          </p>
+          <p className="mt-2 max-w-lg text-balance text-sm leading-6 text-text-muted sm:text-base">
+            Self-hosted, MCP-native Markdown wiki and kanban. One folder of plain files, no database, no SaaS.
           </p>
         </header>
 
@@ -97,6 +100,10 @@ export function LoginPage() {
           <span>
             Created by <span className="font-semibold text-text">Andy Lázaro</span>
           </span>
+          <span aria-hidden="true">·</span>
+          <a className="font-medium text-accent transition hover:opacity-80" href="https://github.com/dexgamedev/wikindie" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
           <span aria-hidden="true">·</span>
           <a className="font-medium text-accent transition hover:opacity-80" href="https://x.com/dexgamedev" target="_blank" rel="noreferrer">
             @dexgamedev on X

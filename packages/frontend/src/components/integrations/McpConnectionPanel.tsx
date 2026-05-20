@@ -33,7 +33,7 @@ const clientConfigs: ClientConfig[] = [
   },
   {
     id: 'opencode',
-    label: 'opencode',
+    label: 'OpenCode',
     icon: Braces,
     filePath: '~/.config/opencode/config.json',
     snippet: (mcpUrl, key) =>

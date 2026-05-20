@@ -26,10 +26,10 @@ body > .bn-root:not(.bn-container) {
   z-index: 60;
 }
 
-/* The shadcn Button "default" variant is bg-primary with shadow — too aggressive
-   for the drag handle, "+" button, and toolbar icon buttons. Reset BlockNote's
-   in-editor buttons to a ghost style and soften hover. Scope strictly to
-   BlockNote roots so it never bleeds into the rest of the app. */
+/* The shadcn Button "default" variant is bg-primary with shadow, which is too
+   aggressive for the drag handle, "+" button, and toolbar icon buttons. Reset
+   BlockNote's in-editor buttons to a ghost style and soften hover. Scope
+   strictly to BlockNote roots so it never bleeds into the rest of the app. */
 .bn-shadcn .bn-side-menu .bn-button,
 .bn-shadcn .bn-toolbar .bn-button,
 .bn-suggestion-menu .bn-button,
@@ -61,7 +61,7 @@ body > .bn-root:not(.bn-container) {
   color: var(--color-text);
 }
 
-/* Side menu only fades in on block hover — make the drag handle quiet */
+/* Side menu only fades in on block hover, so the drag handle stays quiet */
 .bn-shadcn .bn-side-menu {
   gap: 0.125rem;
 }
@@ -136,7 +136,7 @@ body > .bn-root:not(.bn-container) {
   background: var(--color-surface-hover);
 }
 
-/* Tooltips — quiet, panel-colored */
+/* Tooltips: quiet, panel-colored */
 [data-slot="tooltip-content"] {
   background: var(--color-card);
   color: var(--color-text);

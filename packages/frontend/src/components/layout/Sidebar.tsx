@@ -95,7 +95,7 @@ export function Sidebar({
       {mobileOpen && <button className="fixed inset-0 z-30 bg-overlay lg:hidden" onClick={onCloseMobile} aria-label="Close sidebar" />}
       <aside className={`panel fixed left-0 top-0 z-40 flex h-dvh w-[min(300px,calc(100vw-1.5rem))] flex-col transition-[transform,width,padding] duration-200 lg:static lg:z-auto lg:h-auto lg:min-h-0 lg:shrink-0 ${collapsed ? 'lg:w-[72px]' : 'lg:w-[300px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
-        {/* Zone A — Logo + desktop collapse toggle */}
+        {/* Zone A: Logo + desktop collapse toggle */}
         <div className={`hidden items-center border-b border-border lg:flex ${collapsed ? 'justify-center px-2 py-3' : 'justify-between gap-2 px-3 py-3'}`}>
           {!collapsed && (
             <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
@@ -117,7 +117,7 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* Zone B — New File + create flow */}
+        {/* Zone B: New File + create flow */}
         {mayWrite && (
           <div className={`relative border-b border-border ${collapsed ? 'px-3 py-2' : 'px-3 py-2'}`}>
             {newFileOpen && !creating && (
@@ -182,7 +182,7 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Zone C — Vault heading + mobile close toggle */}
+        {/* Zone C: Vault heading + mobile close toggle */}
         <div className={`flex items-center justify-between px-4 py-2 ${collapsed ? 'lg:hidden' : ''}`}>
           <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">Vault</span>
           <button className="rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text lg:hidden" onClick={onCloseMobile} title="Close">
@@ -190,7 +190,7 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* Zone D — Nav tree */}
+        {/* Zone D: Nav tree */}
         <nav
           className={`workspace-scroll min-h-0 flex-1 overflow-auto px-2 ${collapsed ? 'lg:px-1' : ''} ${rootDragOver ? 'bg-accent/10 ring-1 ring-accent' : ''}`}
           onDragOver={(event) => {
@@ -214,7 +214,7 @@ export function Sidebar({
           )}
         </nav>
 
-        {/* Zone E — Footer toolbar (desktop only) */}
+        {/* Zone E: Footer toolbar (desktop only) */}
         <div className={`hidden items-center border-t border-border lg:flex ${collapsed ? 'justify-center px-2 py-2' : 'gap-2 px-3 py-2'}`}>
           <button
             className={`flex min-w-0 flex-1 items-center rounded-md border border-border bg-surface py-1.5 text-text-muted transition hover:border-accent hover:text-text ${collapsed ? 'hidden' : 'gap-2 px-2.5'}`}
@@ -226,16 +226,6 @@ export function Sidebar({
             <span className="min-w-0 flex-1 truncate text-left text-sm">Search</span>
             <kbd className="shrink-0 rounded border border-border bg-input px-1.5 py-0.5 text-[10px] text-text-muted">Ctrl K</kbd>
           </button>
-          {collapsed && (
-            <button
-              className="rounded-md p-2 text-text-muted transition hover:bg-accent/10 hover:text-text"
-              onClick={onSearchOpen}
-              title="Search pages (Ctrl+K)"
-              type="button"
-            >
-              <Search size={16} />
-            </button>
-          )}
           <a
             className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
             href={githubUrl}
@@ -246,7 +236,7 @@ export function Sidebar({
           >
             <Github size={16} />
           </a>
-          <AccountMenu direction="up" />
+          {!collapsed && <AccountMenu direction="up" />}
         </div>
 
       </aside>
