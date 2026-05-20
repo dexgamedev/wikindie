@@ -38,6 +38,10 @@ It is also **agent-native**: a built-in MCP server lets Claude Code, Cursor, Ope
 | --- | --- | --- |
 | ![Page view](assets/screenshots/hero-page.png) | ![Kanban board](assets/screenshots/kanban-roadmap.png) | ![AI connect](assets/screenshots/connect-ai.png) |
 
+| Sign in | On mobile (pages) | On mobile (kanban) |
+| --- | --- | --- |
+| ![Login screen](assets/screenshots/login.png) | ![Mobile page view](assets/screenshots/mobile-page.png) | ![Mobile kanban](assets/screenshots/mobile-kanban.png) |
+
 The live showcase at [wikindie.dexgamedev.com](https://wikindie.dexgamedev.com) is itself a Wikindie instance running in public read-only mode, with its own Roadmap board as the live source of truth.
 
 ## Try it in 60 seconds
