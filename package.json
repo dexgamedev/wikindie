@@ -1,6 +1,6 @@
 {
   "name": "wikindie",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "description": "Filesystem-backed wiki for notes, docs, and lightweight planning.",
   "license": "MIT",
   "private": true,
@@ -14,6 +14,7 @@
     "copy:frontend": "node scripts/copy-frontend.mjs",
     "start": "npm run start -w packages/backend",
     "typecheck": "npm run typecheck -w packages/backend && npm run typecheck -w packages/frontend",
+    "bump": "node scripts/bump.mjs",
     "screenshots": "node scripts/screenshots.mjs"
   },
   "devDependencies": {

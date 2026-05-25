@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import type { Dirent } from 'node:fs'
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
@@ -48,6 +49,8 @@ import { assertPermission } from '../middleware/permissions.js'
 import { buildTree, type TreeNode } from '../lib/tree.js'
 import { readRecentPages } from '../routes/recents.js'
 import { readWorkspaceStats } from '../routes/stats.js'
+
+const PKG_VERSION: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
 
 type PageIdentifier = { path?: string; id?: string }
 type BoardLocation = { boardPath?: string; boardId?: string }
@@ -296,7 +299,7 @@ function pagePathFromResourceUri(uri: URL) {
 }
 
 export function createWikindieMcpServer(user: SessionUser) {
-  const server = new McpServer({ name: 'wikindie', version: '0.6.6' })
+  const server = new McpServer({ name: 'wikindie', version: PKG_VERSION })
 
   server.registerTool('get_tree', { title: 'Get Tree', description: 'List the Wikindie page tree.', inputSchema: {} }, async () => {
     assertPermission(user, 'read')
