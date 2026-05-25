@@ -4,6 +4,20 @@ export interface DefaultSpaceFile {
   frontmatter?: Record<string, unknown>
 }
 
+export const defaultAgentInstructions: DefaultSpaceFile = {
+  relativePath: '_AGENT.md',
+  frontmatter: { hidden: true },
+  content: `# Agent Instructions
+
+This file is loaded by the Wikindie MCP server (\`get_agent_instructions\` tool) and given
+to AI assistants working in this workspace. It is hidden from the wiki UI because
+\`hidden: true\` is set in its frontmatter.
+
+Replace this content with the project context, tone, or rules you want agents to follow.
+You can edit this page directly through the MCP \`update_page\` tool (path: \`_AGENT\`).
+`,
+}
+
 const defaultKanbanColumns = [
   { id: 'backlog', status: 'backlog' },
   { id: 'next', status: 'next' },

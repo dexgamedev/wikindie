@@ -4,7 +4,7 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
-import { defaultSpaceFiles } from './defaultSpace.js'
+import { defaultAgentInstructions, defaultSpaceFiles } from './defaultSpace.js'
 import {
   defaultKanbanBoard,
   defaultKanbanFrontmatter,
@@ -108,6 +108,24 @@ export function isPageId(value: unknown): value is string {
 
 export function pageIdFromFrontmatter(frontmatter: Record<string, unknown>) {
   return isPageId(frontmatter.id) ? frontmatter.id : undefined
+}
+
+export const AGENT_INSTRUCTIONS_PATH = '_AGENT.md'
+
+export function isHiddenPage(relativePath: string, frontmatter: Record<string, unknown>) {
+  return relativePath === AGENT_INSTRUCTIONS_PATH || frontmatter.hidden === true
+}
+
+export async function isHiddenPageDirectory(relativeDirPath: string) {
+  const indexPath = joinStoragePath(relativeDirPath, '_Index.md')
+  if (!(await exists(indexPath))) return false
+
+  try {
+    const file = await readPageMarkdownByPath(indexPath, false)
+    return isHiddenPage(indexPath, file.frontmatter)
+  } catch {
+    return false
+  }
 }
 
 function withStablePageId(frontmatter: Record<string, unknown>, currentFrontmatter?: Record<string, unknown>) {
@@ -245,8 +263,19 @@ function parseSections(frontmatter: Record<string, unknown>): PageSection[] {
 
 export async function ensureSpace() {
   await fs.mkdir(SPACE_DIR, { recursive: true })
+
+  if (!(await exists(defaultAgentInstructions.relativePath))) {
+    await writeMarkdownByPath(
+      defaultAgentInstructions.relativePath,
+      defaultAgentInstructions.content,
+      defaultAgentInstructions.frontmatter ?? {},
+    )
+  }
+
   const entries = await fs.readdir(SPACE_DIR)
-  const meaningfulEntries = entries.filter((entry) => !['.DS_Store', '.gitkeep', 'Thumbs.db'].includes(entry))
+  const meaningfulEntries = entries.filter(
+    (entry) => !['.DS_Store', '.gitkeep', 'Thumbs.db', defaultAgentInstructions.relativePath].includes(entry),
+  )
   if (meaningfulEntries.length > 0) return
 
   if (process.env.NODE_ENV === 'production' && process.env.WIKINDIE_INIT_DEFAULT_SPACE !== 'true') {
@@ -441,7 +470,9 @@ async function collectBoardsRecursive(
       const childPath = joinStoragePath(dirPath, entry.name)
       const indexPath = joinStoragePath(childPath, '_Index.md')
       if (!(await exists(indexPath))) continue
-      const details = summarizeBoardWithTasks(childPath, await readPageMarkdownByPath(indexPath))
+      const indexFile = await readPageMarkdownByPath(indexPath)
+      if (isHiddenPage(indexPath, indexFile.frontmatter)) continue
+      const details = summarizeBoardWithTasks(childPath, indexFile)
       if (details) {
         boards.push(details.summary)
         tasks?.push(...details.tasks)
@@ -451,8 +482,11 @@ async function collectBoardsRecursive(
     }
 
     if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name === '_Index.md') continue
-    const childPath = joinStoragePath(dirPath, entry.name.replace(/\.md$/, ''))
-    const details = summarizeBoardWithTasks(childPath, await readPageMarkdownByPath(`${childPath}.md`))
+    const leafRel = joinStoragePath(dirPath, entry.name)
+    const childPath = leafRel.replace(/\.md$/, '')
+    const leafFile = await readPageMarkdownByPath(leafRel)
+    if (isHiddenPage(leafRel, leafFile.frontmatter)) continue
+    const details = summarizeBoardWithTasks(childPath, leafFile)
     if (details) {
       boards.push(details.summary)
       tasks?.push(...details.tasks)
@@ -493,6 +527,18 @@ export async function writePage(pagePath: string, content: string, frontmatter: 
   return readPage(pagePath)
 }
 
+export async function writePageContent(pagePath: string, content: string) {
+  const resolved = await resolvePageStoragePath(pagePath, true)
+  let currentFrontmatter: Record<string, unknown> = {}
+  try {
+    currentFrontmatter = (await readMarkdownByPath(resolved.relativePath)).frontmatter
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+  await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(currentFrontmatter, currentFrontmatter))
+  return readPage(pagePath)
+}
+
 export async function createPage(pagePath: string, kanban = false, meta: CreatePageMeta = {}) {
   const normalized = normalizePagePath(pagePath)
   const board = defaultKanbanBoard()
@@ -515,7 +561,11 @@ export async function createChildPage(parentPath: string, pageName: string, kanb
 
 export async function updatePageMeta(pagePath: string, patch: Record<string, unknown>) {
   const page = await readPage(pagePath)
-  const nextFrontmatter = { ...page.frontmatter, ...patch }
+  const nextFrontmatter: Record<string, unknown> = { ...page.frontmatter }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) delete nextFrontmatter[key]
+    else nextFrontmatter[key] = value
+  }
   const currentTaskIds = parseTaskIdSettings(page.frontmatter)
   const nextTaskIds = parseTaskIdSettings(nextFrontmatter)
   const taskIdsChanged = Object.hasOwn(patch, 'taskIds') && nextTaskIds.enabled && (currentTaskIds.enabled !== nextTaskIds.enabled || currentTaskIds.prefix !== nextTaskIds.prefix)

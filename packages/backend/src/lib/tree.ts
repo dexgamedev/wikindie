@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { SPACE_DIR, pageIdFromFrontmatter, readPageMarkdownByPath, safePath } from './files.js'
+import { SPACE_DIR, isHiddenPage, pageIdFromFrontmatter, readPageMarkdownByPath, safePath } from './files.js'
 
 export interface TreeNode {
   id?: string
@@ -44,6 +44,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
       try {
         await fs.stat(safePath(indexPath))
         const frontmatter = await readFrontmatter(indexPath)
+        if (isHiddenPage(indexPath, frontmatter)) continue
         const children = await buildTree(rel)
         nodes.push({
           id: pageIdFromFrontmatter(frontmatter),
@@ -64,6 +65,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
     if (!entry.name.endsWith('.md') || entry.name === '_Index.md') continue
     const pagePath = rel.replace(/\.md$/, '')
     const frontmatter = await readFrontmatter(rel)
+    if (isHiddenPage(rel, frontmatter)) continue
     const name = displayNameFromPath(pagePath)
     nodes.push({
       id: pageIdFromFrontmatter(frontmatter),

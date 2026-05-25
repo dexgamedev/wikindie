@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { Router } from 'express'
-import { SPACE_DIR, normalizePagePath, pageIdFromFrontmatter, readPageMarkdownByPath } from '../lib/files.js'
+import { SPACE_DIR, isHiddenPage, isHiddenPageDirectory, normalizePagePath, pageIdFromFrontmatter, readPageMarkdownByPath } from '../lib/files.js'
 
 export const recentsRouter = Router()
 
@@ -27,6 +27,8 @@ async function collectPages(dir: string, pages: RecentPage[]) {
 
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
+      const rel = path.relative(SPACE_DIR, full).replaceAll(path.sep, '/')
+      if (await isHiddenPageDirectory(rel)) continue
       await collectPages(full, pages)
       continue
     }
@@ -38,6 +40,7 @@ async function collectPages(dir: string, pages: RecentPage[]) {
 
     try {
       const [file, stat] = await Promise.all([readPageMarkdownByPath(rel, false), fs.stat(full)])
+      if (isHiddenPage(rel, file.frontmatter)) continue
       const title = String(file.frontmatter.title ?? pagePath.split('/').at(-1) ?? pagePath)
       const type = file.frontmatter.kanban === true ? 'board' : 'page'
       const icon = typeof file.frontmatter.icon === 'string' ? file.frontmatter.icon : undefined

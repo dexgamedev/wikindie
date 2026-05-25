@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import matter from 'gray-matter'
 import { Router } from 'express'
-import { SPACE_DIR } from '../lib/files.js'
+import { SPACE_DIR, isHiddenPage, isHiddenPageDirectory } from '../lib/files.js'
 import { isDoneColumn, normalizeKanbanBoard, parseKanban, parseKanbanColumnMetadata, parseTaskIdSettings } from '../lib/kanban.js'
 
 export const statsRouter = Router()
@@ -29,6 +29,8 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
 
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
+      const rel = path.relative(SPACE_DIR, full).replaceAll(path.sep, '/')
+      if (await isHiddenPageDirectory(rel)) continue
       await collectStats(full, stats)
       continue
     }
@@ -36,8 +38,10 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
 
     try {
       const [raw, fileStat] = await Promise.all([fs.readFile(full, 'utf8'), fs.stat(full)])
-      stats.diskSizeBytes += fileStat.size
       const parsed = matter(raw)
+      const rel = path.relative(SPACE_DIR, full).replaceAll(path.sep, '/')
+      if (isHiddenPage(rel, parsed.data)) continue
+      stats.diskSizeBytes += fileStat.size
       if (parsed.data.kanban === true) {
         stats.totalBoards++
         const board = normalizeKanbanBoard(parseKanban(parsed.content), parseTaskIdSettings(parsed.data), parseKanbanColumnMetadata(parsed.data))

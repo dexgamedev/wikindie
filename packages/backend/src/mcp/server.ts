@@ -10,6 +10,8 @@ import {
   createPage,
   deletePage,
   deleteSection,
+  isHiddenPageDirectory,
+  isHiddenPage,
   movePage,
   normalizePagePath,
   pageIdFromFrontmatter,
@@ -23,6 +25,7 @@ import {
   updatePageMeta,
   upsertSection,
   writePage,
+  writePageContent,
   joinStoragePath,
   type PageBundle,
   type TaskInfo,
@@ -242,6 +245,7 @@ async function collectSearchResults(dirPath: string, query: string, results: Sea
 
     const rel = joinStoragePath(dirPath, entry.name)
     if (entry.isDirectory()) {
+      if (await isHiddenPageDirectory(rel)) continue
       await collectSearchResults(rel, query, results, limit)
       continue
     }
@@ -252,6 +256,7 @@ async function collectSearchResults(dirPath: string, query: string, results: Sea
 
     try {
       const file = await readPageMarkdownByPath(rel)
+      if (isHiddenPage(rel, file.frontmatter)) continue
       const haystack = `${String(file.frontmatter.title ?? '')}\n${file.content}`.toLowerCase()
       if (!haystack.includes(query)) continue
 
@@ -357,17 +362,16 @@ export function createWikindieMcpServer(user: SessionUser) {
     'update_page',
     {
       title: 'Update Page',
-      description: 'Replace page Markdown content and frontmatter. The stable page id is preserved.',
+      description: 'Replace the Markdown body of a page. Frontmatter metadata (title, icon, sections, hidden, kanban config, etc.) is preserved untouched. Use patch_page_meta to change metadata.',
       inputSchema: {
         ...pageIdentifierSchema,
         content: z.string(),
-        frontmatter: z.record(z.string(), z.unknown()).default({}).optional(),
       },
     },
-    async ({ content, frontmatter = {}, ...input }) => {
+    async ({ content, ...input }) => {
       assertPermission(user, 'write')
       const pagePath = await pagePathFromIdentifier(input)
-      return toolResult(await writePage(pagePath, content, frontmatter))
+      return toolResult(await writePageContent(pagePath, content))
     },
   )
 
@@ -375,7 +379,7 @@ export function createWikindieMcpServer(user: SessionUser) {
     'patch_page_meta',
     {
       title: 'Patch Page Metadata',
-      description: 'Merge frontmatter metadata into a page. The stable page id is preserved.',
+      description: 'Merge frontmatter metadata into a page. Pass a key with a null value to remove it. The stable page id is preserved and cannot be removed.',
       inputSchema: { ...pageIdentifierSchema, patch: z.record(z.string(), z.unknown()) },
     },
     async ({ patch, ...input }) => {
