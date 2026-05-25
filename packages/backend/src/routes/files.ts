@@ -208,13 +208,14 @@ filesRouter.patch('/page/*path/meta', requirePermission('write'), async (req, re
 })
 
 filesRouter.post('/pages', requirePermission('write'), async (req, res) => {
-  const { parentPath, name, type } = req.body as { parentPath?: string; name?: string; type?: 'page' | 'board' }
+  const { parentPath, name, type, icon } = req.body as { parentPath?: string; name?: string; type?: 'page' | 'board'; icon?: string }
   const cleanName = String(name ?? '').trim()
   if (!cleanName) throw new AppError(400, 'Missing name')
+  const cleanIcon = typeof icon === 'string' ? icon.trim() : undefined
 
   let path: string
-  if (parentPath && parentPath.trim()) path = await createChildPage(parentPath, cleanName, type === 'board')
-  else path = await createPage(cleanName, type === 'board')
+  if (parentPath && parentPath.trim()) path = await createChildPage(parentPath, cleanName, type === 'board', { icon: cleanIcon })
+  else path = await createPage(cleanName, type === 'board', { icon: cleanIcon })
   res.status(201).json({ path })
 })
 

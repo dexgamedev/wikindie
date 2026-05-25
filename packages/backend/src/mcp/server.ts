@@ -296,7 +296,7 @@ function pagePathFromResourceUri(uri: URL) {
 }
 
 export function createWikindieMcpServer(user: SessionUser) {
-  const server = new McpServer({ name: 'wikindie', version: '0.6.0' })
+  const server = new McpServer({ name: 'wikindie', version: '0.6.6' })
 
   server.registerTool('get_tree', { title: 'Get Tree', description: 'List the Wikindie page tree.', inputSchema: {} }, async () => {
     assertPermission(user, 'read')
@@ -332,17 +332,20 @@ export function createWikindieMcpServer(user: SessionUser) {
     'create_page',
     {
       title: 'Create Page',
-      description: 'Create a page or kanban board, optionally below a parent page.',
+      description: 'Create a page or kanban board, optionally below a parent page. Pass content to set initial Markdown body (ignored for boards).',
       inputSchema: {
         parentPath: z.string().optional(),
         parentId: z.string().optional(),
         name: z.string().min(1),
+        icon: z.string().trim().min(1).optional().describe('Page icon id to store in frontmatter, such as project, idea, or devlog.'),
+        content: z.string().optional().describe('Initial Markdown body. Ignored when type is board.'),
         type: z.enum(['page', 'board']).default('page').optional(),
       },
     },
-    async ({ parentPath, parentId, name, type = 'page' }) => {
+    async ({ parentPath, parentId, name, icon, content, type = 'page' }) => {
       assertPermission(user, 'write')
-      const path = parentId || parentPath ? await createChildPage(await pagePathFromIdentifier({ id: parentId, path: parentPath }), name, type === 'board') : await createPage(name, type === 'board')
+      const meta = { icon, content }
+      const path = parentId || parentPath ? await createChildPage(await pagePathFromIdentifier({ id: parentId, path: parentPath }), name, type === 'board', meta) : await createPage(name, type === 'board', meta)
       return toolResult({ page: await readPage(path) })
     },
   )
@@ -527,9 +530,12 @@ export function createWikindieMcpServer(user: SessionUser) {
       const board = boardForPage(page)
       const column = (columnId ? board.columns.find((item) => item.id === columnId) : board.columns[0]) ?? board.columns[0]
       if (!column) throw new AppError(400, 'Board has no columns')
-      column.cards.push(makeCard(input))
+      const card = makeCard(input)
+      card.uid = generateCardUid()
+      column.cards.push(card)
       const updated = await writeBoard(page, board)
-      return toolResult(updated)
+      const savedCard = updated.board.columns.flatMap((c) => c.cards).find((c) => c.uid === card.uid)
+      return toolResult({ ...updated, createdTask: savedCard ? { ...savedCard, columnId: column.id } : undefined })
     },
   )
 
@@ -537,7 +543,7 @@ export function createWikindieMcpServer(user: SessionUser) {
     'update_task',
     {
       title: 'Update Task',
-      description: 'Update task fields by task id.',
+      description: 'Update task fields by task id. Optionally move to a different column in the same call by passing columnId.',
       inputSchema: {
         ...boardLocationSchema,
         taskId: z.string().min(1),
@@ -547,9 +553,11 @@ export function createWikindieMcpServer(user: SessionUser) {
         assignees: z.array(z.string()).optional(),
         labels: z.array(z.string()).optional(),
         archived: z.boolean().optional(),
+        columnId: z.string().optional().describe('Move task to this column'),
+        index: z.number().int().min(0).optional().describe('Position within target column after move'),
       },
     },
-    async ({ taskId, title, description, priority, assignees, labels, archived, ...location }) => {
+    async ({ taskId, title, description, priority, assignees, labels, archived, columnId, index, ...location }) => {
       assertPermission(user, 'write')
       if (labels) assertNoReservedLabels(labels)
       const result = await resolveTaskBoard(taskId, location)
@@ -559,6 +567,12 @@ export function createWikindieMcpServer(user: SessionUser) {
       if (assignees !== undefined) result.card.assignees = assignees
       if (labels !== undefined) result.card.labels = labels
       if (archived !== undefined) result.card.archived = archived || undefined
+      if (columnId !== undefined) {
+        const targetColumn = result.board.columns.find((column) => column.id === columnId)
+        if (!targetColumn) throw notFound('Column not found')
+        result.column.cards.splice(result.cardIndex, 1)
+        targetColumn.cards.splice(index ?? targetColumn.cards.length, 0, result.card)
+      }
       return toolResult(await writeBoard(result.page, result.board))
     },
   )
@@ -700,17 +714,127 @@ export function createWikindieMcpServer(user: SessionUser) {
     },
   )
 
-  server.registerPrompt('wikindie_workspace_brief', { title: 'Workspace Brief', description: 'Summarize the current Wikindie workspace.' }, async (): Promise<GetPromptResult> => ({
-    messages: [{ role: 'user', content: { type: 'text', text: 'Review the Wikindie workspace tree, recent pages, stats, and open tasks. Give me a concise project brief with the most important current work.' } }],
-  }))
+  server.registerPrompt(
+    'wikindie_workspace_brief',
+    { title: 'Workspace Brief', description: 'Gather workspace context and produce a concise project brief.' },
+    async (): Promise<GetPromptResult> => ({
+      messages: [{
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Produce a concise workspace brief for my Wikindie workspace. Follow these steps:
 
-  server.registerPrompt('wikindie_plan_project', { title: 'Plan Project', description: 'Create a project page and task plan.' }, async (): Promise<GetPromptResult> => ({
-    messages: [{ role: 'user', content: { type: 'text', text: 'Help me plan a project in Wikindie. Create or update a project page with goals, scope, risks, and a kanban task breakdown.' } }],
-  }))
+1. Call get_agent_instructions to check for workspace-level instructions. Follow any directives found there.
+2. Call get_tree to get the full page hierarchy.
+3. Call get_recents (limit 15) to see what has been actively worked on.
+4. Call get_stats for workspace-level metrics.
+5. Call list_tasks to get open tasks across all boards.
 
-  server.registerPrompt('wikindie_triage_tasks', { title: 'Triage Tasks', description: 'Review and prioritize kanban tasks.' }, async (): Promise<GetPromptResult> => ({
-    messages: [{ role: 'user', content: { type: 'text', text: 'Review Wikindie kanban tasks. Identify blocked, stale, high-priority, and ready-next tasks, then recommend concrete updates.' } }],
-  }))
+Then synthesize a brief with these sections:
+- **Workspace overview**: page count, board count, structure highlights.
+- **Active work**: the 3-5 most recently touched pages and what they contain.
+- **Open tasks**: group by board, note any high-priority or stale items.
+- **Suggestions**: 2-3 actionable next steps based on what you found.
+
+Keep the total output under 500 words. Use Markdown formatting.`,
+        },
+      }],
+    }),
+  )
+
+  server.registerPrompt(
+    'wikindie_plan_project',
+    {
+      title: 'Plan Project',
+      description: 'Create a project page with goals, scope, and a kanban task board.',
+      argsSchema: {
+        name: z.string().describe('Project name. Will be used as the page title.'),
+        parentPath: z.string().optional().describe('Parent page path to nest the project under (e.g. "Projects"). Omit to create at the workspace root.'),
+        goals: z.string().optional().describe('Comma-separated project goals or a short description of what the project should achieve.'),
+      },
+    },
+    async ({ name, parentPath, goals }): Promise<GetPromptResult> => ({
+      messages: [{
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Plan and create a project called "${name}" in my Wikindie workspace. Follow these steps:
+
+1. Call get_agent_instructions to check for workspace-level instructions. Follow any directives found there.
+2. Call get_tree to understand the current page structure and avoid name collisions.
+${goals ? `3. The stated goals are: ${goals}\n` : '3. Ask me to clarify the project goals before proceeding.\n'}
+Once goals are clear:
+
+4. Call create_page to create the project page:
+   - name: "${name}"${parentPath ? `\n   - parentPath: "${parentPath}"` : ''}
+   - icon: pick from (project, idea, devlog, launch, bug, research) based on context
+   - content: Markdown body with these sections:
+     ## Goals
+     (bulleted list of goals)
+     ## Scope
+     (what is in/out of scope)
+     ## Risks
+     (potential blockers or unknowns)
+
+5. Call create_page to create a kanban task board as a child of the project page:
+   - name: "Tasks"
+   - parentPath: the project path from step 4
+   - type: "board"
+
+6. Call create_task multiple times to populate the board with an initial set of tasks derived from the goals and scope. For each task:
+   - Set a clear, actionable title
+   - Add a short description with acceptance criteria
+   - Set priority (high/medium/low) based on importance
+   - Place in the appropriate column (use columnId from the board)
+
+7. Summarize what you created: the project page path, the board path, and the list of tasks with their IDs and priorities.`,
+        },
+      }],
+    }),
+  )
+
+  server.registerPrompt(
+    'wikindie_triage_tasks',
+    {
+      title: 'Triage Tasks',
+      description: 'Review and prioritize kanban tasks, recommending concrete actions.',
+      argsSchema: {
+        boardPath: z.string().optional().describe('Board page path to triage. Omit to triage all boards.'),
+        boardId: z.string().optional().describe('Board page id to triage. Omit to triage all boards.'),
+      },
+    },
+    async ({ boardPath, boardId }): Promise<GetPromptResult> => {
+      const scope = boardId ? `boardId "${boardId}"` : boardPath ? `board at "${boardPath}"` : 'all boards'
+      return {
+        messages: [{
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Triage kanban tasks on ${scope} in my Wikindie workspace. Follow these steps:
+
+1. Call get_agent_instructions to check for workspace-level instructions. Follow any directives found there.
+2. Call list_tasks${boardPath ? ` with path "${boardPath}"` : boardId ? ` with id "${boardId}"` : ''} (includeArchived: false) to get all active tasks.
+3. If triaging all boards, also call get_tree to understand project context.
+
+Analyze every task and categorize into:
+- **Blocked / stale**: tasks in "in_progress" with no recent activity, or tasks that depend on something unresolved.
+- **High priority unstarted**: high-priority tasks still in backlog/next columns.
+- **Ready to start**: tasks whose dependencies appear met and should move to in_progress.
+- **Should reprioritize**: tasks whose priority seems mismatched (e.g. low-priority but blocking other work).
+- **Candidates for archiving**: tasks that look obsolete or completed but not archived.
+
+For each category, list the specific tasks (by id and title) and recommend a concrete action. Use exact tool calls the user can approve:
+- update_task with columnId to move tasks between columns
+- update_task with priority to reprioritize
+- archive_task to archive stale/completed tasks
+- add_task_comment to leave triage notes
+
+End with a prioritized punch list: the top 3-5 tasks to focus on next, ordered by impact.`,
+          },
+        }],
+      }
+    },
+  )
 
   server.registerTool('get_agent_instructions', { title: 'Get Agent Instructions', description: 'Read workspace _AGENT.md instructions if present.', inputSchema: {} }, async () => {
     assertPermission(user, 'read')

@@ -91,6 +91,11 @@ export interface TaskOverview {
   tasks: TaskInfo[]
 }
 
+export interface CreatePageMeta {
+  icon?: string
+  content?: string
+}
+
 const pageIdPattern = /^pg_[a-f0-9]{32}$/
 
 export function generatePageId() {
@@ -488,22 +493,23 @@ export async function writePage(pagePath: string, content: string, frontmatter: 
   return readPage(pagePath)
 }
 
-export async function createPage(pagePath: string, kanban = false) {
+export async function createPage(pagePath: string, kanban = false, meta: CreatePageMeta = {}) {
   const normalized = normalizePagePath(pagePath)
   const board = defaultKanbanBoard()
-  const frontmatter = withStablePageId(kanban ? defaultKanbanFrontmatter() : {})
-  const content = kanban ? serializeKanban(board) : `# ${pageTitleFromPath(normalized)}\n`
+  const icon = meta.icon?.trim()
+  const frontmatter = withStablePageId({ ...(kanban ? defaultKanbanFrontmatter() : {}), ...(icon ? { icon } : {}) })
+  const content = kanban ? serializeKanban(board) : (meta.content || `# ${pageTitleFromPath(normalized)}\n`)
   await writeMarkdownByPath(pageToLeafPath(normalized), content, frontmatter)
   return normalized
 }
 
-export async function createChildPage(parentPath: string, pageName: string, kanban = false) {
+export async function createChildPage(parentPath: string, pageName: string, kanban = false, meta: CreatePageMeta = {}) {
   const parent = normalizePagePath(parentPath)
   const childName = normalizePagePath(pageName).split('/').filter(Boolean).pop()
   if (!childName) throw new AppError(400, 'Invalid child name')
   await ensurePageContainer(parent)
   const childPath = `${parent}/${childName}`
-  await createPage(childPath, kanban)
+  await createPage(childPath, kanban, meta)
   return childPath
 }
 

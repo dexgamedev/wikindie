@@ -211,10 +211,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ patch }),
     }),
-  createPage: (name: string, parentPath?: string, type: 'page' | 'board' = 'page') =>
+  createPage: (name: string, parentPath?: string, type: 'page' | 'board' = 'page', icon?: string) =>
     request<{ path: string }>('/api/pages', {
       method: 'POST',
-      body: JSON.stringify({ name, parentPath, type }),
+      body: JSON.stringify({ name, parentPath, type, icon }),
     }),
   removePage: (path: string) => request<{ ok: true }>(`/api/page/${encodePath(path)}`, { method: 'DELETE' }),
   movePage: (path: string, newPath: string) =>
