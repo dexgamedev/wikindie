@@ -2,14 +2,12 @@ import { Pencil, Plus, Settings, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { KanbanBoard, KanbanCard as Card, KanbanColumn as Column, KanbanColumnStatus } from '../../lib/api'
 import { setDragPreview } from '../../lib/dragPreview'
-import { wikiIcons } from '../../lib/icons'
 import { getActiveColumnReorderSource, getActiveDragSource, getColumnDragPayload, hasColumnDragPayload, kanbanColumnStatusOptions, setActiveColumnReorderSource, setColumnDragPayload } from '../../lib/kanban'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
+import { IconPicker } from '../ui/IconPicker'
 import { PageIcon } from '../ui/PageIcon'
 import { KanbanCard } from './KanbanCard'
-
-const iconCategories = Array.from(new Set(wikiIcons.map((icon) => icon.category)))
 
 export function KanbanColumn({
   column,
@@ -217,55 +215,57 @@ export function KanbanColumn({
       </div>
       {editable && metaEditing && (
         <article className="mb-4 rounded-md border border-border bg-card p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h4 className="text-sm font-semibold text-text">Column meta</h4>
-            <span className="text-xs text-text-muted">Icon, title, and workflow status</span>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-sm font-semibold text-text">Column meta</h4>
+              <p className="text-xs text-text-muted">Title, workflow status, and icon.</p>
+            </div>
           </div>
-          <input
-            className="mb-3 w-full rounded border border-accent bg-input px-2 py-1.5 text-sm text-text outline-none"
-            value={metaTitle}
-            onChange={(event) => setMetaTitle(event.target.value)}
-            placeholder="Column title"
-          />
-          <label className="mb-3 grid gap-1 text-xs text-text-muted">
-            Workflow status
-            <select
-              className="w-full rounded border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
-              value={metaStatus}
-              onChange={(event) => setMetaStatus(event.target.value as KanbanColumnStatus)}
-            >
-              {kanbanColumnStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <div className="mb-3 max-h-48 overflow-y-auto rounded-md border border-border bg-input p-2">
-            {iconCategories.map((category) => (
-              <div key={category} className="mb-3 last:mb-0">
-                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">{category}</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {wikiIcons.filter((icon) => icon.category === category).map((icon) => (
-                    <button
-                      key={icon.id}
-                      className={`grid size-8 place-items-center rounded-md border text-base transition ${metaIcon === icon.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
-                      onClick={() => setMetaIcon(icon.id)}
-                      title={`${icon.label} (${icon.id})`}
-                      type="button"
-                    >
-                      <PageIcon icon={icon.id} />
-                    </button>
-                  ))}
-                </div>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="column-meta-title" className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Title</label>
+              <input
+                id="column-meta-title"
+                className="w-full rounded border border-border bg-input px-2.5 py-1.5 text-sm font-semibold text-text outline-none transition focus:border-accent"
+                value={metaTitle}
+                onChange={(event) => setMetaTitle(event.target.value)}
+                placeholder="Column title"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="column-meta-status" className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Workflow status</label>
+              <select
+                id="column-meta-status"
+                className="w-full rounded border border-border bg-input px-2.5 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+                value={metaStatus}
+                onChange={(event) => setMetaStatus(event.target.value as KanbanColumnStatus)}
+              >
+                {kanbanColumnStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Icon</label>
+                <span className="flex items-center gap-2 text-xs text-text-muted">
+                  Selected
+                  <span className="grid size-8 place-items-center rounded-md border border-border bg-input text-lg">
+                    <PageIcon icon={metaIcon} fallback="column" />
+                  </span>
+                </span>
               </div>
-            ))}
+              <div className="rounded-md border border-border bg-input p-2">
+                <IconPicker onSelect={setMetaIcon} />
+              </div>
+            </div>
           </div>
-          <div className="mb-3 flex items-center gap-2 text-xs text-text-muted">
-            <span>Selected:</span>
-            <PageIcon icon={metaIcon} fallback="column" className="text-base" />
-            <span>{metaIcon || 'column'}</span>
-          </div>
-          <div className="flex gap-2">
-            <Button className="py-1.5" onClick={saveMeta}>Save</Button>
+
+          <div className="mt-4 flex gap-2 border-t border-border pt-3">
+            <Button variant="primary" className="py-1.5" onClick={saveMeta}>Save changes</Button>
             <Button className="py-1.5" onClick={() => setMetaEditing(false)}>Cancel</Button>
           </div>
         </article>

@@ -2,7 +2,6 @@ import { ArrowLeft, Check, CheckCircle2, ListChecks, Plus, Settings } from 'luci
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type CardPriority, type KanbanBoard as Board, type KanbanCard as Card, type PageBundle, type TaskIdSettings } from '../../lib/api'
-import { wikiIcons } from '../../lib/icons'
 import { createKanbanColumn, getActiveColumnReorderSource, hasColumnDragPayload, isDoneColumn, sortBoardByPriority } from '../../lib/kanban'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { priorityColor, priorityLabel, priorityRank } from '../../lib/priority'
@@ -12,11 +11,10 @@ import { useMobileTaskPanel } from '../layout/AppLayout'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { UserIconBadge } from '../ui/AssigneeBadges'
 import { Button } from '../ui/Button'
+import { IconPicker } from '../ui/IconPicker'
 import { PageIcon } from '../ui/PageIcon'
 import { KanbanCardDialog } from './KanbanCardDialog'
 import { KanbanColumn } from './KanbanColumn'
-
-const iconCategories = Array.from(new Set(wikiIcons.map((item) => item.category)))
 
 function defaultColumnIcon(title: string) {
   const clean = title.trim().toLowerCase()
@@ -374,67 +372,72 @@ export function KanbanBoard({
 
       <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content p-3 sm:p-4 md:p-6 xl:p-8">
       {mayWrite && metaEditing && (
-        <article className="mb-4 max-w-3xl rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="font-semibold">Board meta</h3>
-            <span className="text-xs text-text-muted">Title, icon, and task IDs</span>
+        <article className="mb-4 max-w-5xl rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:p-5">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-text">Board meta</h3>
+              <p className="text-xs text-text-muted">Title, icon, and task IDs.</p>
+            </div>
           </div>
-          <div className="mb-4 grid max-h-72 gap-4 overflow-y-auto rounded-md border border-border bg-input p-3">
-            {iconCategories.map((category) => (
-              <div key={category}>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{category}</div>
-                <div className="flex flex-wrap gap-2">
-                  {wikiIcons.filter((item) => item.category === category).map((item) => (
-                    <button
-                      key={item.id}
-                      className={`grid size-9 place-items-center rounded-md border text-lg transition ${metaIcon === item.id ? 'border-accent bg-accent/20' : 'border-border bg-card hover:border-accent'}`}
-                      onClick={() => setMetaIcon(item.id)}
-                      title={`${item.label} (${item.id})`}
-                      type="button"
-                    >
-                      <PageIcon icon={item.id} />
-                    </button>
-                  ))}
-                </div>
+
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <label htmlFor="board-meta-title" className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Title</label>
+              <input
+                id="board-meta-title"
+                value={metaTitle}
+                onChange={(event) => setMetaTitle(event.target.value)}
+                placeholder="Board title"
+                className="w-full rounded border border-border bg-input px-3 py-2 text-lg font-semibold text-text outline-none transition focus:border-accent"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Icon</label>
+                <span className="flex items-center gap-2 text-xs text-text-muted">
+                  Selected
+                  <span className="grid size-9 place-items-center rounded-md border border-border bg-input text-xl">
+                    <PageIcon icon={metaIcon} fallback="board" />
+                  </span>
+                </span>
               </div>
-            ))}
+              <div className="rounded-md border border-border bg-input p-2">
+                <IconPicker onSelect={setMetaIcon} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Task IDs</label>
+              <div className="rounded-md border border-border bg-input p-3">
+                <label className="mb-3 flex items-start gap-3 text-sm text-text">
+                  <input
+                    checked={taskIdsEnabled}
+                    className="mt-1 size-4 accent-accent"
+                    onChange={(event) => setTaskIdsEnabled(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>
+                    <span className="block font-semibold">Automatic task IDs</span>
+                    <span className="block text-xs text-text-muted">Disabled by default. Existing IDs stay unchanged; new IDs use this board prefix.</span>
+                  </span>
+                </label>
+                <label className="grid gap-1 text-xs text-text-muted">
+                  ID prefix
+                  <input
+                    value={taskIdPrefix}
+                    onChange={(event) => setTaskIdPrefix(event.target.value.toUpperCase())}
+                    className="w-full rounded border border-border bg-card px-3 py-2 text-sm font-semibold tracking-wide text-text outline-none transition focus:border-accent"
+                    placeholder="TASK"
+                  />
+                </label>
+                <p className="mt-2 text-xs text-text-muted">Example next ID format: <span className="font-semibold text-text">[{normalizeTaskIdPrefix(taskIdPrefix || metaTitle)}-1]</span></p>
+              </div>
+            </div>
           </div>
-          <div className="mb-4 flex items-center gap-2 text-sm text-text-muted">
-            <span>Selected:</span>
-            <PageIcon icon={metaIcon} className="text-lg" />
-            <span>{metaIcon || 'board'}</span>
-          </div>
-          <input
-            value={metaTitle}
-            onChange={(event) => setMetaTitle(event.target.value)}
-            className="mb-4 w-full rounded border border-accent bg-input px-3 py-2 text-lg font-semibold text-text outline-none"
-          />
-          <div className="mb-4 rounded-md border border-border bg-input p-3">
-            <label className="mb-3 flex items-start gap-3 text-sm text-text">
-              <input
-                checked={taskIdsEnabled}
-                className="mt-1 size-4 accent-accent"
-                onChange={(event) => setTaskIdsEnabled(event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                <span className="block font-semibold">Automatic task IDs</span>
-                <span className="block text-xs text-text-muted">Disabled by default. Existing IDs stay unchanged; new IDs use this board prefix.</span>
-              </span>
-            </label>
-            <label className="grid gap-1 text-xs text-text-muted">
-              ID prefix
-              <input
-                value={taskIdPrefix}
-                onChange={(event) => setTaskIdPrefix(event.target.value.toUpperCase())}
-                className="w-full rounded border border-border bg-card px-3 py-2 text-sm font-semibold tracking-wide text-text outline-none transition focus:border-accent"
-                placeholder="TASK"
-              />
-            </label>
-            <p className="mt-2 text-xs text-text-muted">Example next ID format: <span className="font-semibold text-text">[{normalizeTaskIdPrefix(taskIdPrefix || metaTitle)}-1]</span></p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => void saveMeta()}>Save meta</Button>
+
+          <div className="mt-5 flex gap-2 border-t border-border pt-4">
+            <Button variant="primary" onClick={() => void saveMeta()}>Save changes</Button>
             <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
           </div>
         </article>

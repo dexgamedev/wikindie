@@ -1,3 +1,6 @@
+// Legacy icon pool. Page icons are now picked from the full emoji-mart set and
+// stored as raw glyphs (see IconPicker), but these friendly ids remain as
+// back-compat aliases so existing frontmatter and `:shortcode:` markdown still resolve.
 export interface WikiIcon {
   id: string
   label: string

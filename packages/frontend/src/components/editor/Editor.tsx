@@ -3,11 +3,11 @@ import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from '
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type PageBundle, type PageSection } from '../../lib/api'
 import { useMobileTaskPanel } from '../layout/AppLayout'
-import { wikiIcons } from '../../lib/icons'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore, useFilesStore } from '../../lib/store'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
+import { IconPicker } from '../ui/IconPicker'
 import { PageIcon } from '../ui/PageIcon'
 import { MarkdownPreview } from './MarkdownPreview'
 
@@ -47,8 +47,6 @@ function isCurrentPageEvent(currentPath: string, changedFilePath?: string) {
   if (changedFilePath.startsWith(`${currentPath}/_sections/`)) return true
   return false
 }
-
-const iconCategories = Array.from(new Set(wikiIcons.map((icon) => icon.category)))
 
 const BlockEditor = lazy(() => import('./BlockEditor').then((module) => ({ default: module.BlockEditor })))
 
@@ -345,41 +343,45 @@ export function Editor({
 
           {mayWrite && metaEditing && (
             <article className="mb-6 rounded-md border border-border bg-card p-5 shadow-sm shadow-shadow">
-              <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-text">Page meta</h3>
                   <p className="text-xs text-text-muted">Update the title and icon shown in navigation.</p>
                 </div>
                 <Button onClick={() => setMetaEditing(false)}>Close</Button>
               </div>
-              <div className="space-y-3">
-                {iconCategories.map((category) => (
-                  <div key={category}>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">{category}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {wikiIcons.filter((item) => item.category === category).map((item) => (
-                        <button
-                          key={item.id}
-                          className={`grid size-8 place-items-center rounded-md border text-lg transition hover:border-accent hover:bg-accent/10 ${icon === item.id ? 'border-accent bg-accent/15 shadow-sm shadow-accent/20 ring-1 ring-accent/40' : 'border-transparent'}`}
-                          onClick={() => setIcon(item.id)}
-                          title={`${item.label} (${item.id})`}
-                          type="button"
-                        >
-                          <PageIcon icon={item.id} />
-                        </button>
-                      ))}
-                    </div>
+
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="page-meta-title" className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Title</label>
+                  <input
+                    id="page-meta-title"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Page title"
+                    className="w-full rounded border border-border bg-input px-3 py-2 text-lg font-semibold text-text outline-none transition focus:border-accent"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-text-muted">Icon</label>
+                    <span className="flex items-center gap-2 text-xs text-text-muted">
+                      Selected
+                      <span className="grid size-9 place-items-center rounded-md border border-border bg-input text-xl">
+                        <PageIcon icon={icon} />
+                      </span>
+                    </span>
                   </div>
-                ))}
+                  <p className="text-xs text-text-muted">Pick an emoji below, or type ":" in the page body to insert one inline.</p>
+                  <div className="rounded-md border border-border bg-input p-2">
+                    <IconPicker onSelect={setIcon} />
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-text-muted">
-                <span>Selected:</span>
-                <PageIcon icon={icon} className="text-lg" />
-                <span>{icon || 'page'}</span>
-              </div>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} className="w-full rounded border border-accent bg-input px-3 py-2 text-lg font-semibold text-text outline-none" />
-              <div className="flex gap-2">
-                <Button onClick={saveMeta}>Save title</Button>
+
+              <div className="mt-5 flex gap-2 border-t border-border pt-4">
+                <Button variant="primary" onClick={saveMeta}>Save changes</Button>
                 <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
               </div>
             </article>

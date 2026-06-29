@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
 import { defaultAgentInstructions, defaultSpaceFiles } from './defaultSpace.js'
+import { normalizeIcon } from './icons.js'
 import {
   defaultKanbanBoard,
   defaultKanbanFrontmatter,
@@ -542,7 +543,7 @@ export async function writePageContent(pagePath: string, content: string) {
 export async function createPage(pagePath: string, kanban = false, meta: CreatePageMeta = {}) {
   const normalized = normalizePagePath(pagePath)
   const board = defaultKanbanBoard()
-  const icon = meta.icon?.trim()
+  const icon = normalizeIcon(meta.icon)
   const frontmatter = withStablePageId({ ...(kanban ? defaultKanbanFrontmatter() : {}), ...(icon ? { icon } : {}) })
   const content = kanban ? serializeKanban(board) : (meta.content || `# ${pageTitleFromPath(normalized)}\n`)
   await writeMarkdownByPath(pageToLeafPath(normalized), content, frontmatter)
@@ -564,6 +565,7 @@ export async function updatePageMeta(pagePath: string, patch: Record<string, unk
   const nextFrontmatter: Record<string, unknown> = { ...page.frontmatter }
   for (const [key, value] of Object.entries(patch)) {
     if (value === null) delete nextFrontmatter[key]
+    else if (key === 'icon') nextFrontmatter[key] = normalizeIcon(value) ?? value
     else nextFrontmatter[key] = value
   }
   const currentTaskIds = parseTaskIdSettings(page.frontmatter)

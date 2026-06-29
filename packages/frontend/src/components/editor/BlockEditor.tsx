@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { filterSuggestionItems } from '@blocknote/core'
 import {
+  getDefaultReactEmojiPickerItems,
   getDefaultReactSlashMenuItems,
+  GridSuggestionMenuController,
   SuggestionMenuController,
   useCreateBlockNote,
   type DefaultReactSuggestionItem,
@@ -132,6 +134,12 @@ export function BlockEditor({ value, onChange, editable = true, className }: Pro
         <SuggestionMenuController
           triggerCharacter="[["
           getItems={async (query) => pagePickerItems(editor, tree, query)}
+        />
+        <GridSuggestionMenuController
+          triggerCharacter=":"
+          columns={9}
+          minQueryLength={2}
+          getItems={async (query) => getDefaultReactEmojiPickerItems(editor, query)}
         />
       </BlockNoteView>
     </div>

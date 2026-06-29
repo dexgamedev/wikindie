@@ -345,7 +345,7 @@ export function createWikindieMcpServer(user: SessionUser) {
         parentPath: z.string().optional(),
         parentId: z.string().optional(),
         name: z.string().min(1),
-        icon: z.string().trim().min(1).optional().describe('Page icon id to store in frontmatter, such as project, idea, or devlog.'),
+        icon: z.string().trim().min(1).optional().describe('Page icon. Any emoji (e.g. "🚀") or a standard emoji shortcode like ":rocket:" or ":bulb:". Legacy ids (project, idea, devlog) still work. Stored as the resolved emoji glyph.'),
         content: z.string().optional().describe('Initial Markdown body. Ignored when type is board.'),
         type: z.enum(['page', 'board']).default('page').optional(),
       },
@@ -379,7 +379,7 @@ export function createWikindieMcpServer(user: SessionUser) {
     'patch_page_meta',
     {
       title: 'Patch Page Metadata',
-      description: 'Merge frontmatter metadata into a page. Pass a key with a null value to remove it. The stable page id is preserved and cannot be removed.',
+      description: 'Merge frontmatter metadata into a page. Pass a key with a null value to remove it. The stable page id is preserved and cannot be removed. The "icon" key accepts any emoji or a standard emoji shortcode like ":rocket:" (legacy ids like project/idea still work) and is stored as the resolved glyph.',
       inputSchema: { ...pageIdentifierSchema, patch: z.record(z.string(), z.unknown()) },
     },
     async ({ patch, ...input }) => {
@@ -774,7 +774,7 @@ Once goals are clear:
 
 4. Call create_page to create the project page:
    - name: "${name}"${parentPath ? `\n   - parentPath: "${parentPath}"` : ''}
-   - icon: pick from (project, idea, devlog, launch, bug, research) based on context
+   - icon: any emoji or standard shortcode (e.g. "🚀", ":rocket:", ":bulb:") that fits the context
    - content: Markdown body with these sections:
      ## Goals
      (bulleted list of goals)

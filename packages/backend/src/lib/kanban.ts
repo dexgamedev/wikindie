@@ -360,7 +360,9 @@ function formatAssigneeTag(assignee: string) {
 
 function parseColumnHeading(raw: string): Omit<KanbanColumn, 'cards'> {
   const trimmed = raw.trim()
-  const icon = trimmed.match(/^:([a-z0-9_-]+):\s+(.+)$/i)
+  // Accept any non-colon, non-whitespace icon token so raw emoji glyphs (e.g.
+  // :🚀:) round-trip the same way as shortcode ids like :todo:.
+  const icon = trimmed.match(/^:([^:\s]+):\s+(.+)$/)
   const title = icon ? icon[2].trim() : trimmed
   const status = inferColumnStatus(title)
   return {

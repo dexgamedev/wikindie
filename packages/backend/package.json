@@ -1,6 +1,6 @@
 {
   "name": "@wikindie/backend",
-  "version": "0.6.10",
+  "version": "0.6.11",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "argon2": "^0.44.0",
     "chokidar": "^4.0.3",
