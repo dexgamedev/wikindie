@@ -2,6 +2,9 @@ import type { KanbanBoard, KanbanColumn, KanbanColumnStatus } from './api'
 import { priorityRank } from './priority'
 
 let activeDragSourceColumn: number | null = null
+let activeColumnReorderSource: number | null = null
+
+const kanbanColumnDragType = 'application/x-wikindie-kanban-column'
 
 export const kanbanColumnStatusOptions: Array<{ value: KanbanColumnStatus; label: string }> = [
   { value: 'backlog', label: 'Backlog' },
@@ -60,6 +63,31 @@ export function setActiveDragSource(columnIndex: number | null) {
 
 export function getActiveDragSource() {
   return activeDragSourceColumn
+}
+
+export function setActiveColumnReorderSource(columnIndex: number | null) {
+  activeColumnReorderSource = columnIndex
+}
+
+export function getActiveColumnReorderSource() {
+  return activeColumnReorderSource
+}
+
+export function setColumnDragPayload(dataTransfer: DataTransfer, columnIndex: number) {
+  dataTransfer.effectAllowed = 'move'
+  dataTransfer.setData(kanbanColumnDragType, String(columnIndex))
+  setActiveColumnReorderSource(columnIndex)
+}
+
+export function hasColumnDragPayload(dataTransfer: DataTransfer) {
+  return Array.from(dataTransfer.types).includes(kanbanColumnDragType)
+}
+
+export function getColumnDragPayload(dataTransfer: DataTransfer) {
+  const raw = dataTransfer.getData(kanbanColumnDragType)
+  if (!raw.trim()) return activeColumnReorderSource
+  const index = Number(raw)
+  return Number.isInteger(index) && index >= 0 ? index : activeColumnReorderSource
 }
 
 export function sortBoardByPriority(board: KanbanBoard): KanbanBoard {

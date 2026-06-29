@@ -1,8 +1,9 @@
 import { Pencil, Plus, Settings, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KanbanBoard, KanbanCard as Card, KanbanColumn as Column, KanbanColumnStatus } from '../../lib/api'
+import { setDragPreview } from '../../lib/dragPreview'
 import { wikiIcons } from '../../lib/icons'
-import { getActiveDragSource, kanbanColumnStatusOptions } from '../../lib/kanban'
+import { getActiveColumnReorderSource, getActiveDragSource, getColumnDragPayload, hasColumnDragPayload, kanbanColumnStatusOptions, setActiveColumnReorderSource, setColumnDragPayload } from '../../lib/kanban'
 import { ActionMenu, ActionMenuItem } from '../ui/ActionMenu'
 import { Button } from '../ui/Button'
 import { PageIcon } from '../ui/PageIcon'
@@ -21,6 +22,7 @@ export function KanbanColumn({
   users,
   onUpdate,
   onMove,
+  onMoveColumn,
   onAddComment,
   onUpdateComment,
   onDeleteComment,
@@ -35,6 +37,7 @@ export function KanbanColumn({
   users: string[]
   onUpdate: (board: KanbanBoard) => void
   onMove: (fromColumn: number, fromCard: number, toColumn: number) => void
+  onMoveColumn: (fromColumn: number, targetColumn: number, position: 'before' | 'after') => void
   onAddComment: (input: { taskId?: string; cardUid?: string; columnId?: string; index?: number; body: string }) => Promise<void>
   onUpdateComment: (commentId: string, body: string) => Promise<void>
   onDeleteComment: (commentId: string) => Promise<void>
@@ -47,6 +50,9 @@ export function KanbanColumn({
   const [metaTitle, setMetaTitle] = useState(column.title)
   const [metaIcon, setMetaIcon] = useState(column.icon || '')
   const [metaStatus, setMetaStatus] = useState<KanbanColumnStatus>(column.status)
+  const [columnDropPosition, setColumnDropPosition] = useState<'before' | 'after' | null>(null)
+  const [draggingColumn, setDraggingColumn] = useState(false)
+  const columnRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!renaming) setRenameValue(column.title)
@@ -99,18 +105,74 @@ export function KanbanColumn({
 
   const cardsToRender = visibleCards ?? column.cards.map((card, cardIndex) => ({ card, cardIndex }))
 
+  const dropPositionFromEvent = (event: React.DragEvent) => {
+    const rect = columnRef.current?.getBoundingClientRect()
+    if (!rect) return 'after'
+    return event.clientX < rect.left + rect.width / 2 ? 'before' : 'after'
+  }
+
+  const startColumnDrag = (event: React.DragEvent) => {
+    if (!editable) return
+    const target = event.target
+    if (target instanceof HTMLElement && target.closest('button, input, textarea, select, a')) {
+      event.preventDefault()
+      return
+    }
+    event.stopPropagation()
+    setColumnDragPayload(event.dataTransfer, columnIndex)
+    setDragPreview(event.dataTransfer, 'Move column', column.title)
+    setDraggingColumn(true)
+  }
+
+  const endColumnDrag = () => {
+    setDraggingColumn(false)
+    setColumnDropPosition(null)
+    setActiveColumnReorderSource(null)
+  }
+
   return (
     <div
-      className="overflow-hidden rounded-md border border-border bg-surface p-3 sm:p-4"
+      className={`relative overflow-hidden rounded-md border border-border bg-surface p-3 transition sm:p-4 ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingColumn ? 'opacity-60 ring-2 ring-accent/40' : ''} ${columnDropPosition ? 'ring-1 ring-accent/30' : ''}`}
+      draggable={editable}
+      ref={columnRef}
+      onDragEnd={endColumnDrag}
       onDragOver={(event) => {
-        if (editable && getActiveDragSource() !== null && getActiveDragSource() !== columnIndex) event.preventDefault()
+        if (!editable) return
+        const activeColumnSource = getActiveColumnReorderSource()
+        if (activeColumnSource !== null || hasColumnDragPayload(event.dataTransfer)) {
+          event.preventDefault()
+          event.stopPropagation()
+          event.dataTransfer.dropEffect = 'move'
+          setColumnDropPosition(activeColumnSource === columnIndex ? null : dropPositionFromEvent(event))
+          return
+        }
+        if (getActiveDragSource() !== null && getActiveDragSource() !== columnIndex) event.preventDefault()
       }}
+      onDragLeave={() => setColumnDropPosition(null)}
       onDrop={(event) => {
         if (!editable) return
+        const columnSource = getColumnDragPayload(event.dataTransfer)
+        if (columnSource !== null) {
+          event.preventDefault()
+          event.stopPropagation()
+          if (columnSource !== columnIndex) onMoveColumn(columnSource, columnIndex, columnDropPosition ?? dropPositionFromEvent(event))
+          setColumnDropPosition(null)
+          setActiveColumnReorderSource(null)
+          return
+        }
         const [fromColumn, fromCard] = event.dataTransfer.getData('text/plain').split(':').map(Number)
         if (!Number.isNaN(fromColumn) && !Number.isNaN(fromCard) && fromColumn !== columnIndex) onMove(fromColumn, fromCard, columnIndex)
       }}
+      onDragStart={startColumnDrag}
     >
+      {columnDropPosition && (
+        <div className={`pointer-events-none absolute inset-y-3 z-10 flex items-center ${columnDropPosition === 'before' ? 'left-0' : 'right-0'}`}>
+          <span className="h-full w-1 rounded-full bg-accent shadow-[0_0_14px_var(--color-accent)]" />
+          <span className={`${columnDropPosition === 'before' ? 'ml-2' : 'order-first mr-2'} rounded-full border border-control-border bg-panel px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent shadow-sm shadow-shadow`}>
+            {columnDropPosition === 'before' ? 'Before' : 'After'}
+          </span>
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-between gap-3">
         {editable && renaming ? (
           <form

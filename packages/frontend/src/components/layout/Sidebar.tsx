@@ -205,7 +205,7 @@ export function Sidebar({
           onDrop={dropOnRoot}
         >
           {tree.map((node) => (
-            <TreeItem key={node.path} node={node} collapsed={collapsed} onRefresh={refreshTree} onPageDragChange={setPageDragging} />
+            <TreeItem key={node.path} node={node} collapsed={collapsed} siblings={tree} onRefresh={refreshTree} onPageDragChange={setPageDragging} />
           ))}
           {mayWrite && pageDragActive && (
             <div className={`mt-2 rounded-md border border-dashed border-border px-3 py-2 text-center text-xs text-text-muted ${collapsed ? 'lg:hidden' : ''}`}>

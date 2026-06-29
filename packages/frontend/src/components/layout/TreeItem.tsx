@@ -2,6 +2,7 @@ import { ChevronRight, Pencil, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { api, type TreeNode } from '../../lib/api'
+import { setDragPreview } from '../../lib/dragPreview'
 import { getPageDragPayload, hasPageDragPayload, setPageDragPayload, type PageDragPayload } from '../../lib/pageDrag'
 import { pageUrl, pagePathFromLocation } from '../../lib/paths'
 import { canDelete, canWrite, useAuthStore } from '../../lib/store'
@@ -27,16 +28,27 @@ function validMove(source: PageDragPayload, targetParent: string) {
   return joinPath(targetParent, basename(source.path)) !== source.path
 }
 
+function validSiblingDrop(source: PageDragPayload, targetPath: string, targetParent: string) {
+  if (source.path === targetPath) return false
+  if (source.path === targetParent) return false
+  if (targetParent.startsWith(`${source.path}/`)) return false
+  return true
+}
+
+type TreeDropMode = 'before' | 'inside' | 'after'
+
 export function TreeItem({
   node,
   depth = 0,
   collapsed,
+  siblings,
   onRefresh,
   onPageDragChange,
 }: {
   node: TreeNode
   depth?: number
   collapsed: boolean
+  siblings: TreeNode[]
   onRefresh: () => Promise<void>
   onPageDragChange: (active: boolean) => void
 }) {
@@ -48,8 +60,10 @@ export function TreeItem({
   const [creating, setCreating] = useState<null | 'page' | 'board'>(null)
   const [createValue, setCreateValue] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
+  const [dragMode, setDragMode] = useState<TreeDropMode | null>(null)
+  const [dragging, setDragging] = useState(false)
   const renameFormRef = useRef<HTMLFormElement>(null)
+  const rowRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const role = useAuthStore((state) => state.role)
@@ -154,15 +168,49 @@ export function TreeItem({
     navigate('/page/Home')
   }
 
+  const patchSiblingOrder = async (orderedPaths: string[]) => {
+    await Promise.all(orderedPaths.map((path, index) => api.patchPageMeta(path, { order: index })))
+  }
+
+  const dropAsSibling = async (payload: PageDragPayload, mode: 'before' | 'after') => {
+    const targetParent = dirname(node.path)
+    if (!validSiblingDrop(payload, node.path, targetParent)) return
+    const newPath = joinPath(targetParent, basename(payload.path))
+    if (newPath !== payload.path && siblings.some((item) => item.path === newPath)) return
+
+    const orderedPaths = siblings.map((item) => item.path).filter((path) => path !== payload.path && path !== newPath)
+    const targetIndex = orderedPaths.indexOf(node.path)
+    if (targetIndex < 0) return
+    orderedPaths.splice(mode === 'before' ? targetIndex : targetIndex + 1, 0, newPath)
+
+    const followingMovedPage = newPath !== payload.path && pagePathFromLocation(location.pathname) === payload.path
+    if (newPath !== payload.path) await api.movePage(payload.path, newPath)
+    await patchSiblingOrder(orderedPaths)
+    await onRefresh()
+    if (followingMovedPage) navigate(pageUrl(newPath))
+  }
+
+  const dropModeFromEvent = (event: React.DragEvent): TreeDropMode => {
+    const rect = rowRef.current?.getBoundingClientRect()
+    if (!rect) return 'inside'
+    const offset = event.clientY - rect.top
+    if (offset < rect.height * 0.3) return 'before'
+    if (offset > rect.height * 0.7) return 'after'
+    return 'inside'
+  }
+
   const startPageDrag = (event: React.DragEvent) => {
     if (!mayWrite) return
     event.stopPropagation()
     setPageDragPayload(event.dataTransfer, { path: node.path, type: node.type })
+    setDragPreview(event.dataTransfer, 'Move page', node.title)
+    setDragging(true)
     onPageDragChange(true)
   }
 
   const endPageDrag = () => {
-    setDragOver(false)
+    setDragging(false)
+    setDragMode(null)
     onPageDragChange(false)
   }
 
@@ -170,10 +218,16 @@ export function TreeItem({
     event.preventDefault()
     if (!mayWrite) return
     event.stopPropagation()
-    setDragOver(false)
+    const mode = dragMode ?? dropModeFromEvent(event)
+    setDragMode(null)
     onPageDragChange(false)
     const payload = getPageDragPayload(event.dataTransfer)
-    if (!payload || !validMove(payload, node.path)) return
+    if (!payload) return
+    if (mode === 'before' || mode === 'after') {
+      await dropAsSibling(payload, mode)
+      return
+    }
+    if (!validMove(payload, node.path)) return
     const newPath = joinPath(node.path, basename(payload.path))
     await api.movePage(payload.path, newPath)
     await onRefresh()
@@ -183,20 +237,28 @@ export function TreeItem({
 
   return (
     <div
-      className={`${dragOver ? 'rounded-md bg-accent/10' : ''} ${depth > 0 ? 'ml-2 border-l border-border' : ''}`}
+      className={`${dragMode === 'inside' ? 'rounded-md bg-accent/10 ring-1 ring-accent/40' : ''} ${dragging ? 'opacity-60' : ''} ${depth > 0 ? 'ml-2 border-l border-border' : ''}`}
       onDragOver={(event) => {
         if (!mayWrite) return
         if (!hasPageDragPayload(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
         event.dataTransfer.dropEffect = 'move'
-        setDragOver(true)
+        setDragMode(dropModeFromEvent(event))
       }}
-      onDragLeave={() => setDragOver(false)}
+      onDragLeave={() => setDragMode(null)}
       onDrop={dropOnNode}
       style={{ paddingLeft: depth * 10 }}
     >
-      <div className="group flex items-center gap-1 rounded-md">
+      <div className="group relative flex items-center gap-1 rounded-md border-y-2 border-transparent" ref={rowRef}>
+        {(dragMode === 'before' || dragMode === 'after') && (
+          <div className={`pointer-events-none absolute left-6 right-2 z-10 flex items-center ${dragMode === 'before' ? '-top-1.5' : '-bottom-1.5'}`}>
+            <span className="h-1 flex-1 rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />
+            <span className="ml-2 rounded-full border border-control-border bg-panel px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent shadow-sm shadow-shadow">
+              {dragMode === 'before' ? 'Place before' : 'Place after'}
+            </span>
+          </div>
+        )}
         <button className={`rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text ${collapsed ? 'lg:hidden' : ''}`} onClick={toggle}>
           <ChevronRight size={14} className={`transition ${open ? 'rotate-90' : ''}`} />
         </button>
@@ -236,7 +298,7 @@ export function TreeItem({
         ) : (
           <NavLink
             className={({ isActive }) =>
-                `flex min-w-0 flex-1 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm hover:bg-surface-hover ${collapsed ? 'lg:justify-center lg:border-l-0 lg:px-0' : ''} ${
+                `flex min-w-0 flex-1 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm hover:bg-surface-hover ${mayWrite ? 'cursor-grab active:cursor-grabbing' : ''} ${collapsed ? 'lg:justify-center lg:border-l-0 lg:px-0' : ''} ${
                 isActive ? 'border-accent bg-surface-hover text-text' : 'border-transparent text-text-muted'
               }`
             }
@@ -344,7 +406,7 @@ export function TreeItem({
 
       {open && (
         <div className={collapsed ? 'lg:hidden' : ''}>
-          {node.children?.map((child) => <TreeItem key={child.path} node={child} depth={depth + 1} collapsed={collapsed} onRefresh={onRefresh} onPageDragChange={onPageDragChange} />)}
+          {node.children?.map((child) => <TreeItem key={child.path} node={child} depth={depth + 1} collapsed={collapsed} siblings={node.children ?? []} onRefresh={onRefresh} onPageDragChange={onPageDragChange} />)}
         </div>
       )}
     </div>

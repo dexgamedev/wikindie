@@ -81,7 +81,8 @@ export function KanbanCard({
         className="relative rounded-md border border-border bg-card px-3 py-3 shadow-sm shadow-shadow hover:border-accent sm:px-4 sm:py-4"
         draggable={editable}
         onClick={openDialog}
-        onDragEnd={() => {
+        onDragEnd={(event) => {
+          event.stopPropagation()
           setActiveDragSource(null)
           window.setTimeout(() => {
             suppressNextClick.current = false
@@ -89,6 +90,7 @@ export function KanbanCard({
         }}
         onDragStart={(event) => {
           if (!editable) return
+          event.stopPropagation()
           setActiveDragSource(columnIndex)
           suppressNextClick.current = true
           event.dataTransfer.effectAllowed = 'move'

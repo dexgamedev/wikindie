@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type CardPriority, type KanbanBoard as Board, type KanbanCard as Card, type PageBundle, type TaskIdSettings } from '../../lib/api'
 import { wikiIcons } from '../../lib/icons'
-import { createKanbanColumn, isDoneColumn, sortBoardByPriority } from '../../lib/kanban'
+import { createKanbanColumn, getActiveColumnReorderSource, hasColumnDragPayload, isDoneColumn, sortBoardByPriority } from '../../lib/kanban'
 import { breadcrumbsFromPath, findTreeNode, goBack, pageNameFromPath, pageUrl } from '../../lib/paths'
 import { priorityColor, priorityLabel, priorityRank } from '../../lib/priority'
 import { canWrite, useAuthStore, useFilesStore, useGuestMode, useTaskFiltersStore } from '../../lib/store'
@@ -261,6 +261,16 @@ export function KanbanBoard({
     void update(next)
   }
 
+  const moveColumn = (fromColumn: number, targetColumn: number, position: 'before' | 'after') => {
+    if (!mayWrite || fromColumn === targetColumn) return
+    const next = structuredClone(board)
+    const [column] = next.columns.splice(fromColumn, 1)
+    let insertIndex = position === 'before' ? targetColumn : targetColumn + 1
+    if (fromColumn < insertIndex) insertIndex -= 1
+    next.columns.splice(Math.max(0, Math.min(insertIndex, next.columns.length)), 0, column)
+    void update(next)
+  }
+
   const archiveDone = () => {
     if (!mayWrite) return
     const next = structuredClone(board)
@@ -277,8 +287,15 @@ export function KanbanBoard({
     if (changed) void update(next)
   }
 
+  const acceptColumnDrag = (event: React.DragEvent) => {
+    if (!mayWrite) return
+    if (getActiveColumnReorderSource() === null && !hasColumnDragPayload(event.dataTransfer)) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }
+
   return (
-    <section className="flex h-full min-h-0 flex-col">
+    <section className="flex h-full min-h-0 flex-col" onDragEnter={acceptColumnDrag} onDragOver={acceptColumnDrag}>
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel px-3 md:px-4">
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <button
@@ -456,6 +473,7 @@ export function KanbanBoard({
                 users={users}
                 onUpdate={update}
                 onMove={moveCard}
+                onMoveColumn={moveColumn}
                 onAddComment={addComment}
                 onUpdateComment={updateComment}
                 onDeleteComment={deleteComment}

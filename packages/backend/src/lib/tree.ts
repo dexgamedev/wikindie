@@ -9,6 +9,7 @@ export interface TreeNode {
   path: string
   type: 'page' | 'board'
   icon?: string
+  order?: number
   children?: TreeNode[]
 }
 
@@ -25,8 +26,17 @@ function displayNameFromPath(relativePath: string) {
   return parts.length ? parts[parts.length - 1] : 'Home'
 }
 
+function orderFromFrontmatter(frontmatter: Record<string, unknown>) {
+  const order = Number(frontmatter.order)
+  return Number.isFinite(order) ? order : undefined
+}
+
 function sortNodes(nodes: TreeNode[]) {
-  return nodes.sort((a, b) => a.title.localeCompare(b.title))
+  return nodes.sort((a, b) => {
+    const orderA = a.order ?? Number.POSITIVE_INFINITY
+    const orderB = b.order ?? Number.POSITIVE_INFINITY
+    return orderA - orderB || a.title.localeCompare(b.title)
+  })
 }
 
 export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
@@ -46,6 +56,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
         const frontmatter = await readFrontmatter(indexPath)
         if (isHiddenPage(indexPath, frontmatter)) continue
         const children = await buildTree(rel)
+        const order = orderFromFrontmatter(frontmatter)
         nodes.push({
           id: pageIdFromFrontmatter(frontmatter),
           name: entry.name,
@@ -53,6 +64,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
           path: rel,
           type: frontmatter.kanban === true ? 'board' : 'page',
           icon: typeof frontmatter.icon === 'string' ? frontmatter.icon : undefined,
+          ...(order !== undefined ? { order } : {}),
           children,
         })
       } catch {
@@ -67,6 +79,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
     const frontmatter = await readFrontmatter(rel)
     if (isHiddenPage(rel, frontmatter)) continue
     const name = displayNameFromPath(pagePath)
+    const order = orderFromFrontmatter(frontmatter)
     nodes.push({
       id: pageIdFromFrontmatter(frontmatter),
       name,
@@ -74,6 +87,7 @@ export async function buildTree(relativePath = ''): Promise<TreeNode[]> {
       path: pagePath,
       type: frontmatter.kanban === true ? 'board' : 'page',
       icon: typeof frontmatter.icon === 'string' ? frontmatter.icon : undefined,
+      ...(order !== undefined ? { order } : {}),
       children: [],
     })
   }

@@ -13,6 +13,7 @@ export interface TreeNode {
   path: string
   type: 'page' | 'board'
   icon?: string
+  order?: number
   children?: TreeNode[]
 }
 
