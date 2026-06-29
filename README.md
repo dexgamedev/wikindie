@@ -10,7 +10,7 @@
   </tr>
 </table>
 
-[![X](https://img.shields.io/badge/follow-%40dexgamedev-000?logo=x&logoColor=fff&style=flat)](https://x.com/dexgamedev)
+[![X](https://img.shields.io/badge/follow-%40Wikindie-000?logo=x&logoColor=fff&style=flat)](https://x.com/WikindieApp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/dexgamedev/wikindie?style=flat&logo=github)](https://github.com/dexgamedev/wikindie)
 
