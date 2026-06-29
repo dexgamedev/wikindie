@@ -10,6 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Verification is `npm run typecheck` + `npm run build`. There is **no test, lint, or formatter** configured.
 - `npm run build` builds backend, builds frontend, then `scripts/copy-frontend.mjs` copies `packages/frontend/dist` to `packages/backend/public`. `npm run start` requires that build output to exist.
 
+## Task completion workflow
+
+When finishing a roadmap task (a `WK-*` card on the `Wikindie/Roadmap` board), do all of the following:
+
+- **Bump the version before committing.** Run `npm run bump` (`major|minor|patch`, default `patch`); it updates the root and both package versions together. Include the bump in the same commit as the feature, or as a dedicated follow-up commit. Do not commit feature work without a version bump.
+- **Update the board over MCP** once the work is committed: add a comment to the matching `WK-*` card referencing the commit (convention: `Implemented in [`<short-sha>`](https://github.com/dexgamedev/wikindie/commit/<short-sha>)` plus a one-line summary), then move the card to the `done` column.
+- Never `git commit --amend` a commit that is already on `origin` (e.g. a pushed merge commit); put new work on a fresh commit instead.
+
 ## Runtime & environment
 
 - Node does **not** auto-load `.env`. Pass `WIKINDIE_USER`, `JWT_SECRET`, `SPACE_DIR`, `PORT` through the shell, Docker, or host env.

@@ -9,6 +9,11 @@
 - `npm run build` builds backend, builds frontend, then copies `packages/frontend/dist` to `packages/backend/public`; `npm run start` only works after that build output exists.
 - MCP stdio bridge entrypoint after build: `packages/backend/dist/mcp-stdio.js`. It requires `WIKINDIE_URL` and `WIKINDIE_API_KEY`.
 
+## Task Completion
+- When finishing a roadmap task (`WK-*` card on the `Wikindie/Roadmap` board), bump the version before committing: run `npm run bump` (`major|minor|patch`, default `patch`), which updates the root and both package versions together. Do not commit feature work without a version bump.
+- After committing, update the board over MCP: add a comment to the matching `WK-*` card referencing the commit (convention: `Implemented in [`<short-sha>`](https://github.com/dexgamedev/wikindie/commit/<short-sha>)` plus a one-line summary), then move the card to the `done` column.
+- Never `git commit --amend` a commit already on `origin` (such as a pushed merge commit); add a new commit instead.
+
 ## Runtime And Env
 - The app does not auto-load `.env` in Node. Pass `WIKINDIE_USER`, `JWT_SECRET`, `SPACE_DIR`, and `PORT` through the shell, Docker, or host environment.
 - Local auth defaults to `dev:dev` only when `WIKINDIE_USER` is unset and `NODE_ENV` is not production.
