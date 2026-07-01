@@ -14,6 +14,42 @@ export interface WorkspaceStats {
   doneTasks: number
   archivedTasks: number
   diskSizeBytes: number
+  imageCount: number
+  imageDiskSizeBytes: number
+}
+
+const ATTACHMENTS_DIR = '.wikindie/attachments'
+
+async function collectImageStats(stats: WorkspaceStats) {
+  const root = path.join(SPACE_DIR, ATTACHMENTS_DIR)
+  let pageDirs
+  try {
+    pageDirs = await fs.readdir(root, { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  for (const pageDir of pageDirs) {
+    if (!pageDir.isDirectory()) continue
+    let attachmentDirs
+    try {
+      attachmentDirs = await fs.readdir(path.join(root, pageDir.name), { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const attachmentDir of attachmentDirs) {
+      if (!attachmentDir.isDirectory()) continue
+      try {
+        const meta = JSON.parse(await fs.readFile(path.join(root, pageDir.name, attachmentDir.name, 'meta.json'), 'utf8'))
+        if (typeof meta.contentType === 'string' && meta.contentType.startsWith('image/')) {
+          stats.imageCount++
+          stats.imageDiskSizeBytes += Number(meta.size) || 0
+        }
+      } catch {
+        // skip unreadable/missing attachment metadata
+      }
+    }
+  }
 }
 
 async function collectStats(dir: string, stats: WorkspaceStats) {
@@ -61,8 +97,8 @@ async function collectStats(dir: string, stats: WorkspaceStats) {
 }
 
 export async function readWorkspaceStats() {
-  const stats: WorkspaceStats = { totalPages: 0, totalBoards: 0, totalTasks: 0, doneTasks: 0, archivedTasks: 0, diskSizeBytes: 0 }
-  await collectStats(SPACE_DIR, stats)
+  const stats: WorkspaceStats = { totalPages: 0, totalBoards: 0, totalTasks: 0, doneTasks: 0, archivedTasks: 0, diskSizeBytes: 0, imageCount: 0, imageDiskSizeBytes: 0 }
+  await Promise.all([collectStats(SPACE_DIR, stats), collectImageStats(stats)])
   return stats
 }
 

@@ -12,6 +12,7 @@ import { initUserStore } from './lib/users.js'
 import { startWatcher } from './lib/watcher.js'
 import { authenticateToken, requireAuth, requireAuthOrPublicRead } from './middleware/auth.js'
 import { adminRouter } from './routes/admin.js'
+import { attachmentsRouter } from './routes/attachments.js'
 import { authRouter } from './routes/auth.js'
 import { filesRouter } from './routes/files.js'
 import { mcpRouter } from './routes/mcp.js'
@@ -47,6 +48,7 @@ app.use('/api/auth', authRouter)
 app.use('/api/admin', requireAuth, adminRouter)
 app.use('/api/recents', requireAuthOrPublicRead, recentsRouter)
 app.use('/api/stats', requireAuthOrPublicRead, statsRouter)
+app.use('/api/attachments', requireAuthOrPublicRead, attachmentsRouter)
 
 app.use('/api', requireAuthOrPublicRead, filesRouter)
 app.use('/mcp', requireAuth, mcpRouter)

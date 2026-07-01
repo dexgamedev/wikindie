@@ -44,6 +44,16 @@ export interface TaskComment {
   editedBy?: string
 }
 
+export interface AttachmentMeta {
+  id: string
+  pageId: string
+  filename: string
+  contentType: string
+  size: number
+  createdAt: string
+  url: string
+}
+
 export interface KanbanCard {
   uid?: string
   id?: string
@@ -125,6 +135,8 @@ export interface WorkspaceStats {
   doneTasks: number
   archivedTasks: number
   diskSizeBytes: number
+  imageCount: number
+  imageDiskSizeBytes: number
 }
 
 export interface TaskIdSettings {
@@ -154,6 +166,46 @@ export interface ApiKeyRecord {
 
 export function encodePath(path: string) {
   return path.split('/').map(encodeURIComponent).join('/')
+}
+
+function buildAuthHeaders(authToken: string | null, headers?: HeadersInit) {
+  const result = new Headers(headers)
+  if (authToken) result.set('Authorization', `Bearer ${authToken}`)
+  return result
+}
+
+function errorFromResponse(res: Response) {
+  return res.json().then((body) => new Error(body.error ?? 'Request failed')).catch(() => new Error(res.statusText || 'Request failed'))
+}
+
+async function binaryRequest(path: string, init: RequestInit = {}) {
+  const token = useAuthStore.getState().token
+  let res = await fetch(path, {
+    ...init,
+    headers: buildAuthHeaders(token, init.headers),
+  })
+
+  if (res.status === 401) {
+    if (token) useAuthStore.getState().logout()
+    const method = String(init.method ?? 'GET').toUpperCase()
+    if (token && useRuntimeConfigStore.getState().config?.publicReadonly && (method === 'GET' || method === 'HEAD')) {
+      res = await fetch(path, { ...init, headers: buildAuthHeaders(null, init.headers) })
+    }
+  }
+
+  if (!res.ok) throw await errorFromResponse(res)
+  return res
+}
+
+export function isAttachmentUrl(url: string) {
+  try {
+    const parsed = new URL(url, window.location.origin)
+    // Must be same-origin: otherwise a page could point an "attachment" at an
+    // attacker host and we would fetch it with the user's bearer token attached.
+    return parsed.origin === window.location.origin && parsed.pathname.startsWith('/api/attachments/')
+  } catch {
+    return false
+  }
 }
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -242,6 +294,22 @@ export const api = {
     request<PageBundle & { board: KanbanBoard; comment: TaskComment; card: KanbanCard }>(`/api/kanban-comments/${encodePath(path)}`, { method: 'PATCH', body: JSON.stringify({ commentId, body }) }),
   deleteTaskComment: (path: string, commentId: string) =>
     request<PageBundle & { board: KanbanBoard; comment: TaskComment; card: KanbanCard }>(`/api/kanban-comments/${encodePath(path)}`, { method: 'DELETE', body: JSON.stringify({ commentId }) }),
+  uploadAttachment: async (pageId: string, file: File) => {
+    const res = await binaryRequest(`/api/attachments/${encodeURIComponent(pageId)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Wikindie-Filename': file.name,
+        'X-Wikindie-Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    })
+    return (await res.json()) as { attachment: AttachmentMeta }
+  },
+  attachmentBlob: async (url: string) => {
+    if (!isAttachmentUrl(url)) throw new Error('Refusing to fetch non-attachment URL')
+    return (await binaryRequest(url)).blob()
+  },
   recents: (limit = 10) => request<{ pages: RecentPage[] }>(`/api/recents?limit=${limit}`),
   stats: () => request<{ stats: WorkspaceStats }>('/api/stats'),
 }

@@ -163,6 +163,7 @@ Keep this hidden `.wikindie` directory with the rest of your workspace data. Bac
 | `WIKINDIE_CORS_ORIGINS` | unset | Optional comma-separated origins allowed for cross-origin API calls. If omitted, allowed hosts are used when configured. |
 | `WIKINDIE_LOGIN_RATE_LIMIT_MAX` | `10` | Maximum login attempts per client IP in the rate-limit window. |
 | `WIKINDIE_LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | Login rate-limit window in milliseconds. |
+| `WIKINDIE_ATTACHMENT_MAX_BYTES` | `26214400` | Maximum bytes accepted for one attachment upload. |
 | `PORT` | `3000` | Backend HTTP port. |
 
 `.env.example` documents the expected variables, but the Node app does not automatically load `.env` files. Pass variables through your shell, process manager, Docker, or hosting platform.

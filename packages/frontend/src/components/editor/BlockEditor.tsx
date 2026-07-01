@@ -13,11 +13,14 @@ import { BlockNoteView } from '@blocknote/shadcn'
 import { Link2 } from 'lucide-react'
 import '@blocknote/shadcn/style.css'
 import './blocknote.css'
+import { api, isAttachmentUrl } from '../../lib/api'
+import { resolveAttachmentObjectUrl } from '../../lib/attachmentCache'
 import { useFilesStore } from '../../lib/store'
+import { applyImageWidths, collectImageWidths, restoreImageWidths } from './imageWidths'
 import { pagePickerItems } from './pagePicker'
 import { protectWikiReferences, restoreProtectedWikiReferences } from './wikiReferences'
 
-const HIDDEN_SLASH_ITEMS = new Set(['Audio', 'Video', 'File'])
+const HIDDEN_SLASH_ITEMS = new Set(['Audio', 'Video'])
 
 const ALLOWED_LINK_PROTOCOL = /^(https?|ftp|ftps|mailto|tel|callto|sms|cid|xmpp):/i
 
@@ -29,16 +32,19 @@ function isValidWikindieLink(href: string | undefined) {
 }
 
 type Props = {
+  pageId?: string
   value: string
   onChange: (markdown: string) => void
   editable?: boolean
   className?: string
 }
 
-export function BlockEditor({ value, onChange, editable = true, className }: Props) {
+export function BlockEditor({ pageId, value, onChange, editable = true, className }: Props) {
   const editor = useCreateBlockNote({
     links: { isValidLink: isValidWikindieLink },
-  })
+    uploadFile: pageId ? async (file) => (await api.uploadAttachment(pageId, file)).attachment.url : undefined,
+    resolveFileUrl: pageId ? async (url) => (isAttachmentUrl(url) ? resolveAttachmentObjectUrl(url) : url) : undefined,
+  }, [pageId])
   const navigate = useNavigate()
   const tree = useFilesStore((state) => state.tree)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -50,6 +56,7 @@ export function BlockEditor({ value, onChange, editable = true, className }: Pro
     if (seeded.current && value === lastEmittedMd.current) return
     seeded.current = true
     const parsed = editor.tryParseMarkdownToBlocks(protectWikiReferences(value))
+    restoreImageWidths(parsed)
     const blocks = parsed.length ? parsed : [{ type: 'paragraph' as const }]
     isReseeding.current = true
     editor.replaceBlocks(editor.document, blocks)
@@ -61,7 +68,10 @@ export function BlockEditor({ value, onChange, editable = true, className }: Pro
 
   const handleChange = useCallback(() => {
     if (isReseeding.current) return
-    const md = restoreProtectedWikiReferences(editor.blocksToMarkdownLossy(editor.document))
+    const md = applyImageWidths(
+      restoreProtectedWikiReferences(editor.blocksToMarkdownLossy(editor.document)),
+      collectImageWidths(editor.document),
+    )
     if (md === lastEmittedMd.current) return
     lastEmittedMd.current = md
     onChange(md)
@@ -103,7 +113,7 @@ export function BlockEditor({ value, onChange, editable = true, className }: Pro
         editable={editable}
         onChange={handleChange}
         slashMenu={false}
-        filePanel={false}
+        filePanel
         data-wikindie-editor=""
       >
         <SuggestionMenuController
@@ -125,7 +135,7 @@ export function BlockEditor({ value, onChange, editable = true, className }: Pro
             return filterSuggestionItems(
               [
                 pageLink,
-                ...getDefaultReactSlashMenuItems(editor).filter((item) => !HIDDEN_SLASH_ITEMS.has(item.title)),
+                ...getDefaultReactSlashMenuItems(editor).filter((item) => !HIDDEN_SLASH_ITEMS.has(item.title) && (pageId || item.title !== 'File')),
               ],
               query,
             )

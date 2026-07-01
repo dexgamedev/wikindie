@@ -643,16 +643,53 @@ export async function movePage(fromPagePath: string, toPagePath: string) {
   throw notFound('Page not found')
 }
 
+async function collectPageIdsUnder(relativeDir: string, out: Set<string>) {
+  let entries: Dirent[]
+  try {
+    entries = await fs.readdir(safePath(relativeDir), { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === '_sections') continue
+    const rel = joinStoragePath(relativeDir, entry.name)
+    if (entry.isDirectory()) {
+      await collectPageIdsUnder(rel, out)
+      continue
+    }
+    if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+    const file = await readMarkdownByPath(rel).catch(() => null)
+    const id = file && pageIdFromFrontmatter(file.frontmatter)
+    if (id) out.add(id)
+  }
+}
+
+async function deleteAttachmentsForPageIds(pageIds: Iterable<string>) {
+  for (const id of pageIds) {
+    await fs.rm(safePath(`.wikindie/attachments/${id}`), { recursive: true, force: true }).catch(() => {})
+  }
+}
+
 export async function deletePage(pagePath: string) {
   const normalized = normalizePagePath(pagePath)
   const indexPath = pageToIndexPath(normalized)
   const leafPath = pageToLeafPath(normalized)
+
+  // Gather owning page ids (including descendants of an index page) before
+  // deleting, so their attachments don't linger on disk as orphans.
+  const pageIds = new Set<string>()
   if (await exists(indexPath)) {
+    await collectPageIdsUnder(normalized, pageIds)
     await deleteItem(normalized)
+    await deleteAttachmentsForPageIds(pageIds)
     return
   }
   if (await exists(leafPath)) {
+    const file = await readMarkdownByPath(leafPath).catch(() => null)
+    const id = file && pageIdFromFrontmatter(file.frontmatter)
+    if (id) pageIds.add(id)
     await deleteItem(leafPath)
+    await deleteAttachmentsForPageIds(pageIds)
     return
   }
   throw notFound('Page not found')

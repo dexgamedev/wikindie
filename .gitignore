@@ -16,5 +16,6 @@ npm-debug.log*
 # AI
 .claude/
 .opencode/
+.codex/
 
 assets/refs
