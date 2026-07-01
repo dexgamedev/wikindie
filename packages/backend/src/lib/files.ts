@@ -516,6 +516,31 @@ export async function readTaskOverview(pagePath: string): Promise<TaskOverview> 
   return { scope: 'page', ...(await readChildBoardsWithTasks(page.path)) }
 }
 
+const ATTACHMENT_ID_REF = /att_[a-f0-9]{32}/g
+
+// Remove attachments belonging to a page that are no longer referenced anywhere
+// in its content or sections, so deleting an image also reclaims its storage.
+// The full-page scan (content + every section) ensures an image used only in a
+// section is not mistaken for an orphan when the main body is saved.
+async function reconcilePageAttachments(page: PageBundle) {
+  const pageId = pageIdFromFrontmatter(page.frontmatter)
+  if (!pageId) return
+  const dir = `.wikindie/attachments/${pageId}`
+  let entries: Dirent[]
+  try {
+    entries = await fs.readdir(safePath(dir), { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  const text = [page.content, ...page.sections.map((section) => section.content)].join('\n')
+  const referenced = new Set(text.match(ATTACHMENT_ID_REF) ?? [])
+  for (const entry of entries) {
+    if (!entry.isDirectory() || referenced.has(entry.name)) continue
+    await fs.rm(safePath(`${dir}/${entry.name}`), { recursive: true, force: true }).catch(() => {})
+  }
+}
+
 export async function writePage(pagePath: string, content: string, frontmatter: Record<string, unknown> = {}) {
   const resolved = await resolvePageStoragePath(pagePath, true)
   let currentFrontmatter: Record<string, unknown> | undefined
@@ -525,7 +550,9 @@ export async function writePage(pagePath: string, content: string, frontmatter: 
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
   await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(frontmatter, currentFrontmatter))
-  return readPage(pagePath)
+  const page = await readPage(pagePath)
+  await reconcilePageAttachments(page)
+  return page
 }
 
 export async function writePageContent(pagePath: string, content: string) {
@@ -537,7 +564,9 @@ export async function writePageContent(pagePath: string, content: string) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
   await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(currentFrontmatter, currentFrontmatter))
-  return readPage(pagePath)
+  const page = await readPage(pagePath)
+  await reconcilePageAttachments(page)
+  return page
 }
 
 export async function createPage(pagePath: string, kanban = false, meta: CreatePageMeta = {}) {
