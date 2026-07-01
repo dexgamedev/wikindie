@@ -312,4 +312,9 @@ export const api = {
   },
   recents: (limit = 10) => request<{ pages: RecentPage[] }>(`/api/recents?limit=${limit}`),
   stats: () => request<{ stats: WorkspaceStats }>('/api/stats'),
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    request<{ ok: true }>('/api/auth/password', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 }

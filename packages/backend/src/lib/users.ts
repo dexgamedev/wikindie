@@ -201,3 +201,19 @@ export async function deleteUser(id: string) {
 export async function verifyPassword(user: StoredUser, password: string) {
   return argon2.verify(user.passwordHash, password)
 }
+
+export async function changeUserPassword(id: string, newPassword: string) {
+  return withUsersWriteLock(async () => {
+    const store = await loadUsersStore()
+    const user = store.users.find((item) => item.id === id)
+    if (!user) throw notFound('User not found')
+
+    const updated = {
+      ...user,
+      passwordHash: await argon2.hash(newPassword, { type: argon2.argon2id }),
+      updatedAt: new Date().toISOString(),
+    }
+    await saveUsersStore({ ...store, users: store.users.map((item) => (item.id === id ? updated : item)) })
+    return publicUser(updated)
+  })
+}

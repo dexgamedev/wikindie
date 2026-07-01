@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { deleteApiKey, generateApiKey, listApiKeys, revokeApiKey } from '../lib/apikeys.js'
 import { AppError } from '../lib/errors.js'
 import { capRole, isRole, signSession } from '../lib/jwt.js'
-import { findUserByUsername, verifyPassword } from '../lib/users.js'
+import { changeUserPassword, findUserById, findUserByUsername, verifyPassword } from '../lib/users.js'
 import { requireAuth, requireSessionAuth } from '../middleware/auth.js'
 
 export const authRouter = Router()
@@ -12,6 +12,11 @@ const loginWindowMs = Math.max(Number(process.env.WIKINDIE_LOGIN_RATE_LIMIT_WIND
 const loginMaxAttempts = Math.max(Number(process.env.WIKINDIE_LOGIN_RATE_LIMIT_MAX ?? 10), 1)
 const loginAttempts = new Map<string, { count: number; resetAt: number }>()
 let loginPruneCounter = 0
+
+const passwordWindowMs = Math.max(Number(process.env.WIKINDIE_PASSWORD_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000), 1000)
+const passwordMaxAttempts = Math.max(Number(process.env.WIKINDIE_PASSWORD_RATE_LIMIT_MAX ?? 5), 1)
+const passwordAttempts = new Map<string, { count: number; resetAt: number }>()
+let passwordPruneCounter = 0
 
 function pruneExpiredLoginAttempts(now: number) {
   loginPruneCounter += 1
@@ -42,6 +47,37 @@ function clearLoginRateLimit(req: Request) {
   loginAttempts.delete(req.ip || req.socket.remoteAddress || 'unknown')
 }
 
+function pruneExpiredPasswordAttempts(now: number) {
+  passwordPruneCounter += 1
+  if (passwordPruneCounter % 25 !== 0) return
+
+  for (const [key, entry] of passwordAttempts) {
+    if (entry.resetAt <= now) passwordAttempts.delete(key)
+  }
+}
+
+function assertPasswordChangeRateLimit(userId: string) {
+  const now = Date.now()
+  pruneExpiredPasswordAttempts(now)
+  const entry = passwordAttempts.get(userId)
+  if (entry && entry.resetAt > now && entry.count >= passwordMaxAttempts) {
+    throw new AppError(429, 'Too many password change attempts. Try again later.')
+  }
+}
+
+function recordPasswordChangeFailure(userId: string) {
+  const now = Date.now()
+  pruneExpiredPasswordAttempts(now)
+  const current = passwordAttempts.get(userId)
+  const entry = current && current.resetAt > now ? current : { count: 0, resetAt: now + passwordWindowMs }
+  entry.count += 1
+  passwordAttempts.set(userId, entry)
+}
+
+function clearPasswordChangeRateLimit(userId: string) {
+  passwordAttempts.delete(userId)
+}
+
 authRouter.post('/login', loginRateLimit, async (req, res) => {
   const { username, password } = req.body as { username?: string; password?: string }
   if (!username || !password) throw new AppError(401, 'Invalid credentials')
@@ -56,6 +92,34 @@ authRouter.post('/login', loginRateLimit, async (req, res) => {
 
 authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user })
+})
+
+const minPasswordLength = 8
+
+authRouter.post('/password', requireSessionAuth, async (req, res) => {
+  const sessionUser = assertUser(req)
+  const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string }
+
+  if (typeof currentPassword !== 'string' || !currentPassword) {
+    throw new AppError(400, 'Current password is required')
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < minPasswordLength) {
+    throw new AppError(400, `New password must be at least ${minPasswordLength} characters`)
+  }
+
+  const user = (await findUserById(sessionUser.id)) ?? (await findUserByUsername(sessionUser.username))
+  if (!user) throw new AppError(401, 'Authentication required')
+
+  assertPasswordChangeRateLimit(user.id)
+
+  if (!(await verifyPassword(user, currentPassword))) {
+    recordPasswordChangeFailure(user.id)
+    throw new AppError(400, 'Current password is incorrect')
+  }
+
+  await changeUserPassword(user.id, newPassword)
+  clearPasswordChangeRateLimit(user.id)
+  res.json({ ok: true })
 })
 
 function assertUser(req: Request) {

@@ -8,8 +8,8 @@ import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { WelcomePage } from './pages/WelcomePage'
 
-const AdminPage = lazy(() => import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })))
 const ConnectPage = lazy(() => import('./pages/ConnectPage').then((module) => ({ default: module.ConnectPage })))
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const PageView = lazy(() => import('./pages/PageView').then((module) => ({ default: module.PageView })))
 
 function RouteFallback() {
@@ -24,13 +24,6 @@ function Protected({ children }: { children: ReactNode }) {
   const token = useAuthStore((state) => state.token)
   const config = useRuntimeConfigStore((state) => state.config)
   return token || config?.publicReadonly ? children : <Navigate to="/login" replace />
-}
-
-function AdminOnly({ children }: { children: ReactNode }) {
-  const token = useAuthStore((state) => state.token)
-  const role = useAuthStore((state) => state.role)
-  if (!token) return <Navigate to="/login" replace />
-  return role === 'admin' ? children : <Navigate to="/" replace />
 }
 
 function SignedIn({ children }: { children: ReactNode }) {
@@ -95,18 +88,7 @@ export default function App() {
           </Protected>
         }
       />
-      <Route
-        path="/admin"
-        element={
-          <AdminOnly>
-            <AppLayout>
-              <LazyRoute>
-                <AdminPage />
-              </LazyRoute>
-            </AppLayout>
-          </AdminOnly>
-        }
-      />
+      <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
       <Route
         path="/connect"
         element={
@@ -114,6 +96,18 @@ export default function App() {
             <AppLayout>
               <LazyRoute>
                 <ConnectPage />
+              </LazyRoute>
+            </AppLayout>
+          </SignedIn>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <SignedIn>
+            <AppLayout>
+              <LazyRoute>
+                <DashboardPage />
               </LazyRoute>
             </AppLayout>
           </SignedIn>

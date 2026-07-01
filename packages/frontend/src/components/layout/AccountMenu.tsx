@@ -1,4 +1,4 @@
-import { LogIn, LogOut, Moon, Shield, Sun } from 'lucide-react'
+import { LayoutDashboard, LogIn, LogOut, Moon, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
@@ -90,17 +90,15 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
             </div>
           </div>
 
-          {role === 'admin' && (
-            <button
-              className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
-              onClick={() => {
-                setOpen(false)
-                navigate('/admin')
-              }}
-            >
-              <Shield size={15} /> Admin Console
-            </button>
-          )}
+          <button
+            className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
+            onClick={() => {
+              setOpen(false)
+              navigate('/dashboard')
+            }}
+          >
+            <LayoutDashboard size={15} /> Dashboard
+          </button>
           <button
             className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
             onClick={toggleTheme}
