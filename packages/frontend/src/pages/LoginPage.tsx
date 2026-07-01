@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import logoUrl from '../assets/wikindie_logo.png'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { api } from '../lib/api'
 import { useAuthStore, useRuntimeConfigStore } from '../lib/store'
@@ -71,11 +72,10 @@ export function LoginPage() {
               autoComplete="username"
               className="w-full"
             />
-            <Input
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              type="password"
               autoComplete="current-password"
               className="w-full"
             />

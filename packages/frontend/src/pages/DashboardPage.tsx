@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { McpConnectionPanel } from '../components/integrations/McpConnectionPanel'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { api, type ApiKeyRecord } from '../lib/api'
 import { adminApi, type AdminUser } from '../lib/adminApi'
 import { roleBadgeClass } from '../lib/badges'
@@ -84,9 +85,8 @@ function ChangePasswordForm() {
           <label className="mb-1 block text-xs font-medium text-text-muted" htmlFor="current-password">
             Current password
           </label>
-          <Input
+          <PasswordInput
             id="current-password"
-            type="password"
             autoComplete="current-password"
             value={currentPassword}
             onChange={(event) => setCurrentPassword(event.target.value)}
@@ -97,9 +97,8 @@ function ChangePasswordForm() {
           <label className="mb-1 block text-xs font-medium text-text-muted" htmlFor="new-password">
             New password
           </label>
-          <Input
+          <PasswordInput
             id="new-password"
-            type="password"
             autoComplete="new-password"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
@@ -110,9 +109,8 @@ function ChangePasswordForm() {
           <label className="mb-1 block text-xs font-medium text-text-muted" htmlFor="confirm-password">
             Confirm new password
           </label>
-          <Input
+          <PasswordInput
             id="confirm-password"
-            type="password"
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
@@ -354,7 +352,7 @@ export function DashboardPage() {
               </div>
               <div className="space-y-3">
                 <Input value={newUsername} onChange={(event) => setNewUsername(event.target.value)} placeholder="Username" className="w-full" />
-                <Input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Temporary password" type="password" className="w-full" />
+                <PasswordInput value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Temporary password" autoComplete="new-password" className="w-full" />
                 <RoleSelect value={newRole} onChange={setNewRole} options={allRoles} />
                 <Button variant="primary" type="submit" className="w-full justify-center">Create user</Button>
               </div>
