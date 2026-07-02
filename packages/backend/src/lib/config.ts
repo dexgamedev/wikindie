@@ -19,6 +19,13 @@ export const publicDefaultPage = process.env.WIKINDIE_PUBLIC_DEFAULT_PAGE?.trim(
 export const allowedHosts = new Set(csvEnv('WIKINDIE_ALLOWED_HOSTS'))
 export const corsOrigins = new Set(csvEnv('WIKINDIE_CORS_ORIGINS'))
 
+// OIDC is enabled only when explicitly turned on AND the minimum discovery
+// details are present. Everything stays off by default so local username/password
+// login is untouched.
+export const oidcEnabled =
+  envFlag('OIDC_ENABLED') && Boolean(process.env.OIDC_ISSUER?.trim()) && Boolean(process.env.OIDC_CLIENT_ID?.trim())
+export const oidcButtonLabel = process.env.OIDC_BUTTON_LABEL?.trim() || 'Sign in with SSO'
+
 export function hostnameFromHostHeader(hostHeader: string | string[] | undefined) {
   const value = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader
   if (!value) return ''
@@ -68,5 +75,7 @@ export function publicConfig() {
   return {
     publicReadonly,
     publicDefaultPage,
+    oidcEnabled,
+    oidcButtonLabel,
   }
 }

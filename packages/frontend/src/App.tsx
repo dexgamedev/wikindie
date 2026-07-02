@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import { api } from './lib/api'
 import { pageUrl } from './lib/paths'
 import { useAuthStore, useRuntimeConfigStore } from './lib/store'
+import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { WelcomePage } from './pages/WelcomePage'
@@ -50,7 +51,7 @@ export default function App() {
         if (!cancelled) setConfig(result)
       })
       .catch(() => {
-        if (!cancelled) setConfig({ publicReadonly: false, publicDefaultPage: '' })
+        if (!cancelled) setConfig({ publicReadonly: false, publicDefaultPage: '', oidcEnabled: false, oidcButtonLabel: '' })
       })
       .finally(() => {
         if (!cancelled) setConfigLoaded(true)
@@ -66,6 +67,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route
         path="/"
         element={
