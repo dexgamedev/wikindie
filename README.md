@@ -92,6 +92,7 @@ The agent sees the same workspace you do: pages, sections, kanban cards, frontma
 - **HTTP API** for pages, sections, frontmatter, boards, tasks, and comments.
 - **Public read-only mode** for sharing a workspace as a public site.
 - **Role-based access** for admin, editor, and readonly. Revocable `wk_`-prefixed API keys.
+- **Single sign-on (OIDC)**, optional. Log in with Authentik, Keycloak, or any OIDC provider; coexists with local login and maps provider groups to roles.
 - **Realtime UI.** Page and board changes push to connected clients over WebSocket.
 - **Docker image** that serves the built frontend from the backend on a single port.
 
@@ -122,6 +123,8 @@ docker compose up --build
 ```
 
 The compose file mounts `./space` into the container as `/space`, so your Docker workspace lives in a root-level `space` directory.
+
+`docker compose up` uses `docker-compose.yml`, which publishes the app on `http://localhost:3000` and keeps the workspace as plain files under `./space`. For a server behind a reverse proxy (Dokploy, Traefik, nginx, and others), deploy `docker-compose.server.yml` instead: it publishes no host port — the proxy reaches the container over Docker's internal network — and stores the workspace in a Docker-managed named volume that survives redeploys.
 
 ### Production data safety
 
@@ -171,6 +174,40 @@ Keep this hidden `.wikindie` directory with the rest of your workspace data. Bac
 `.env.example` documents the expected variables, but the Node app does not automatically load `.env` files. Pass variables through your shell, process manager, Docker, or hosting platform.
 
 Change `WIKINDIE_USER` and `JWT_SECRET` before exposing the app outside your local machine.
+
+### Single sign-on (OIDC)
+
+Wikindie can delegate login to any OpenID Connect provider (Authentik, Keycloak, Authelia, and others) while local username/password login keeps working alongside it. SSO is **off by default** and configured entirely through environment variables, so existing deployments are unaffected.
+
+To turn it on, register Wikindie as an OIDC client in your provider with this redirect URI:
+
+```text
+https://your-wikindie.example.com/api/auth/oidc/callback
+```
+
+then set at least `OIDC_ENABLED`, `OIDC_ISSUER`, and `OIDC_CLIENT_ID` (plus `OIDC_CLIENT_SECRET` for a confidential client). A "Sign in with SSO" button then appears on the login page.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `OIDC_ENABLED` | unset | Set to `true` to enable SSO. Also requires `OIDC_ISSUER` and `OIDC_CLIENT_ID`. |
+| `OIDC_ISSUER` | unset | Issuer URL used for discovery, such as `https://auth.example.com/application/o/wikindie/`. |
+| `OIDC_CLIENT_ID` | unset | OAuth client ID from your provider. |
+| `OIDC_CLIENT_SECRET` | unset | Client secret. Omit for a public, PKCE-only client. |
+| `OIDC_REDIRECT_URI` | request origin + `/api/auth/oidc/callback` | Exact redirect URI registered with the provider. Set it explicitly if auto-detection behind a proxy is wrong. |
+| `OIDC_SCOPES` | `openid profile email` | Space-separated scopes requested from the provider. |
+| `OIDC_USERNAME_CLAIM` | `preferred_username` | Claim used as the Wikindie username. Falls back to `email`, then `sub`. |
+| `OIDC_DEFAULT_ROLE` | `readonly` | Role for users not matched by any group mapping. |
+| `OIDC_GROUPS_CLAIM` | `groups` | Claim holding the user's group names. |
+| `OIDC_ADMIN_GROUPS` | unset | Comma-separated groups mapped to `admin` (case-insensitive). |
+| `OIDC_EDITOR_GROUPS` | unset | Comma-separated groups mapped to `editor`. |
+| `OIDC_READONLY_GROUPS` | unset | Comma-separated groups mapped to `readonly`. |
+| `OIDC_SYNC_ROLES` | unset | Re-sync roles from the provider on every login (IdP is the source of truth). Default: groups only seed the role on first login, and role changes made in the UI persist. |
+| `OIDC_BUTTON_LABEL` | `Sign in with SSO` | Text shown on the SSO button. |
+| `OIDC_ALLOW_INSECURE` | unset | Allow an `http://` issuer. Local testing only; never in production. |
+
+Accounts are provisioned just in time: the first SSO sign-in creates the user, linking to an existing local account when the usernames match. Group mappings seed the new user's role; afterwards you can adjust roles from the admin dashboard and they persist unless `OIDC_SYNC_ROLES=true`.
+
+With OIDC enabled, `WIKINDIE_USER` becomes optional, so you can run an SSO-only instance. Keep it set if you want a local break-glass admin alongside SSO.
 
 ## Data model
 
