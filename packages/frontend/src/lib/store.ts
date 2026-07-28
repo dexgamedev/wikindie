@@ -7,6 +7,8 @@ export type Role = 'admin' | 'editor' | 'readonly'
 export interface RuntimeConfig {
   publicReadonly: boolean
   publicDefaultPage: string
+  oidcEnabled: boolean
+  oidcButtonLabel: string
 }
 
 interface AuthState {

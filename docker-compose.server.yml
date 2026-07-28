@@ -1,0 +1,41 @@
+# Compose file for servers behind a reverse proxy (Dokploy, Coolify, Traefik,
+# nginx, ...). Differences from the local docker-compose.yml:
+#   - No published host port: the proxy reaches the container over Docker's
+#     internal network, so nothing is exposed on the host.
+#   - The workspace lives in a Docker-managed named volume that survives
+#     redeploys (and can be backed up, e.g. via Dokploy Volume Backups), instead
+#     of a ./space bind that a re-cloning platform would wipe.
+#   - WIKINDIE_USER is optional here so you can run an SSO-only instance.
+# Point your platform's compose path at this file. For local use, use the
+# default docker-compose.yml instead.
+services:
+  wikindie:
+    build: .
+    environment:
+      # Optional: seeds a local admin on first start. Not required when OIDC is
+      # configured (accounts are provisioned via SSO). Keep it set if you want a
+      # local break-glass admin alongside SSO.
+      WIKINDIE_USER: "${WIKINDIE_USER:-}"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in your environment}"
+      SPACE_DIR: /space
+      # Optional OIDC/SSO. See README (Single sign-on) and .env.example.
+      OIDC_ENABLED: "${OIDC_ENABLED:-}"
+      OIDC_ISSUER: "${OIDC_ISSUER:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      OIDC_REDIRECT_URI: "${OIDC_REDIRECT_URI:-}"
+      OIDC_SCOPES: "${OIDC_SCOPES:-}"
+      OIDC_USERNAME_CLAIM: "${OIDC_USERNAME_CLAIM:-}"
+      OIDC_GROUPS_CLAIM: "${OIDC_GROUPS_CLAIM:-}"
+      OIDC_ADMIN_GROUPS: "${OIDC_ADMIN_GROUPS:-}"
+      OIDC_EDITOR_GROUPS: "${OIDC_EDITOR_GROUPS:-}"
+      OIDC_READONLY_GROUPS: "${OIDC_READONLY_GROUPS:-}"
+      OIDC_SYNC_ROLES: "${OIDC_SYNC_ROLES:-}"
+      OIDC_DEFAULT_ROLE: "${OIDC_DEFAULT_ROLE:-}"
+      OIDC_BUTTON_LABEL: "${OIDC_BUTTON_LABEL:-}"
+      OIDC_ALLOW_INSECURE: "${OIDC_ALLOW_INSECURE:-}"
+    volumes:
+      - wikindie_space:/space
+
+volumes:
+  wikindie_space:

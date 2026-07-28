@@ -60,6 +60,7 @@ type BoardLocation = { boardPath?: string; boardId?: string }
 type TaskCommentLocator = BoardLocation & { taskId?: string; cardUid?: string; columnId?: string; index?: number }
 
 const prioritySchema = z.enum(['high', 'medium', 'low'])
+const columnStatusSchema = z.enum(['backlog', 'next', 'in_progress', 'done', 'custom'])
 const pageIdentifierSchema = {
   path: z.string().optional().describe('Human page path, such as Projects/Wikindie/Roadmap'),
   id: z.string().optional().describe('Stable page id from frontmatter, such as pg_...'),
@@ -103,6 +104,113 @@ async function boardPathFromLocation(input: BoardLocation) {
 function boardForPage(page: PageBundle) {
   if (page.type !== 'board') throw new AppError(400, 'Page is not a kanban board')
   return normalizeKanbanBoard(parseKanban(page.content), parseTaskIdSettings(page.frontmatter), parseKanbanColumnMetadata(page.frontmatter), true, parseTaskComments(page.frontmatter))
+}
+
+const defaultBoardPageBytes = 60000
+
+type BoardReadOptions = {
+  columnId?: string
+  includeDescriptions: boolean
+  includeComments: boolean
+  includeArchived: boolean
+  cursor?: string
+  limit?: number
+  maxBytes: number
+}
+
+function projectCard(card: KanbanCard, options: BoardReadOptions): KanbanCard {
+  const projected: KanbanCard = { ...card }
+  if (!options.includeDescriptions) delete projected.description
+  if (!options.includeComments) delete projected.comments
+  return projected
+}
+
+function parseBoardCursor(cursor: string | undefined) {
+  if (!cursor) return { column: 0, card: 0 }
+  const match = /^(\d+):(\d+)$/.exec(cursor)
+  if (!match) throw new AppError(400, `Invalid cursor: ${cursor}. Pass back the nextCursor returned by a previous get_board call.`)
+  return { column: Number(match[1]), card: Number(match[2]) }
+}
+
+// Cards are walked in column order and emitted until the caller's card limit or byte budget is hit,
+// so a board can never blow past an MCP client's output cap no matter how many cards it grows to.
+export function readBoardPage(board: KanbanBoard, options: BoardReadOptions) {
+  const columns = board.columns
+    .filter((column) => !options.columnId || column.id === options.columnId)
+    .map((column) => ({ ...column, cards: column.cards.filter((card) => options.includeArchived || !card.archived) }))
+  if (options.columnId && columns.length === 0) throw notFound(`Column not found: ${options.columnId}`)
+
+  const start = parseBoardCursor(options.cursor)
+  const limit = options.limit ?? Number.POSITIVE_INFINITY
+  const paged = columns.map((column) => ({ ...column, totalCards: column.cards.length, cards: [] as KanbanCard[] }))
+
+  let returnedCards = 0
+  let bytes = 0
+  let nextCursor: string | null = null
+
+  walk: for (let columnIndex = Math.min(start.column, columns.length); columnIndex < columns.length; columnIndex += 1) {
+    const cards = columns[columnIndex].cards
+    for (let cardIndex = columnIndex === start.column ? start.card : 0; cardIndex < cards.length; cardIndex += 1) {
+      const card = projectCard(cards[cardIndex], options)
+      const size = JSON.stringify(card).length
+      // Always emit at least one card per page, otherwise an oversized card would stall the cursor forever.
+      if (returnedCards > 0 && (returnedCards >= limit || bytes + size > options.maxBytes)) {
+        nextCursor = `${columnIndex}:${cardIndex}`
+        break walk
+      }
+      paged[columnIndex].cards.push(card)
+      returnedCards += 1
+      bytes += size
+    }
+  }
+
+  const filtered = Boolean(options.columnId) || !options.includeDescriptions || !options.includeComments || !options.includeArchived
+  return {
+    columns: paged,
+    pagination: {
+      returnedCards,
+      totalCards: columns.reduce((sum, column) => sum + column.cards.length, 0),
+      nextCursor,
+      complete: nextCursor === null && !options.cursor && !filtered,
+    },
+  }
+}
+
+function summarizeTitles(titles: string[]) {
+  const shown = titles.slice(0, 3).join(', ')
+  return titles.length > 3 ? `${shown}, +${titles.length - 3} more` : shown
+}
+
+// save_board is a full replace, so a caller working from a paginated or filtered get_board response
+// would silently wipe every card it never saw. Refuse unless the loss is explicitly acknowledged.
+export function assertNoCardLoss(previous: KanbanBoard, next: KanbanBoard) {
+  const cardKey = (card: KanbanCard) => card.uid ?? `title:${card.title.trim().toLowerCase()}`
+  const incoming = new Map<string, KanbanCard>()
+  for (const column of next.columns) {
+    for (const card of column.cards) incoming.set(cardKey(card), card)
+  }
+
+  const dropped: string[] = []
+  const stripped: string[] = []
+  for (const column of previous.columns) {
+    for (const card of column.cards) {
+      const match = incoming.get(cardKey(card))
+      if (!match) dropped.push(card.title)
+      else if ((card.description && !match.description) || (card.comments?.length && !match.comments?.length)) stripped.push(card.title)
+    }
+  }
+  if (!dropped.length && !stripped.length) return
+
+  const details = [
+    dropped.length ? `${dropped.length} card(s) missing entirely (${summarizeTitles(dropped)})` : null,
+    stripped.length ? `${stripped.length} card(s) losing their description or comments (${summarizeTitles(stripped)})` : null,
+  ]
+    .filter(Boolean)
+    .join('; ')
+  throw new AppError(
+    400,
+    `save_board replaces the whole board and this payload would discard data: ${details}. Read the board with get_board until pagination.complete is true, or pass allowCardLoss: true if the removal is intentional.`,
+  )
 }
 
 function assertNoReservedLabels(labels: string[]) {
@@ -432,13 +540,44 @@ export function createWikindieMcpServer(user: SessionUser) {
     },
   )
 
+  const boardReadSchema = {
+    ...pageIdentifierSchema,
+    columnId: z.string().optional().describe('Return cards from this column only'),
+    includeDescriptions: z.boolean().default(true).describe('Include card descriptions. Set false for a compact overview.'),
+    includeComments: z.boolean().default(true).describe('Include card comments.'),
+    includeArchived: z.boolean().default(true).describe('Include archived cards.'),
+    cursor: z.string().optional().describe('Continue from the nextCursor returned by a previous call.'),
+    limit: z.number().int().min(1).max(1000).optional().describe('Maximum number of cards to return in this page.'),
+    maxBytes: z
+      .number()
+      .int()
+      .min(2000)
+      .max(400000)
+      .default(defaultBoardPageBytes)
+      .describe('Approximate JSON size budget for the returned cards. The response is split into pages to stay under it.'),
+  }
+
   server.registerTool(
     'get_board',
-    { title: 'Get Board', description: 'Read a kanban board by path or id.', inputSchema: pageIdentifierSchema },
-    async (input) => {
+    {
+      title: 'Get Board',
+      description:
+        'Read a kanban board by path or id. Cards are paginated: follow pagination.nextCursor until it is null. Only a response with pagination.complete === true is a full board safe to feed back into save_board.',
+      inputSchema: boardReadSchema,
+    },
+    async ({ columnId, includeDescriptions, includeComments, includeArchived, cursor, limit, maxBytes, ...input }) => {
       assertPermission(user, 'read')
       const page = await readPageFromIdentifier(input)
-      return toolResult({ ...page, board: boardForPage(page) })
+      const board = boardForPage(page)
+      const { columns, pagination } = readBoardPage(board, { columnId, includeDescriptions, includeComments, includeArchived, cursor, limit, maxBytes })
+      return toolResult({
+        id: page.id,
+        path: page.path,
+        title: typeof page.frontmatter?.title === 'string' ? page.frontmatter.title : pageTitleFromPath(page.path),
+        icon: page.frontmatter?.icon,
+        board: { columns },
+        pagination,
+      })
     },
   )
 
@@ -466,7 +605,7 @@ export function createWikindieMcpServer(user: SessionUser) {
   const kanbanColumnSchema = z.object({
     id: z.string(),
     title: z.string(),
-    status: z.enum(['backlog', 'next', 'in_progress', 'done', 'custom']).default('custom'),
+    status: columnStatusSchema.default('custom'),
     icon: z.string().optional(),
     cards: z.array(kanbanCardSchema).default([]),
   })
@@ -477,12 +616,84 @@ export function createWikindieMcpServer(user: SessionUser) {
 
   server.registerTool(
     'save_board',
-    { title: 'Save Board', description: 'Replace a complete kanban board structure.', inputSchema: { ...pageIdentifierSchema, board: kanbanBoardSchema } },
-    async ({ board, ...input }) => {
+    {
+      title: 'Save Board',
+      description:
+        'Replace a complete kanban board structure. Everything you omit is deleted, so prefer create_task/update_task/move_task/archive_task for card edits and patch_board for column edits; use this only for a full rewrite.',
+      inputSchema: { ...pageIdentifierSchema, board: kanbanBoardSchema, allowCardLoss: z.boolean().default(false).describe('Permit dropping existing cards or clearing their description/comments.') },
+    },
+    async ({ board, allowCardLoss, ...input }) => {
       assertPermission(user, 'write')
       const page = await readPageFromIdentifier(input)
-      boardForPage(page)
+      const previous = boardForPage(page)
+      if (!allowCardLoss) assertNoCardLoss(previous, board as KanbanBoard)
       return toolResult(await writeBoard(page, board as KanbanBoard))
+    },
+  )
+
+  server.registerTool(
+    'patch_board',
+    {
+      title: 'Patch Board',
+      description: 'Add, update, remove or reorder columns without resending the cards. Card contents are preserved untouched.',
+      inputSchema: {
+        ...pageIdentifierSchema,
+        addColumns: z
+          .array(z.object({ id: z.string().optional(), title: z.string().min(1), status: columnStatusSchema.default('custom'), icon: z.string().optional(), index: z.number().int().min(0).optional() }))
+          .optional()
+          .describe('Columns to create. index is the position in the board, appended when omitted.'),
+        updateColumns: z.array(z.object({ id: z.string().min(1), title: z.string().min(1).optional(), status: columnStatusSchema.optional(), icon: z.string().optional() })).optional(),
+        removeColumns: z.array(z.object({ id: z.string().min(1), moveCardsTo: z.string().optional().describe('Column that inherits the cards. Required when the column is not empty.') })).optional(),
+        columnOrder: z.array(z.string()).optional().describe('Full ordered list of column ids after the other operations are applied.'),
+      },
+    },
+    async ({ addColumns, updateColumns, removeColumns, columnOrder, ...input }) => {
+      assertPermission(user, 'write')
+      const page = await readPageFromIdentifier(input)
+      const board = boardForPage(page)
+      let columns = board.columns.map((column) => ({ ...column, cards: [...column.cards] }))
+      const columnById = (id: string) => {
+        const found = columns.find((column) => column.id === id)
+        if (!found) throw notFound(`Column not found: ${id}`)
+        return found
+      }
+
+      for (const patch of updateColumns ?? []) {
+        const column = columnById(patch.id)
+        if (patch.title !== undefined) column.title = patch.title
+        if (patch.status !== undefined) column.status = patch.status
+        if (patch.icon !== undefined) column.icon = patch.icon
+      }
+
+      for (const addition of addColumns ?? []) {
+        if (addition.id && columns.some((column) => column.id === addition.id)) throw new AppError(409, `Column already exists: ${addition.id}`)
+        const column = { id: addition.id ?? '', title: addition.title, status: addition.status, icon: addition.icon, cards: [] as KanbanCard[] }
+        columns.splice(addition.index ?? columns.length, 0, column)
+      }
+
+      for (const removal of removeColumns ?? []) {
+        const column = columnById(removal.id)
+        if (column.cards.length) {
+          if (!removal.moveCardsTo) throw new AppError(400, `Column "${removal.id}" still holds ${column.cards.length} card(s). Pass moveCardsTo to relocate them.`)
+          if (removal.moveCardsTo === removal.id) throw new AppError(400, 'moveCardsTo must be a different column')
+          columnById(removal.moveCardsTo).cards.push(...column.cards)
+        }
+        columns = columns.filter((candidate) => candidate !== column)
+      }
+
+      if (columnOrder) {
+        const ordered = columnOrder.map((id) => {
+          const found = columns.find((column) => column.id === id)
+          if (!found) throw notFound(`Column not found: ${id}`)
+          return found
+        })
+        const missing = columns.filter((column) => !ordered.includes(column))
+        if (missing.length) throw new AppError(400, `columnOrder must list every column. Missing: ${missing.map((column) => column.id).join(', ')}`)
+        columns = ordered
+      }
+
+      const saved = await writeBoard(page, { columns })
+      return toolResult({ id: saved.id, path: saved.path, columns: saved.board.columns.map(({ cards, ...column }) => ({ ...column, totalCards: cards.length })) })
     },
   )
 

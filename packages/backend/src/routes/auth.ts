@@ -1,9 +1,16 @@
 import { Router } from 'express'
 import type { NextFunction, Request, Response } from 'express'
 import { deleteApiKey, generateApiKey, listApiKeys, revokeApiKey } from '../lib/apikeys.js'
+import { oidcEnabled } from '../lib/config.js'
 import { AppError } from '../lib/errors.js'
 import { capRole, isRole, signSession } from '../lib/jwt.js'
-import { changeUserPassword, findUserById, findUserByUsername, verifyPassword } from '../lib/users.js'
+import {
+  completeAuthorization,
+  createAuthorizationRequest,
+  resolveRedirectUri,
+  type OidcTransaction,
+} from '../lib/oidc.js'
+import { changeUserPassword, findUserById, findUserByUsername, upsertOidcUser, verifyPassword } from '../lib/users.js'
 import { requireAuth, requireSessionAuth } from '../middleware/auth.js'
 
 export const authRouter = Router()
@@ -92,6 +99,60 @@ authRouter.post('/login', loginRateLimit, async (req, res) => {
 
 authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user })
+})
+
+// --- OIDC (SSO) -----------------------------------------------------------
+// Login/callback transactions are held in memory keyed by the OAuth `state`.
+// A single-instance filesystem app has no shared store, and these are short
+// lived (a few minutes between redirect and callback), so a Map is sufficient.
+const oidcTxTtlMs = 10 * 60 * 1000
+const oidcTransactions = new Map<string, OidcTransaction & { expiresAt: number }>()
+
+function pruneOidcTransactions(now: number) {
+  for (const [key, entry] of oidcTransactions) {
+    if (entry.expiresAt <= now) oidcTransactions.delete(key)
+  }
+}
+
+authRouter.get('/oidc/login', async (req, res) => {
+  if (!oidcEnabled) throw new AppError(404, 'OIDC is not enabled')
+
+  const redirectUri = resolveRedirectUri(req.protocol, req.get('host'))
+  const { url, state, nonce, codeVerifier } = await createAuthorizationRequest(redirectUri)
+
+  const now = Date.now()
+  pruneOidcTransactions(now)
+  oidcTransactions.set(state, { state, nonce, codeVerifier, redirectUri, expiresAt: now + oidcTxTtlMs })
+
+  res.redirect(url)
+})
+
+authRouter.get('/oidc/callback', async (req, res) => {
+  if (!oidcEnabled) throw new AppError(404, 'OIDC is not enabled')
+
+  const state = typeof req.query.state === 'string' ? req.query.state : ''
+  const tx = state ? oidcTransactions.get(state) : undefined
+  if (tx) oidcTransactions.delete(state)
+
+  try {
+    if (!tx || tx.expiresAt <= Date.now()) throw new Error('Invalid or expired login attempt. Please try again.')
+
+    // Reconstruct the exact callback URL from the stored redirect_uri plus the
+    // incoming query so openid-client can validate state/code against it.
+    const currentUrl = new URL(tx.redirectUri)
+    const queryString = req.originalUrl.split('?')[1] ?? ''
+    currentUrl.search = queryString
+
+    const profile = await completeAuthorization(currentUrl, tx)
+    const user = await upsertOidcUser(profile)
+    const token = signSession({ id: user.id, username: user.username, role: user.role })
+
+    const params = new URLSearchParams({ token, username: user.username, role: user.role })
+    res.redirect(`/auth/callback#${params.toString()}`)
+  } catch (error) {
+    const message = error instanceof AppError || error instanceof Error ? error.message : 'SSO login failed'
+    res.redirect(`/login?error=${encodeURIComponent(message)}`)
+  }
 })
 
 const minPasswordLength = 8

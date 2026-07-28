@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import logoUrl from '../assets/wikindie_logo.png'
 import { Button } from '../components/ui/Button'
@@ -19,9 +19,21 @@ export function LoginPage() {
   const token = useAuthStore((state) => state.token)
   const setSession = useAuthStore((state) => state.setSession)
   const publicReadonly = useRuntimeConfigStore((state) => state.config?.publicReadonly)
+  const oidcEnabled = useRuntimeConfigStore((state) => state.config?.oidcEnabled)
+  const oidcButtonLabel = useRuntimeConfigStore((state) => state.config?.oidcButtonLabel)
   const [username, setUsername] = useState(import.meta.env.DEV ? 'dev' : '')
   const [password, setPassword] = useState(import.meta.env.DEV ? 'dev' : '')
   const [error, setError] = useState('')
+
+  // Surface errors bounced back from the OIDC callback (e.g. ?error=...).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const oidcError = params.get('error')
+    if (oidcError) {
+      setError(oidcError)
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
 
   if (token) return <Navigate to="/" replace />
 
@@ -84,6 +96,22 @@ export function LoginPage() {
               Sign in
             </Button>
           </div>
+
+          {oidcEnabled && (
+            <div className="mt-4">
+              <div className="mb-4 flex items-center gap-3 text-xs text-text-muted">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <a
+                href="/api/auth/oidc/login"
+                className="flex w-full items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-text-heading transition hover:bg-body"
+              >
+                {oidcButtonLabel || 'Sign in with SSO'}
+              </a>
+            </div>
+          )}
         </form>
 
         <ul className="grid w-full max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
