@@ -1,6 +1,6 @@
 {
   "name": "wikindie",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "Filesystem-backed wiki for notes, docs, and lightweight planning.",
   "license": "MIT",
   "private": true,
@@ -15,11 +15,29 @@
     "start": "npm run start -w packages/backend",
     "typecheck": "npm run typecheck -w packages/backend && npm run typecheck -w packages/frontend",
     "bump": "node scripts/bump.mjs",
+    "check:markdown": "node scripts/check-markdown.mjs",
     "screenshots": "node scripts/screenshots.mjs"
   },
   "devDependencies": {
+    "@blocknote/server-util": "^0.50.0",
     "concurrently": "^9.1.2",
     "playwright": "^1.60.0",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@tiptap/core": "3.32.2",
+    "@tiptap/extension-bold": "3.32.2",
+    "@tiptap/extension-bubble-menu": "3.32.2",
+    "@tiptap/extension-code": "3.32.2",
+    "@tiptap/extension-floating-menu": "3.32.2",
+    "@tiptap/extension-horizontal-rule": "3.32.2",
+    "@tiptap/extension-italic": "3.32.2",
+    "@tiptap/extension-paragraph": "3.32.2",
+    "@tiptap/extension-strike": "3.32.2",
+    "@tiptap/extension-text": "3.32.2",
+    "@tiptap/extension-underline": "3.32.2",
+    "@tiptap/extensions": "3.32.2",
+    "@tiptap/pm": "3.32.2",
+    "@tiptap/react": "3.32.2"
   }
 }

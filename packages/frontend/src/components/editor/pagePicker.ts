@@ -37,7 +37,8 @@ export function pagePickerItems(
   tree: TreeNode[],
   query: string,
 ): DefaultReactSuggestionItem[] {
-  const pages = flattenTree(tree)
+  // Keep each group contiguous: BlockNote keys group labels by name, so interleaved groups leave stale labels.
+  const pages = flattenTree(tree).sort((a, b) => Number(a.type === 'board') - Number(b.type === 'board'))
   const items = pages.map<DefaultReactSuggestionItem>((page) => ({
     title: page.title,
     subtext: page.path,
