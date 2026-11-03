@@ -49,7 +49,9 @@ The live showcase at [wikindie.dexgamedev.com](https://wikindie.dexgamedev.com) 
 macOS / Linux:
 
 ```bash
+mkdir -p space
 docker run -d -p 3000:3000 -v $(pwd)/space:/space \
+  --user "$(id -u):$(id -g)" \
   -e WIKINDIE_USER=you:your-strong-password \
   -e JWT_SECRET=$(openssl rand -hex 32) \
   -e SPACE_DIR=/space \
@@ -59,6 +61,7 @@ docker run -d -p 3000:3000 -v $(pwd)/space:/space \
 Windows (PowerShell):
 
 ```powershell
+mkdir -Force space
 docker run -d -p 3000:3000 -v "${PWD}/space:/space" `
   -e WIKINDIE_USER=you:your-strong-password `
   -e JWT_SECRET=$(-join ((48..57) + (97..102) | Get-Random -Count 64 | ForEach-Object {[char]$_})) `
@@ -67,6 +70,8 @@ docker run -d -p 3000:3000 -v "${PWD}/space:/space" `
 ```
 
 Open `http://localhost:3000`, sign in with the credentials above, and you have a working wiki. Your workspace lives in `./space` on the host as plain Markdown files.
+
+The container runs as a non-root user. Creating `./space` upfront and passing `--user` keeps the folder owned by, and writable for, your host user. With rootless Docker, drop `--user`; with Podman, use `--userns=keep-id` instead. See [Rootless container](#rootless-container).
 
 For Docker Compose, reverse proxies, and production hardening, see [Self-hosting](#self-hosting).
 
@@ -129,16 +134,25 @@ The compose file mounts `./space` into the container as `/space`, so your Docker
 
 The image runs as the non-root `node` user (uid/gid `1000`) rather than root, and the compose file adds `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`, and a read-only root filesystem with a `tmpfs` mount at `/tmp`. The app itself never writes outside `SPACE_DIR`, so none of that affects normal operation.
 
-Because the container writes into the bind-mounted `./space` directory as uid/gid `1000`, that directory needs to be writable by that uid on the host. Either:
+Because the container writes into the bind-mounted `./space` directory as uid/gid `1000` by default, that directory needs to be writable by that uid on the host. Compose does not pick up your shell's `$UID` automatically (bash does not export it). Either:
 
-- Leave `UID`/`GID` unset and let the default `1000:1000` apply, chowning the host directory to match: `chown -R 1000:1000 ./space`, or
+- Leave `UID`/`GID` unset and let the default `1000:1000` apply, chowning the host directory to match: `sudo chown -R 1000:1000 ./space`, or
 - Set `UID`/`GID` in your `.env` (see `.env.example`) to your own host user, so the container writes as you: `echo "UID=$(id -u)" >> .env && echo "GID=$(id -g)" >> .env`.
+
+**Upgrading an existing install:** earlier images ran as root, so files already in your space directory are owned by root and the new non-root container cannot write to them. Before starting the upgraded container, hand the directory to the uid/gid the container will run as (`1000:1000` by default, or the `UID`/`GID` / `--user` you configured):
+
+```bash
+sudo chown -R 1000:1000 <space dir>
+```
+
+With rootless Docker, the container's non-root uid maps to a subordinate uid on the host, so it cannot write to a directory you own. Run the container without `--user`/`user:` there (container root maps to your host user), or use `--userns=keep-id` with Podman.
 
 If you run the image directly with `docker run` instead of Compose, add the equivalent flags:
 
 ```bash
+mkdir -p space
 docker run -d -p 3000:3000 -v $(pwd)/space:/space \
-  --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges:true \
+  --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges:true \
   --read-only --tmpfs /tmp \
   -e WIKINDIE_USER=you:your-strong-password \
   -e JWT_SECRET=$(openssl rand -hex 32) \

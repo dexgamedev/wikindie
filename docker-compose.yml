@@ -1,8 +1,8 @@
 services:
   wikindie:
     build: .
-    # Matches the host user by default so the bind-mounted ./space volume stays
-    # writable without a manual chown. Override with your own UID/GID if needed.
+    # Defaults to 1000:1000. Compose does not see the shell's $UID (it is not
+    # exported), so set UID/GID in .env to match your host user if it differs.
     user: "${UID:-1000}:${GID:-1000}"
     security_opt:
       - no-new-privileges:true
