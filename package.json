@@ -1,6 +1,6 @@
 {
   "name": "wikindie",
-  "version": "0.7.7",
+  "version": "0.8.0",
   "description": "Filesystem-backed wiki for notes, docs, and lightweight planning.",
   "license": "MIT",
   "private": true,
@@ -16,6 +16,7 @@
     "typecheck": "npm run typecheck -w packages/backend && npm run typecheck -w packages/frontend",
     "bump": "node scripts/bump.mjs",
     "check:markdown": "node scripts/check-markdown.mjs",
+    "check:docker-upgrade": "bash scripts/check-docker-upgrade.sh",
     "screenshots": "node scripts/screenshots.mjs"
   },
   "devDependencies": {

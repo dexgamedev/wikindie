@@ -21,5 +21,7 @@ COPY --from=builder /app/packages/backend/dist packages/backend/dist
 COPY --from=builder /app/packages/frontend/dist packages/backend/public
 RUN mkdir -p /space /app/space && chown node:node /space /app/space
 EXPOSE 3000
-USER node
+# No USER line: started as root, the app takes ownership of SPACE_DIR and switches to this
+# uid:gid, so upgrades from root images keep working (see lib/privileges.ts).
+ENV WIKINDIE_RUN_AS=1000:1000
 CMD ["node", "packages/backend/dist/index.js"]

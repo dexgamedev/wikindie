@@ -133,26 +133,28 @@ The compose file mounts `./space` into the container as `/space`, so your Docker
 
 ### Rootless container
 
-The image runs as the non-root `node` user (uid/gid `1000`) rather than root, and the compose file adds `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`, and a read-only root filesystem with a `tmpfs` mount at `/tmp`. The app itself never writes outside `SPACE_DIR`, so none of that affects normal operation.
+The app runs as the non-root `node` user (uid/gid `1000`). Started without `--user`/`user:`, the container begins as root, takes ownership of `SPACE_DIR`, and switches to `node` for good before serving anything. The compose file instead starts it as non-root directly and adds `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`, and a read-only root filesystem with a `tmpfs` mount at `/tmp`. The app itself never writes outside `SPACE_DIR`, so none of that affects normal operation.
 
 Because the container writes into the bind-mounted `./space` directory as uid/gid `1000` by default, that directory needs to be writable by that uid on the host. Compose does not pick up your shell's `$UID` automatically (bash does not export it). Either:
 
 - Leave `UID`/`GID` unset and let the default `1000:1000` apply, chowning the host directory to match: `sudo chown -R 1000:1000 ./space`, or
 - Set `UID`/`GID` in your `.env` (see `.env.example`) to your own host user, so the container writes as you: `echo "UID=$(id -u)" >> .env && echo "GID=$(id -g)" >> .env`.
 
-**Upgrading an existing install:** earlier images ran as root, so files already in your space directory are owned by root and the new non-root container cannot write to them. Before starting the upgraded container, hand the directory to the uid/gid the container will run as (`1000:1000` by default, or the `UID`/`GID` / `--user` you configured):
+**Upgrading an existing install:** earlier images ran as root, so files already in your space directory are owned by root. If you start the container without `--user`/`user:`, which includes most hosted platforms, there is nothing to do: it fixes the ownership on startup.
+
+If you start it with `--user`/`user:`, which includes the current compose file, it cannot change the owner itself and saves will fail. Before starting the upgraded container, hand the directory to the uid/gid the container will run as (`1000:1000` by default, or the `UID`/`GID` / `--user` you configured):
 
 ```bash
 sudo chown -R 1000:1000 <space dir>
 ```
 
-For hosted setups that use a named Docker volume instead of a bind mount, fix ownership through a one-off container:
+For a named Docker volume instead of a bind mount, fix ownership through a one-off container:
 
 ```bash
 docker run --rm -v <volume>:/data alpine chown -R 1000:1000 /data
 ```
 
-With rootless Docker, the container's non-root uid maps to a subordinate uid on the host, so it cannot write to a directory you own. Run the container without `--user`/`user:` there (container root maps to your host user), or use `--userns=keep-id` with Podman.
+With rootless Docker, the container's non-root uid maps to a subordinate uid on the host, so it cannot write to a directory you own. Run the container without `--user`/`user:` there (container root maps to your host user, so the app stays as that user and leaves file ownership alone), or use `--userns=keep-id` with Podman.
 
 If you run the image directly with `docker run` instead of Compose, add the equivalent flags:
 
@@ -203,6 +205,7 @@ Keep this hidden `.wikindie` directory with the rest of your workspace data. Bac
 | `JWT_SECRET` | Dev-only fallback | Secret used to sign session tokens. Required in production. |
 | `SPACE_DIR` | `./space` | Directory containing Markdown workspace files, resolved from the backend process working directory. |
 | `WIKINDIE_INIT_DEFAULT_SPACE` | unset | Set to `true` only when you want to seed the starter/demo workspace into an empty `SPACE_DIR`. |
+| `WIKINDIE_RUN_AS` | `1000:1000` in the Docker image | The uid:gid the container switches to when started as root. Unset it to keep running as root. |
 | `WIKINDIE_PUBLIC_READONLY` | unset | Set to `true` to let anonymous visitors browse read-only while keeping writes behind login. |
 | `WIKINDIE_PUBLIC_DEFAULT_PAGE` | unset | Page path to open from `/` in public showcase mode, such as `Wikindie`. |
 | `WIKINDIE_ALLOWED_HOSTS` | unset | Comma-separated hostnames allowed to serve the app, such as `wiki.example.com`. Unknown hosts return 404. |

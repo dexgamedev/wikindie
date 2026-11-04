@@ -8,6 +8,7 @@ import { initApiKeyStore } from './lib/apikeys.js'
 import { isAllowedCorsOrigin, isAllowedHostHeader, publicConfig, requireAllowedHost } from './lib/config.js'
 import { errorHandler } from './lib/errors.js'
 import { ensureSpace } from './lib/files.js'
+import { dropPrivileges } from './lib/privileges.js'
 import { initUserStore } from './lib/users.js'
 import { startWatcher } from './lib/watcher.js'
 import { authenticateToken, requireAuth, requireAuthOrPublicRead } from './middleware/auth.js'
@@ -29,6 +30,7 @@ const publicDir = path.resolve(__dirname, '../public')
 
 app.set('trust proxy', 1)
 
+await dropPrivileges()
 await ensureSpace()
 await initUserStore()
 await initApiKeyStore()
