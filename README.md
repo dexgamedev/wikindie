@@ -49,22 +49,29 @@ The live showcase at [wikindie.dexgamedev.com](https://wikindie.dexgamedev.com) 
 macOS / Linux:
 
 ```bash
+mkdir -p space
 docker run -d -p 3000:3000 -v $(pwd)/space:/space \
+  --user "$(id -u):$(id -g)" \
   -e WIKINDIE_USER=you:your-strong-password \
   -e JWT_SECRET=$(openssl rand -hex 32) \
+  -e SPACE_DIR=/space \
   ghcr.io/dexgamedev/wikindie:latest
 ```
 
 Windows (PowerShell):
 
 ```powershell
+mkdir -Force space
 docker run -d -p 3000:3000 -v "${PWD}/space:/space" `
   -e WIKINDIE_USER=you:your-strong-password `
   -e JWT_SECRET=$(-join ((48..57) + (97..102) | Get-Random -Count 64 | ForEach-Object {[char]$_})) `
+  -e SPACE_DIR=/space `
   ghcr.io/dexgamedev/wikindie:latest
 ```
 
 Open `http://localhost:3000`, sign in with the credentials above, and you have a working wiki. Your workspace lives in `./space` on the host as plain Markdown files.
+
+The container runs as a non-root user. Creating `./space` upfront and passing `--user` keeps the folder owned by, and writable for, your host user. With rootless Docker, drop `--user`; with Podman, use `--userns=keep-id` instead. See [Rootless container](#rootless-container).
 
 For Docker Compose, reverse proxies, and production hardening, see [Self-hosting](#self-hosting).
 
@@ -118,10 +125,49 @@ Docker Compose reads environment values from your shell or a root `.env` file. S
 
 ```bash
 cp .env.example .env
+mkdir -p space
 docker compose up --build
 ```
 
 The compose file mounts `./space` into the container as `/space`, so your Docker workspace lives in a root-level `space` directory.
+
+### Rootless container
+
+The image runs as the non-root `node` user (uid/gid `1000`) rather than root, and the compose file adds `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`, and a read-only root filesystem with a `tmpfs` mount at `/tmp`. The app itself never writes outside `SPACE_DIR`, so none of that affects normal operation.
+
+Because the container writes into the bind-mounted `./space` directory as uid/gid `1000` by default, that directory needs to be writable by that uid on the host. Compose does not pick up your shell's `$UID` automatically (bash does not export it). Either:
+
+- Leave `UID`/`GID` unset and let the default `1000:1000` apply, chowning the host directory to match: `sudo chown -R 1000:1000 ./space`, or
+- Set `UID`/`GID` in your `.env` (see `.env.example`) to your own host user, so the container writes as you: `echo "UID=$(id -u)" >> .env && echo "GID=$(id -g)" >> .env`.
+
+**Upgrading an existing install:** earlier images ran as root, so files already in your space directory are owned by root and the new non-root container cannot write to them. Before starting the upgraded container, hand the directory to the uid/gid the container will run as (`1000:1000` by default, or the `UID`/`GID` / `--user` you configured):
+
+```bash
+sudo chown -R 1000:1000 <space dir>
+```
+
+For hosted setups that use a named Docker volume instead of a bind mount, fix ownership through a one-off container:
+
+```bash
+docker run --rm -v <volume>:/data alpine chown -R 1000:1000 /data
+```
+
+With rootless Docker, the container's non-root uid maps to a subordinate uid on the host, so it cannot write to a directory you own. Run the container without `--user`/`user:` there (container root maps to your host user), or use `--userns=keep-id` with Podman.
+
+If you run the image directly with `docker run` instead of Compose, add the equivalent flags:
+
+```bash
+mkdir -p space
+docker run -d -p 3000:3000 -v $(pwd)/space:/space \
+  --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges:true \
+  --read-only --tmpfs /tmp \
+  -e WIKINDIE_USER=you:your-strong-password \
+  -e JWT_SECRET=$(openssl rand -hex 32) \
+  -e SPACE_DIR=/space \
+  ghcr.io/dexgamedev/wikindie:latest
+```
+
+`SPACE_DIR` must be set to `/space` here: it defaults to `./space`, which resolves relative to the container's working directory (`/app`), not to the mounted volume. With `--read-only`, writing anywhere outside a mounted volume or tmpfs fails outright (`EROFS: read-only file system, open '/app/space/_AGENT.md'`); without `--read-only` it would silently write into the container's ephemeral layer instead of your host's `./space`, so this applies to the quickstart command above too.
 
 ### Production data safety
 

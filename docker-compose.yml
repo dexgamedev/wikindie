@@ -1,6 +1,16 @@
 services:
   wikindie:
     build: .
+    # Defaults to 1000:1000. Compose does not see the shell's $UID (it is not
+    # exported), so set UID/GID in .env to match your host user if it differs.
+    user: "${UID:-1000}:${GID:-1000}"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     ports:
       - "3000:3000"
     environment:
