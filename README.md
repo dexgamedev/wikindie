@@ -125,6 +125,7 @@ Docker Compose reads environment values from your shell or a root `.env` file. S
 
 ```bash
 cp .env.example .env
+mkdir -p space
 docker compose up --build
 ```
 
@@ -145,6 +146,12 @@ Because the container writes into the bind-mounted `./space` directory as uid/gi
 sudo chown -R 1000:1000 <space dir>
 ```
 
+For hosted setups that use a named Docker volume instead of a bind mount, fix ownership through a one-off container:
+
+```bash
+docker run --rm -v <volume>:/data alpine chown -R 1000:1000 /data
+```
+
 With rootless Docker, the container's non-root uid maps to a subordinate uid on the host, so it cannot write to a directory you own. Run the container without `--user`/`user:` there (container root maps to your host user), or use `--userns=keep-id` with Podman.
 
 If you run the image directly with `docker run` instead of Compose, add the equivalent flags:
@@ -160,7 +167,7 @@ docker run -d -p 3000:3000 -v $(pwd)/space:/space \
   ghcr.io/dexgamedev/wikindie:latest
 ```
 
-`SPACE_DIR` must be set to `/space` here: it defaults to `./space`, which resolves relative to the container's working directory (`/app`), not to the mounted volume. With `--read-only`, writing anywhere outside a mounted volume or tmpfs fails outright (`ENOENT: no such file or directory, mkdir '/app/space'`); without `--read-only` it would silently write into the container's ephemeral layer instead of your host's `./space`, so this applies to the quickstart command above too.
+`SPACE_DIR` must be set to `/space` here: it defaults to `./space`, which resolves relative to the container's working directory (`/app`), not to the mounted volume. With `--read-only`, writing anywhere outside a mounted volume or tmpfs fails outright (`EROFS: read-only file system, open '/app/space/_AGENT.md'`); without `--read-only` it would silently write into the container's ephemeral layer instead of your host's `./space`, so this applies to the quickstart command above too.
 
 ### Production data safety
 
