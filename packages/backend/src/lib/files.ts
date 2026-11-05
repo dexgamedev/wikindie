@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises'
 import type { Dirent } from 'node:fs'
 import path from 'node:path'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import matter from 'gray-matter'
 import { AppError, notFound } from './errors.js'
-import { defaultAgentInstructions, defaultSpaceFiles } from './defaultSpace.js'
+import { AGENT_RULES_MARKER, agentRules, defaultAgentInstructions, defaultSpaceFiles } from './defaultSpace.js'
 import { normalizeIcon } from './icons.js'
 import {
   defaultKanbanBoard,
@@ -178,6 +179,30 @@ async function exists(relativePath: string) {
   }
 }
 
+const fileLocks = new Map<string, Promise<void>>()
+const heldLocks = new AsyncLocalStorage<Set<string>>()
+
+// Serializes read-then-write on one file. Reentrant, so a locked operation can call other locked helpers.
+// ponytail: in-process only, which holds while the app is one container.
+async function withFileLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const held = heldLocks.getStore()
+  if (held?.has(key)) return fn()
+  const run = (fileLocks.get(key) ?? Promise.resolve()).then(() => heldLocks.run(new Set(held).add(key), fn))
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
+  )
+  fileLocks.set(key, tail)
+  void tail.then(() => {
+    if (fileLocks.get(key) === tail) fileLocks.delete(key)
+  })
+  return run
+}
+
+async function withPageLock<T>(pagePath: string, fn: () => Promise<T>) {
+  return withFileLock((await resolvePageStoragePath(pagePath, true)).relativePath, fn)
+}
+
 async function readMarkdownByPath(relativePath: string): Promise<MarkdownFile> {
   const raw = await fs.readFile(safePath(relativePath), 'utf8')
   const parsed = matter(raw)
@@ -194,8 +219,14 @@ async function writeMarkdownByPath(relativePath: string, content: string, frontm
 export async function readPageMarkdownByPath(relativePath: string, persistId = true): Promise<MarkdownFile & { id: string }> {
   const file = await readMarkdownByPath(relativePath)
   const nextFrontmatter = withStablePageId(file.frontmatter)
-  if (persistId && nextFrontmatter.id !== file.frontmatter.id) await writeMarkdownByPath(relativePath, file.content, nextFrontmatter)
-  return { content: file.content, frontmatter: nextFrontmatter, id: String(nextFrontmatter.id) }
+  if (!persistId || nextFrontmatter.id === file.frontmatter.id) return { content: file.content, frontmatter: nextFrontmatter, id: String(nextFrontmatter.id) }
+  // Reread under the lock, or parallel readers each persist a different id.
+  return withFileLock(relativePath, async () => {
+    const latest = await readMarkdownByPath(relativePath)
+    const frontmatter = withStablePageId(latest.frontmatter)
+    if (frontmatter.id !== latest.frontmatter.id) await writeMarkdownByPath(relativePath, latest.content, frontmatter)
+    return { content: latest.content, frontmatter, id: String(frontmatter.id) }
+  })
 }
 
 async function markdownFileSize(relativePath: string) {
@@ -264,6 +295,18 @@ function parseSections(frontmatter: Record<string, unknown>): PageSection[] {
     .filter((section): section is PageSection => Boolean(section))
 }
 
+// Append only, so whatever the workspace owner wrote in _AGENT.md stays byte for byte.
+// ponytail: the marker means later rule changes do not reach existing files, replace the marked block if rules start changing.
+async function appendAgentRules() {
+  const fullPath = safePath(defaultAgentInstructions.relativePath)
+  try {
+    if ((await fs.readFile(fullPath, 'utf8')).includes(AGENT_RULES_MARKER)) return
+    await fs.appendFile(fullPath, `\n${agentRules}`, 'utf8')
+  } catch (error) {
+    console.warn('Could not add the agent rules to _AGENT.md:', error)
+  }
+}
+
 export async function ensureSpace() {
   await fs.mkdir(SPACE_DIR, { recursive: true })
 
@@ -274,6 +317,7 @@ export async function ensureSpace() {
       defaultAgentInstructions.frontmatter ?? {},
     )
   }
+  await appendAgentRules()
 
   const entries = await fs.readdir(SPACE_DIR)
   const meaningfulEntries = entries.filter(
@@ -545,31 +589,40 @@ async function reconcilePageAttachments(page: PageBundle) {
 }
 
 export async function writePage(pagePath: string, content: string, frontmatter: Record<string, unknown> = {}) {
-  const resolved = await resolvePageStoragePath(pagePath, true)
-  let currentFrontmatter: Record<string, unknown> | undefined
-  try {
-    currentFrontmatter = (await readMarkdownByPath(resolved.relativePath)).frontmatter
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
-  await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(frontmatter, currentFrontmatter))
-  const page = await readPage(pagePath)
-  await reconcilePageAttachments(page)
-  return page
+  return withPageLock(pagePath, async () => {
+    const resolved = await resolvePageStoragePath(pagePath, true)
+    let currentFrontmatter: Record<string, unknown> | undefined
+    try {
+      currentFrontmatter = (await readMarkdownByPath(resolved.relativePath)).frontmatter
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(frontmatter, currentFrontmatter))
+    const page = await readPage(pagePath)
+    await reconcilePageAttachments(page)
+    return page
+  })
 }
 
 export async function writePageContent(pagePath: string, content: string) {
-  const resolved = await resolvePageStoragePath(pagePath, true)
-  let currentFrontmatter: Record<string, unknown> = {}
-  try {
-    currentFrontmatter = (await readMarkdownByPath(resolved.relativePath)).frontmatter
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
-  await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(currentFrontmatter, currentFrontmatter))
-  const page = await readPage(pagePath)
-  await reconcilePageAttachments(page)
-  return page
+  return withPageLock(pagePath, async () => {
+    const resolved = await resolvePageStoragePath(pagePath, true)
+    let currentFrontmatter: Record<string, unknown> = {}
+    try {
+      currentFrontmatter = (await readMarkdownByPath(resolved.relativePath)).frontmatter
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    await writeMarkdownByPath(resolved.relativePath, content, withStablePageId(currentFrontmatter, currentFrontmatter))
+    const page = await readPage(pagePath)
+    await reconcilePageAttachments(page)
+    return page
+  })
+}
+
+// Builds the next body from the latest one, with no other page write in between.
+export async function editPageContent(pagePath: string, next: (page: PageBundle) => string) {
+  return withPageLock(pagePath, async () => writePageContent(pagePath, next(await readPage(pagePath))))
 }
 
 export async function createPage(pagePath: string, kanban = false, meta: CreatePageMeta = {}) {
@@ -593,6 +646,10 @@ export async function createChildPage(parentPath: string, pageName: string, kanb
 }
 
 export async function updatePageMeta(pagePath: string, patch: Record<string, unknown>) {
+  return withPageLock(pagePath, () => updatePageMetaLocked(pagePath, patch))
+}
+
+async function updatePageMetaLocked(pagePath: string, patch: Record<string, unknown>) {
   const page = await readPage(pagePath)
   const nextFrontmatter: Record<string, unknown> = { ...page.frontmatter }
   for (const [key, value] of Object.entries(patch)) {
@@ -615,23 +672,27 @@ export async function updatePageMeta(pagePath: string, patch: Record<string, unk
 }
 
 export async function upsertSection(pagePath: string, sectionPath: string, sectionTitle: string, content: string) {
-  const page = await readPage(pagePath)
-  const normalizedSectionPath = sectionPath.replaceAll('\\', '/').replace(/^\/+/, '')
-  const sections = parseSections(page.frontmatter)
-  const existingIndex = sections.findIndex((section) => section.path === normalizedSectionPath)
-  if (existingIndex >= 0) sections[existingIndex].title = sectionTitle
-  else sections.push({ title: sectionTitle, path: normalizedSectionPath })
+  return withPageLock(pagePath, async () => {
+    const page = await readPage(pagePath)
+    const normalizedSectionPath = sectionPath.replaceAll('\\', '/').replace(/^\/+/, '')
+    const sections = parseSections(page.frontmatter)
+    const existingIndex = sections.findIndex((section) => section.path === normalizedSectionPath)
+    if (existingIndex >= 0) sections[existingIndex].title = sectionTitle
+    else sections.push({ title: sectionTitle, path: normalizedSectionPath })
 
-  await writeMarkdown(`${page.path}/${normalizedSectionPath}`, content, {})
-  return writePage(page.path, page.content, { ...page.frontmatter, sections })
+    await writeMarkdown(`${page.path}/${normalizedSectionPath}`, content, {})
+    return writePage(page.path, page.content, { ...page.frontmatter, sections })
+  })
 }
 
 export async function deleteSection(pagePath: string, sectionPath: string) {
-  const page = await readPage(pagePath)
-  const normalizedSectionPath = sectionPath.replaceAll('\\', '/').replace(/^\/+/, '')
-  const sections = parseSections(page.frontmatter).filter((section) => section.path !== normalizedSectionPath)
-  await deleteItem(`${page.path}/${normalizedSectionPath}`)
-  return writePage(page.path, page.content, { ...page.frontmatter, sections })
+  return withPageLock(pagePath, async () => {
+    const page = await readPage(pagePath)
+    const normalizedSectionPath = sectionPath.replaceAll('\\', '/').replace(/^\/+/, '')
+    const sections = parseSections(page.frontmatter).filter((section) => section.path !== normalizedSectionPath)
+    await deleteItem(`${page.path}/${normalizedSectionPath}`)
+    return writePage(page.path, page.content, { ...page.frontmatter, sections })
+  })
 }
 
 export async function createFolder(relativePath: string) {
@@ -699,6 +760,7 @@ async function collectPageIdsUnder(relativeDir: string, out: Set<string>) {
 async function deleteAttachmentsForPageIds(pageIds: Iterable<string>) {
   for (const id of pageIds) {
     await fs.rm(safePath(`.wikindie/attachments/${id}`), { recursive: true, force: true }).catch(() => {})
+    await fs.rm(safePath(`.wikindie/memory/${id}.jsonl`), { force: true }).catch(() => {})
   }
 }
 

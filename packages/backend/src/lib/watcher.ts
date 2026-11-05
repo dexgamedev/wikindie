@@ -2,6 +2,7 @@ import chokidar from 'chokidar'
 import path from 'node:path'
 import type { WebSocketServer } from 'ws'
 import { SPACE_DIR } from './files.js'
+import { MEMORY_DIR } from './memory.js'
 
 function broadcast(wss: WebSocketServer, payload: unknown) {
   const message = JSON.stringify(payload)
@@ -11,7 +12,9 @@ function broadcast(wss: WebSocketServer, payload: unknown) {
 }
 
 export function startWatcher(wss: WebSocketServer) {
+  const memoryDir = path.join(SPACE_DIR, ...MEMORY_DIR.split('/'))
   const watcher = chokidar.watch(SPACE_DIR, {
+    ignored: (watched) => path.resolve(watched).startsWith(memoryDir),
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
   })

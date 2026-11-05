@@ -4,12 +4,13 @@ import type { Dirent } from 'node:fs'
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
+import { defaultAgentInstructions } from '../lib/defaultSpace.js'
 import { AppError, notFound } from '../lib/errors.js'
+import { MAX_BODY, MAX_TITLE, memoryKinds, recallEntries, recallIndex, remember } from '../lib/memory.js'
 import {
   createChildPage,
   createPage,
   deletePage,
-  deleteSection,
   isHiddenPageDirectory,
   isHiddenPage,
   movePage,
@@ -17,15 +18,15 @@ import {
   pageIdFromFrontmatter,
   pageTitleFromPath,
   readPage,
+  readMarkdown,
   readPageById,
   readPageMarkdownByPath,
   readTaskOverview,
   resolvePageId,
   safePath,
   updatePageMeta,
-  upsertSection,
   writePage,
-  writePageContent,
+  editPageContent,
   joinStoragePath,
   type PageBundle,
   type TaskInfo,
@@ -307,8 +308,27 @@ function pagePathFromResourceUri(uri: URL) {
   return decodeURIComponent(uri.pathname.replace(/^\/+/, ''))
 }
 
-export function createWikindieMcpServer(user: SessionUser) {
-  const server = new McpServer({ name: 'wikindie', version: PKG_VERSION })
+// A dated entry counts anywhere. A bare "Decision:" counts only as a log line, so prose and code examples pass.
+const DECISION_ENTRIES = [/\b(?:decision|status)\s*\(?\d{4}-\d{2}-\d{2}/gi, /^[ \t]*(?:[-*][ \t]+|#{1,6}[ \t]+)?\**Decision\**:/gm]
+
+// Compares counts so a page that already holds old entries can still be edited.
+function assertNoNewDecisions(before: string, after: string) {
+  const count = (text: string) => DECISION_ENTRIES.reduce((total, pattern) => total + (text.match(pattern)?.length ?? 0), 0)
+  if (count(after) > count(before)) throw new AppError(400, 'Pages do not hold decision or status entries. Save the note with remember and state only the current behavior here.')
+}
+
+function requirePageId(page: PageBundle) {
+  if (!page.id) throw new AppError(400, 'Page has no stable id')
+  return page.id
+}
+
+export async function readConnectInstructions() {
+  const body = await readMarkdown(defaultAgentInstructions.relativePath).then((file) => file.content.trim(), () => '')
+  return body || undefined
+}
+
+export function createWikindieMcpServer(user: SessionUser, instructions?: string) {
+  const server = new McpServer({ name: 'wikindie', version: PKG_VERSION }, { instructions })
 
   server.registerTool('get_tree', { title: 'Get Tree', description: 'List the Wikindie page tree.', inputSchema: {} }, async () => {
     assertPermission(user, 'read')
@@ -356,6 +376,7 @@ export function createWikindieMcpServer(user: SessionUser) {
     },
     async ({ parentPath, parentId, name, icon, content, type = 'page' }) => {
       assertPermission(user, 'write')
+      if (type !== 'board') assertNoNewDecisions('', content ?? '')
       const meta = { icon, content }
       const path = parentId || parentPath ? await createChildPage(await pagePathFromIdentifier({ id: parentId, path: parentPath }), name, type === 'board', meta) : await createPage(name, type === 'board', meta)
       return toolResult({ page: await readPage(path) })
@@ -375,7 +396,12 @@ export function createWikindieMcpServer(user: SessionUser) {
     async ({ content, ...input }) => {
       assertPermission(user, 'write')
       const pagePath = await pagePathFromIdentifier(input)
-      return toolResult(await writePageContent(pagePath, content))
+      return toolResult(
+        await editPageContent(pagePath, (page) => {
+          assertNoNewDecisions(page.content, content)
+          return content
+        }),
+      )
     },
   )
 
@@ -415,24 +441,69 @@ export function createWikindieMcpServer(user: SessionUser) {
   )
 
   server.registerTool(
-    'upsert_section',
+    'edit_page',
     {
-      title: 'Upsert Section',
-      description: 'Create or update a page section file and frontmatter section reference.',
-      inputSchema: { ...pageIdentifierSchema, sectionPath: z.string().min(1), title: z.string().min(1), content: z.string().default('').optional() },
+      title: 'Edit Page',
+      description: 'Replace one exact piece of text in a page body. Prefer this over update_page for small changes. oldText must match exactly once. Not for boards.',
+      inputSchema: { ...pageIdentifierSchema, oldText: z.string().min(1), newText: z.string() },
     },
-    async ({ sectionPath, title, content = '', ...input }) => {
+    async ({ oldText, newText, ...input }) => {
       assertPermission(user, 'write')
-      return toolResult(await upsertSection(await pagePathFromIdentifier(input), sectionPath, title, content))
+      const updated = await editPageContent(await pagePathFromIdentifier(input), (page) => {
+        if (page.type === 'board') throw new AppError(400, 'Use the task tools to change a board')
+        const count = page.content.split(oldText).length - 1
+        if (count !== 1) throw new AppError(400, `oldText must match exactly once, found ${count}`)
+        const next = page.content.replace(oldText, () => newText)
+        assertNoNewDecisions(page.content, next)
+        return next
+      })
+      return toolResult({ ok: true, id: updated.id, path: updated.path })
     },
   )
 
   server.registerTool(
-    'delete_section',
-    { title: 'Delete Section', description: 'Delete a page section. Requires admin role.', inputSchema: { ...pageIdentifierSchema, sectionPath: z.string().min(1) } },
-    async ({ sectionPath, ...input }) => {
-      assertPermission(user, 'delete')
-      return toolResult(await deleteSection(await pagePathFromIdentifier(input), sectionPath))
+    'remember',
+    {
+      title: 'Remember',
+      description: 'Save a decision or an agent log to the hidden project memory. Readers of the wiki never see it. Use the top page of the project. Keep the title to one line: it is what recall lists.',
+      inputSchema: {
+        ...pageIdentifierSchema,
+        kind: z.enum(memoryKinds).default('decision').optional().describe('decision: a choice and its reason. log: what an agent did or found.'),
+        title: z.string().trim().min(1).max(MAX_TITLE).regex(/^[^\r\n]+$/, 'Title must be one line').describe('One-line summary'),
+        body: z.string().trim().max(MAX_BODY).optional().describe('Reason, limits and details. Read only on request.'),
+        task: z.string().trim().min(1).max(40).optional().describe('Task id, such as WK-12'),
+        tags: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
+        replaces: z.string().optional().describe('Id of a note this one replaces. The old note leaves the index.'),
+      },
+    },
+    async ({ kind = 'decision', title, body, task, tags, replaces, ...input }) => {
+      assertPermission(user, 'write')
+      const page = await readPageFromIdentifier(input)
+      const entry = await remember(requirePageId(page), { kind, title, body, task, tags, replaces, author: user.username })
+      return textToolResult(`Saved ${entry.id}`)
+    },
+  )
+
+  server.registerTool(
+    'recall',
+    {
+      title: 'Recall',
+      description: 'Read the hidden project memory. Without ids, returns a short index: one line per note, newest first, with no bodies and without replaced notes. Pass ids to read full notes. Filter first to keep the result small.',
+      inputSchema: {
+        ...pageIdentifierSchema,
+        ids: z.array(z.string()).min(1).max(20).optional().describe('Note ids to read in full'),
+        kind: z.enum(memoryKinds).optional(),
+        task: z.string().optional().describe('Task id, such as WK-12'),
+        tag: z.string().optional(),
+        query: z.string().trim().min(1).optional().describe('Case-insensitive text in the title, body or tags'),
+        limit: z.number().int().min(1).max(100).default(30).optional(),
+      },
+    },
+    async ({ ids, kind, task, tag, query, limit, ...input }) => {
+      // Write, not read: read-only users and guests are wiki readers, and readers never see notes.
+      assertPermission(user, 'write')
+      const pageId = requirePageId(await readPageFromIdentifier(input))
+      return textToolResult(ids ? await recallEntries(pageId, ids) : await recallIndex(pageId, { kind, task, tag, query, limit }))
     },
   )
 

@@ -18,6 +18,29 @@ You can edit this page directly through the MCP \`update_page\` tool (path: \`_A
 `,
 }
 
+export const AGENT_RULES_MARKER = '<!-- wikindie:agent-rules -->'
+
+// Appended once to _AGENT.md on startup. This ships in the public repo, so keep it generic.
+export const agentRules = `${AGENT_RULES_MARKER}
+## Where things go
+
+These rules replace any project file that asks you to log decisions on the wiki.
+
+- **Wiki pages** are for human readers. A page states what is true now. If a line is wrong, change that line with \`edit_page\`.
+- **Never put a decision on a page.** This covers decisions, status notes, changelogs, dated notes, and notes that say another line was replaced.
+- **Decisions and logs go through \`remember\`.** This covers the reason for a choice, accepted limits, what you did, and what you found. A task comment may say what was built and the commit, but the reason goes in \`remember\`.
+- **Open work** goes on the project board as a card.
+- **New pages** are only for a topic that a teammate would look for. Do not create a page to record work.
+
+## Using memory
+
+- Always use the top page of the project.
+- Before you change behavior, call \`recall\` on that page. It returns a short index with one line per note.
+- Narrow with \`task\`, \`tag\`, \`kind\` or \`query\`, then pass \`ids\` to read only the notes you need. Do not read every note.
+- With \`remember\`, keep \`title\` to one line that makes sense in an index. Put details in \`body\`. Set \`task\` when there is one, and \`kind: log\` for a log.
+- If a decision changes, pass \`replaces\` with the old note id.
+`
+
 const defaultKanbanColumns = [
   { id: 'backlog', status: 'backlog' },
   { id: 'next', status: 'next' },

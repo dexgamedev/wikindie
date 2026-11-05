@@ -2,7 +2,7 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isAllowedCorsOrigin } from '../lib/config.js'
-import { createWikindieMcpServer } from '../mcp/server.js'
+import { createWikindieMcpServer, readConnectInstructions } from '../mcp/server.js'
 
 export const mcpRouter = Router()
 
@@ -28,7 +28,7 @@ mcpRouter.post('/', async (req, res) => {
     return
   }
 
-  const server = createWikindieMcpServer(req.user)
+  const server = createWikindieMcpServer(req.user, await readConnectInstructions())
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
   const cleanup = () => {
     void transport.close().catch(() => undefined)
