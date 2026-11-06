@@ -491,7 +491,7 @@ function FilteringPanel({
           <Filter size={15} className="text-accent-warm" /> Filtering
         </h3>
         {hasFilterInput && (
-          <button className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={onClear} type="button">
+          <button className="flex h-7 items-center gap-1 rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text" onClick={onClear} type="button">
             <X size={13} /> Clear
           </button>
         )}

@@ -76,7 +76,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [location.pathname])
 
   return (
-    <div className="flex h-dvh min-h-0 flex-col gap-2 overflow-hidden bg-body p-0 text-text lg:gap-2 lg:p-2 lg:pl-0">
+    <div className="flex h-dvh min-h-0 flex-col gap-2 overflow-hidden bg-body p-0 text-text lg:p-2 lg:pl-0">
       <div className="lg:hidden">
         <TopBar onOpenMobile={() => setMobileOpen(true)} onSearchOpen={() => setQuickFindOpen(true)} />
       </div>

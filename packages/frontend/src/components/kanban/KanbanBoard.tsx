@@ -606,9 +606,9 @@ function KanbanTableView({
               onClick={() => setEditing({ cardIndex, columnIndex })}
             >
               <td className="max-w-[320px] whitespace-nowrap px-3 py-1.5 align-middle">
-                <span className="mr-1.5 inline-flex max-w-[160px] flex-wrap items-center gap-1 align-middle">
-                  {card.id && <span className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">{card.id}</span>}
-                  {card.labels?.map((label) => <span key={label} className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">#{label}</span>)}
+                <span className="mr-1.5 inline-flex max-w-[160px] flex-wrap items-center gap-1 overflow-hidden align-middle">
+                  {card.id && <span className="max-w-full shrink-0 truncate rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">{card.id}</span>}
+                  {card.labels?.map((label) => <span key={label} className="max-w-full min-w-0 truncate rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">#{label}</span>)}
                 </span>
                 <span className="inline-flex max-w-[180px] items-center gap-1.5 align-middle">
                   <CardTypeIcon className="size-3.5" title={`${cardTypeLabel(card.type)} card`} type={card.type} />

@@ -191,7 +191,6 @@ export function KanbanColumn({
           <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-text">
             <PageIcon icon={column.icon} fallback="column" className="size-4 shrink-0" />
             <span className="min-w-0 truncate">{column.title}</span>
-            <span className="shrink-0 text-xs font-normal text-text-muted">{cardsToRender.length}</span>
           </h3>
         )}
         {editable && (
