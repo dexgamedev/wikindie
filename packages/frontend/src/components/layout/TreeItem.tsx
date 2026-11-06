@@ -241,7 +241,7 @@ export function TreeItem({
 
   return (
     <div
-      className={`${dragMode === 'inside' ? 'rounded-md bg-accent/10 ring-1 ring-accent/40' : ''} ${dragging ? 'opacity-60' : ''} ${depth > 0 ? 'border-l border-border/60' : ''}`}
+      className={`${dragMode === 'inside' ? 'rounded-md bg-accent/10 ring-1 ring-accent/40' : ''} ${dragging ? 'opacity-60' : ''} ${depth > 0 ? 'border-l border-border/40' : ''}`}
       onDragOver={(event) => {
         if (!mayWrite) return
         if (!hasPageDragPayload(event.dataTransfer)) return
@@ -255,10 +255,10 @@ export function TreeItem({
       style={{ paddingLeft: depth * 8 }}
     >
       <div
-        className={`group relative flex items-center rounded-md transition-colors ${isActive ? 'bg-accent/10' : 'hover:bg-surface-hover'}`}
+        className={`group relative flex h-7 items-center rounded-md transition-colors ${isActive ? 'bg-surface-hover text-text-heading' : 'hover:bg-surface-hover/70'}`}
         ref={rowRef}
       >
-        {isActive && <span aria-hidden className="pointer-events-none absolute inset-y-1 left-0 w-0.5 rounded-full bg-accent" />}
+        {isActive && <span aria-hidden className="pointer-events-none absolute inset-y-1 left-0 w-0.5 rounded-full bg-accent-warm" />}
         {(dragMode === 'before' || dragMode === 'after') && (
           <div className={`pointer-events-none absolute left-4 right-1.5 z-10 flex items-center ${dragMode === 'before' ? '-top-1.5' : '-bottom-1.5'}`}>
             <span className="h-1 flex-1 rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />
@@ -270,14 +270,14 @@ export function TreeItem({
         {hasChildren ? (
           <button
             aria-label={open ? `Collapse ${node.title}` : `Expand ${node.title}`}
-            className={`grid size-5 shrink-0 place-items-center rounded text-text-muted transition hover:bg-accent/15 hover:text-text ${collapsed ? 'lg:hidden' : ''}`}
+            className={`grid size-4 shrink-0 place-items-center rounded text-text-muted transition hover:bg-surface-hover hover:text-text ${collapsed ? 'lg:hidden' : ''}`}
             onClick={toggle}
             type="button"
           >
             <ChevronRight size={14} className={`transition ${open ? 'rotate-90' : ''}`} />
           </button>
         ) : (
-          <span aria-hidden className={`size-5 shrink-0 ${collapsed ? 'lg:hidden' : ''}`} />
+          <span aria-hidden className={`size-4 shrink-0 ${collapsed ? 'lg:hidden' : ''}`} />
         )}
 
         {renaming ? (
@@ -290,11 +290,11 @@ export function TreeItem({
                 void submitRename()
               }}
             >
-              <div className="flex min-w-0 items-center gap-1.5 rounded-md bg-surface-hover px-1 py-1 text-sm text-text">
-                <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} className="size-5 text-base" />
+              <div className="flex min-w-0 items-center gap-1.5 rounded-md bg-surface-hover px-1 py-0.5 text-sm text-text">
+                <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} className="size-4 text-sm" />
                 <input
                   autoFocus
-                  className="w-full rounded border border-accent bg-input px-2 py-1 text-sm text-text outline-none"
+                  className="w-full rounded border border-accent bg-input px-2 py-0.5 text-sm text-text outline-none"
                   value={renameValue}
                   onChange={(event) => setRenameValue(event.target.value)}
                 />
@@ -309,14 +309,14 @@ export function TreeItem({
               to={pageUrl(node.path)}
               title={node.title}
             >
-              <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} className="size-5 text-base" />
+              <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} className="size-4 text-sm" />
             </NavLink>
           </>
         ) : (
           <NavLink
             className={
-              `flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1 pl-1 pr-2 text-sm leading-tight ${mayWrite ? 'cursor-grab active:cursor-grabbing' : ''} ${collapsed ? 'lg:justify-center lg:px-0' : ''} ${
-                isActive ? 'text-text' : 'text-text-muted'
+              `flex min-w-0 flex-1 items-center gap-1.5 rounded-md pl-1 pr-1.5 text-sm leading-5 ${mayWrite ? 'cursor-grab active:cursor-grabbing' : ''} ${collapsed ? 'lg:justify-center lg:px-0' : ''} ${
+                isActive ? 'text-text-heading' : 'text-text-muted'
               }`
             }
             to={pageUrl(node.path)}
@@ -325,7 +325,7 @@ export function TreeItem({
             onDragStart={mayWrite ? startPageDrag : undefined}
             onDragEnd={endPageDrag}
           >
-            <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} className="size-5 text-base" />
+            <PageIcon icon={node.icon} fallback={node.type === 'board' ? 'board' : 'page'} className="size-4 text-sm" />
             <span className={`min-w-0 truncate ${collapsed ? 'lg:hidden' : ''}`}>{node.title}</span>
           </NavLink>
         )}
@@ -333,7 +333,7 @@ export function TreeItem({
         {(mayWrite || mayDelete) && (
           <ActionMenu
             align="start"
-            buttonClassName={`mr-0.5 grid size-7 place-items-center rounded-md text-text-muted opacity-100 hover:bg-accent/15 hover:text-text focus-visible:opacity-100 group-focus-within:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ${collapsed ? 'lg:hidden' : ''}`}
+            buttonClassName={`mr-0.5 grid size-6 place-items-center rounded-md text-text-muted opacity-100 hover:bg-surface-hover hover:text-text focus-visible:opacity-100 group-focus-within:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ${collapsed ? 'lg:hidden' : ''}`}
             label="Page actions"
             menuClassName="w-[200px]"
             onClose={() => setConfirmDelete(false)}
@@ -392,7 +392,7 @@ export function TreeItem({
               if (event.key === 'Escape') setMoving(false)
             }}
           />
-          <button className="rounded border border-control-border bg-control px-2 py-1 text-xs text-accent hover:bg-control-hover" type="submit">Move</button>
+          <button className="h-6 rounded-md border border-border bg-panel px-2 text-xs text-text hover:bg-surface-hover" type="submit">Move</button>
         </form>
       )}
 
@@ -414,8 +414,8 @@ export function TreeItem({
               if (event.key === 'Escape') cancelCreate()
             }}
           />
-          <button className="rounded border border-control-border bg-control px-2 py-1 text-xs text-accent hover:bg-control-hover" type="submit">Add</button>
-          <button className="rounded p-1 text-text-muted hover:bg-accent/10 hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
+          <button className="h-6 rounded-md border border-border bg-panel px-2 text-xs text-text hover:bg-surface-hover" type="submit">Add</button>
+          <button className="rounded-md p-1 text-text-muted hover:bg-surface-hover hover:text-text" type="button" onClick={cancelCreate} aria-label="Cancel create">
             <X size={14} />
           </button>
         </form>

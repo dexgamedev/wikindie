@@ -30,7 +30,7 @@ export function RecentPages() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-md px-4 py-8 text-text-muted">
+      <div className="flex items-center justify-center gap-2 rounded-lg px-4 py-8 text-text-muted">
         <Spinner />
         <span className="text-sm">Loading recent pages…</span>
       </div>
@@ -39,7 +39,7 @@ export function RecentPages() {
 
   if (!pages.length) {
     return (
-      <div className="rounded-md border border-dashed border-border px-4 py-8 text-center">
+      <div className="m-3 rounded-lg border border-dashed border-border px-4 py-6 text-center">
         <p className="font-medium text-text-heading">No pages yet</p>
         <p className="mt-1 text-sm text-text-muted">Create your first page from the sidebar to start building your wiki.</p>
       </div>
@@ -52,7 +52,7 @@ export function RecentPages() {
         <li key={page.path}>
           <Link
             to={pageUrl(page.path)}
-            className="flex items-center gap-2.5 px-2.5 py-2 text-sm transition hover:bg-surface-hover"
+            className="flex h-9 items-center gap-2.5 px-3 text-sm transition hover:bg-surface-hover"
           >
             <span className="grid size-6 shrink-0 place-items-center text-base">
               <PageIcon icon={page.icon} fallback={page.type === 'board' ? 'board' : 'page'} />

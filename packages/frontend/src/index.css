@@ -4,51 +4,60 @@
 @source "../../../node_modules/@blocknote/react/dist/**/*.js";
 
 @theme {
-  --color-body: #0c0e13;
-  --color-sidebar: #141820;
-  --color-panel: #141820;
-  --color-content: #101318;
-  --color-surface: #1c2028;
-  --color-surface-hover: #252a34;
-  --color-border: #2a2f3a;
-  --color-accent: #5b6af0;
-  --color-accent-warm: #d9a033;
-  --color-accent-soft: rgba(91, 106, 240, 0.10);
-  --color-input: #0e1118;
-  --color-card: #181c24;
-  --color-control: rgba(91, 106, 240, 0.12);
-  --color-control-hover: rgba(91, 106, 240, 0.22);
-  --color-control-border: rgba(91, 106, 240, 0.30);
-  --color-text: #d4d7de;
-  --color-text-muted: #7c8190;
-  --color-text-heading: #ebedf2;
-  --color-text-link: #7b88f5;
-  --color-text-code: #a0acf8;
-  --color-scrollbar-thumb: #2d323e;
-  --color-scrollbar-track: #0e1118;
-  --color-success: #4ade80;
-  --color-warning: #d9a033;
-  --color-danger: #ef4444;
-  --color-info: #60a5fa;
+  /* Type scale: one rhythm. 13px body on a 20px line keeps the 8px priority dot
+     (mt-1.5) vertically centred with card titles. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Warm neutral base. Never pure black. */
+  --color-body: #0e0e10;
+  --color-sidebar: #0e0e10;
+  --color-panel: #141416;
+  --color-content: #141416;
+  --color-surface: #1a1a1d;
+  --color-surface-hover: #222226;
+  --color-border: #26262a;
+  --color-accent: #6a73f0;
+  --color-accent-warm: #e0a43a;
+  --color-accent-soft: rgba(106, 115, 240, 0.10);
+  --color-input: #121214;
+  --color-card: #18181b;
+  --color-control: rgba(106, 115, 240, 0.12);
+  --color-control-hover: rgba(106, 115, 240, 0.22);
+  --color-control-border: rgba(106, 115, 240, 0.30);
+  --color-text: #d6d6da;
+  --color-text-muted: #8a8a93;
+  --color-text-heading: #f0f0f2;
+  --color-text-link: #949bf6;
+  --color-text-code: #b3b8f5;
+  --color-scrollbar-thumb: #26262a;
+  --color-scrollbar-track: transparent;
+  --color-success: #57d98a;
+  --color-warning: #e0a43a;
+  --color-danger: #f26b6b;
+  --color-info: #6aa8f0;
   --color-overlay: rgba(0, 0, 0, 0.60);
-  --color-shadow: rgba(0, 0, 0, 0.18);
-  --color-shadow-heavy: rgba(0, 0, 0, 0.50);
+  --color-shadow: rgba(0, 0, 0, 0.35);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.55);
 
   /* shadcn-style tokens consumed by @blocknote/shadcn menus & popovers (dark default) */
-  --color-background: #141820;
-  --color-foreground: #d4d7de;
-  --color-popover: #181c24;
-  --color-popover-foreground: #d4d7de;
-  --color-muted: #1c2028;
-  --color-muted-foreground: #7c8190;
+  --color-background: #141416;
+  --color-foreground: #d6d6da;
+  --color-popover: #1b1b1f;
+  --color-popover-foreground: #d6d6da;
+  --color-muted: #1a1a1d;
+  --color-muted-foreground: #8a8a93;
   --color-accent-foreground: #ffffff;
-  --color-primary: #5b6af0;
+  --color-primary: #6a73f0;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #1c2028;
-  --color-secondary-foreground: #d4d7de;
-  --color-destructive: #ef4444;
+  --color-secondary: #1a1a1d;
+  --color-secondary-foreground: #d6d6da;
+  --color-destructive: #f26b6b;
   --color-destructive-foreground: #ffffff;
-  --color-ring: #5b6af0;
+  --color-ring: #6a73f0;
 }
 
 :root {
@@ -57,50 +66,51 @@
 
 :root:not(.dark) {
   color-scheme: light;
-  --color-body: #f4f5f7;
-  --color-sidebar: #ffffff;
+  /* Warm off-white base, never pure white for the page chrome. */
+  --color-body: #f6f5f3;
+  --color-sidebar: #f6f5f3;
   --color-panel: #ffffff;
-  --color-content: #fafafa;
-  --color-surface: #f0f1f3;
-  --color-surface-hover: #e5e7eb;
-  --color-border: #d5d7dc;
-  --color-accent: #4a58e0;
-  --color-accent-warm: #b88525;
-  --color-accent-soft: rgba(74, 88, 224, 0.08);
+  --color-content: #ffffff;
+  --color-surface: #f3f2ef;
+  --color-surface-hover: #ebeae6;
+  --color-border: #e4e2dd;
+  --color-accent: #4f58e0;
+  --color-accent-warm: #b7801f;
+  --color-accent-soft: rgba(79, 88, 224, 0.08);
   --color-input: #ffffff;
   --color-card: #ffffff;
-  --color-control: #eef0fd;
-  --color-control-hover: #dde1fa;
-  --color-control-border: #b5bdf0;
-  --color-text: #24272e;
-  --color-text-muted: #6b6f7a;
-  --color-text-heading: #141620;
-  --color-text-link: #3d4bc8;
-  --color-text-code: #3540a8;
-  --color-scrollbar-thumb: #c8cbd2;
-  --color-scrollbar-track: #f0f1f3;
-  --color-success: #16a34a;
-  --color-warning: #b88525;
-  --color-danger: #dc2626;
-  --color-info: #2563eb;
-  --color-overlay: rgba(15, 20, 30, 0.30);
-  --color-shadow: rgba(0, 0, 0, 0.05);
-  --color-shadow-heavy: rgba(0, 0, 0, 0.12);
+  --color-control: #eeeffc;
+  --color-control-hover: #dde0fa;
+  --color-control-border: #b7bdf1;
+  --color-text: #26262b;
+  --color-text-muted: #6c6b70;
+  --color-text-heading: #141417;
+  --color-text-link: #3f48cf;
+  --color-text-code: #3a42b8;
+  --color-scrollbar-thumb: #dedcd7;
+  --color-scrollbar-track: transparent;
+  --color-success: #17803d;
+  --color-warning: #a9741b;
+  --color-danger: #c62828;
+  --color-info: #1d4ed8;
+  --color-overlay: rgba(20, 20, 23, 0.30);
+  --color-shadow: rgba(20, 20, 20, 0.06);
+  --color-shadow-heavy: rgba(20, 20, 20, 0.14);
 
   --color-background: #ffffff;
-  --color-foreground: #24272e;
+  --color-foreground: #26262b;
   --color-popover: #ffffff;
-  --color-popover-foreground: #24272e;
-  --color-muted: #f0f1f3;
-  --color-muted-foreground: #6b6f7a;
+  --color-popover-foreground: #26262b;
+  --color-muted: #f3f2ef;
+  --color-muted-foreground: #6c6b70;
   --color-accent-foreground: #ffffff;
-  --color-primary: #4a58e0;
+  --color-primary: #4f58e0;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f0f1f3;
-  --color-secondary-foreground: #24272e;
-  --color-destructive: #dc2626;
+  --color-secondary: #f3f2ef;
+  --color-secondary-foreground: #26262b;
+  --color-destructive: #c62828;
   --color-destructive-foreground: #ffffff;
-  --color-ring: #4a58e0;
+  --color-ring: #4f58e0;
 }
 
 html,
@@ -114,13 +124,16 @@ body {
   background: var(--color-body);
   color: var(--color-text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.005em;
 }
 
+/* The single raised surface. A hairline instead of a drop shadow. */
 .panel {
   background: var(--color-panel);
   border: 1px solid var(--color-border);
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 2px var(--color-shadow);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 0 var(--color-shadow);
 }
 
 button,
@@ -155,10 +168,11 @@ textarea {
 .markdown-preview h1::before,
 .markdown-preview h2::before,
 .markdown-preview h3::before {
-  color: var(--color-accent);
+  color: var(--color-accent-warm);
   display: inline-block;
   font-weight: 800;
   margin-right: 0.55rem;
+  opacity: 0.8;
 }
 
 .markdown-preview h1::before {
@@ -252,7 +266,7 @@ textarea {
 }
 
 .markdown-preview blockquote {
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--color-accent-warm);
   color: var(--color-text-muted);
   padding-left: 1rem;
 }
@@ -262,6 +276,8 @@ textarea {
   border: 1px solid var(--color-border);
   border-radius: 0.25rem;
   color: var(--color-text-code);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
   padding: 0.1rem 0.3rem;
 }
 
@@ -325,19 +341,21 @@ body.wikindie-resizing * {
 }
 
 .workspace-scroll::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
+  height: 8px;
+  width: 8px;
 }
 
 .workspace-scroll::-webkit-scrollbar-track {
-  background: var(--color-scrollbar-track);
-  border-radius: 999px;
+  background: transparent;
 }
 
 .workspace-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-scrollbar-thumb);
-  border: 2px solid var(--color-scrollbar-track);
+  background: var(--color-border);
   border-radius: 999px;
+}
+
+.workspace-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }
 
 .action-menu-scroll {

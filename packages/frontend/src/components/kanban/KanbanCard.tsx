@@ -80,7 +80,7 @@ export function KanbanCard({
   return (
     <>
       <article
-        className="relative rounded-md border border-border bg-card px-3 py-3 shadow-sm shadow-shadow hover:border-accent sm:px-4 sm:py-4"
+        className="relative rounded-lg border border-border bg-card px-3 py-2.5 shadow-none transition-colors hover:border-text-muted/40"
         draggable={editable}
         onClick={openDialog}
         onDragEnd={(event) => {
@@ -104,10 +104,10 @@ export function KanbanCard({
             <div className="block min-w-0 text-left text-sm text-text">
               {(card.id || card.archived || labels.length > 0) && (
                 <span className="mb-1 flex flex-wrap gap-1">
-                  {card.id && <span className="rounded-full border border-accent/35 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">{card.id}</span>}
-                  {card.archived && <span className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">Archived</span>}
-                  {labels.slice(0, 3).map((label) => <span key={label} className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">#{label}</span>)}
-                  {labels.length > 3 && <span className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">+{labels.length - 3}</span>}
+                  {card.id && <span className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-text-muted">{card.id}</span>}
+                  {card.archived && <span className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-text-muted">Archived</span>}
+                  {labels.slice(0, 3).map((label) => <span key={label} className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-text-muted">#{label}</span>)}
+                  {labels.length > 3 && <span className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-text-muted">+{labels.length - 3}</span>}
                 </span>
               )}
               <span className="flex min-w-0 items-start gap-1.5">
@@ -124,7 +124,7 @@ export function KanbanCard({
             </div>
           </div>
           {(editable || assignees.length > 0) && (
-            <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
               {editable && (
                 <div onClick={(event) => event.stopPropagation()}>
                   <ActionMenu label="Card actions">
@@ -137,11 +137,11 @@ export function KanbanCard({
                         {board.columns.length > 1 && (
                           <>
                             <div className="my-1 border-t border-border" />
-                            <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Move to column</div>
+                            <div className="px-2 pb-1 pt-1 text-[10px] font-medium text-text-muted">Move to column</div>
                             {board.columns.map((column, targetIndex) => (
                               <button
                                 key={`${column.id}-${targetIndex}`}
-                                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text hover:bg-accent/10 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
+                                className="flex h-7 w-full items-center justify-between gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
                                 disabled={targetIndex === columnIndex}
                                 onClick={() => { moveToColumn(targetIndex); close() }}
                                 type="button"

@@ -13,28 +13,28 @@ export function TopBar({
   onSearchOpen: () => void
 }) {
   return (
-    <header className="panel relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 px-3 md:h-16 md:px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+    <header className="relative z-10 flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-sidebar pl-1 pr-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
         <button
-          className="grid size-10 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text lg:hidden"
+          className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text lg:hidden"
           onClick={onOpenMobile}
           aria-label="Open sidebar"
           title="Open sidebar"
         >
           <Menu size={17} />
         </button>
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-md transition hover:opacity-80">
-          <img src={logoUrl} alt="" className="block h-9 w-auto shrink-0 md:h-10" />
-          <span className="hidden min-w-0 translate-y-0.5 sm:block">
-            <span className="block truncate text-xl font-bold leading-none tracking-tight text-text md:text-2xl">Wikindie</span>
-            <span className="block text-[10px] font-semibold leading-none tracking-wide text-text-muted md:text-[11px]">{appVersion}</span>
+        <Link to="/" className="flex min-w-0 items-center gap-2 rounded-md transition hover:opacity-80">
+          <img src={logoUrl} alt="" className="block h-6 w-auto shrink-0" />
+          <span className="hidden min-w-0 items-baseline gap-1.5 sm:flex">
+            <span className="block truncate text-sm font-semibold leading-none tracking-tight text-text-heading">Wikindie</span>
+            <span className="block shrink-0 font-mono text-[10px] leading-none text-text-muted">{appVersion}</span>
           </span>
         </Link>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
         <button
-          className="grid size-10 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text sm:hidden"
+          className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text sm:hidden"
           onClick={onSearchOpen}
           title="Search pages"
           aria-label="Search pages"
@@ -43,18 +43,18 @@ export function TopBar({
           <Search size={15} />
         </button>
         <button
-          className="hidden shrink-0 items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-muted transition hover:border-accent hover:text-text sm:flex"
+          className="hidden h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm text-text-muted transition hover:bg-surface-hover hover:text-text sm:flex"
           onClick={onSearchOpen}
           title="Search pages"
           type="button"
         >
           <Search size={15} />
           <span>Search</span>
-          <kbd className="hidden rounded border border-border bg-input px-1.5 py-0.5 text-[10px] text-text-muted md:inline">Ctrl K</kbd>
+          <kbd className="hidden rounded border border-border bg-input px-1.5 py-0.5 font-mono text-[10px] text-text-muted md:inline">Ctrl K</kbd>
         </button>
         <ThemeToggle />
         <a
-          className="grid size-10 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+          className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
           href={githubUrl}
           target="_blank"
           rel="noreferrer"

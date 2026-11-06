@@ -130,7 +130,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-md border border-border bg-surface p-3 transition sm:p-4 ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingColumn ? 'opacity-60 ring-2 ring-accent/40' : ''} ${columnDropPosition ? 'ring-1 ring-accent/30' : ''}`}
+      className={`relative overflow-hidden rounded-lg bg-surface/50 p-1.5 transition ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingColumn ? 'opacity-60 ring-2 ring-accent/40' : ''} ${columnDropPosition ? 'ring-1 ring-accent/30' : ''}`}
       draggable={editable}
       ref={columnRef}
       onDragEnd={endColumnDrag}
@@ -171,7 +171,7 @@ export function KanbanColumn({
           </span>
         </div>
       )}
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-1 flex h-8 items-center justify-between gap-1.5 px-1.5">
         {editable && renaming ? (
           <form
             className="min-w-0 flex-1"
@@ -188,9 +188,10 @@ export function KanbanColumn({
             />
           </form>
         ) : (
-          <h3 className="flex min-w-0 items-center gap-2 font-semibold">
-            <PageIcon icon={column.icon} fallback="column" className="size-5 shrink-0" />
+          <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-text">
+            <PageIcon icon={column.icon} fallback="column" className="size-4 shrink-0" />
             <span className="min-w-0 truncate">{column.title}</span>
+            <span className="shrink-0 text-xs font-normal text-text-muted">{cardsToRender.length}</span>
           </h3>
         )}
         {editable && (
@@ -214,8 +215,8 @@ export function KanbanColumn({
           )}
       </div>
       {editable && metaEditing && (
-        <article className="mb-4 rounded-md border border-border bg-card p-3">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <article className="mb-2 rounded-lg border border-border bg-card p-2.5">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h4 className="text-sm font-semibold text-text">Column meta</h4>
               <p className="text-xs text-text-muted">Title, workflow status, and icon.</p>
@@ -264,13 +265,13 @@ export function KanbanColumn({
             </div>
           </div>
 
-          <div className="mt-4 flex gap-2 border-t border-border pt-3">
-            <Button variant="primary" className="py-1.5" onClick={saveMeta}>Save changes</Button>
-            <Button className="py-1.5" onClick={() => setMetaEditing(false)}>Cancel</Button>
+          <div className="mt-3 flex gap-2 border-t border-border pt-2.5">
+            <Button variant="primary" onClick={saveMeta}>Save changes</Button>
+            <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
           </div>
         </article>
       )}
-      <div className="space-y-4">
+      <div className="space-y-1.5">
         {cardsToRender.map(({ card, cardIndex }) => (
           <KanbanCard
             key={card.id ?? `${card.title}-${cardIndex}`}
@@ -291,7 +292,7 @@ export function KanbanColumn({
         ))}
       </div>
       {editable && (
-        <div className={`-mx-3 -mb-3 mt-4 border-t border-border bg-panel sm:-mx-4 sm:-mb-4 ${addingCard ? 'p-3' : ''}`}>
+        <div className={`mt-1.5 ${addingCard ? 'rounded-md bg-panel p-2' : ''}`}>
           {addingCard ? (
             <form
               className="grid gap-2"
@@ -302,7 +303,7 @@ export function KanbanColumn({
             >
               <input
                 autoFocus
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                className="h-7 w-full rounded-md border border-border bg-card px-2 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
                 value={newCardTitle}
                 onChange={(event) => setNewCardTitle(event.target.value)}
                 placeholder="Task title"
@@ -314,7 +315,7 @@ export function KanbanColumn({
             </form>
           ) : (
             <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-text-muted transition hover:bg-accent/8 hover:text-text"
+              className="flex h-7 w-full items-center gap-1.5 rounded-md px-1.5 text-left text-xs font-medium text-text-muted transition hover:bg-surface-hover hover:text-text"
               onClick={() => setAddingCard(true)}
               type="button"
             >

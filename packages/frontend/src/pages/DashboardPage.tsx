@@ -76,7 +76,7 @@ function ChangePasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} className="max-w-md rounded-md border border-border bg-surface p-4">
+    <form onSubmit={submit} className="max-w-md rounded-lg border border-border bg-panel p-4">
       <div className="mb-4 flex items-center gap-2 text-text">
         <KeyRound size={17} /> <h3 className="font-semibold">Change password</h3>
       </div>
@@ -275,7 +275,7 @@ export function DashboardPage() {
 
   return (
     <section className="workspace-scroll h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl p-4 md:p-8">
+      <div className="mx-auto max-w-6xl p-4 md:p-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-text">Dashboard</h2>
@@ -283,11 +283,11 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="mb-5 flex gap-2 rounded-md border border-border bg-surface p-1">
+      <div className="mb-4 flex h-8 gap-1 rounded-md border border-border bg-surface p-0.5">
         {tabs.map((item) => (
           <button
             key={item.id}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition ${tab === item.id ? 'bg-accent text-white' : 'bg-control text-text-muted hover:bg-control-hover hover:text-text'}`}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded px-3 text-sm font-medium transition ${tab === item.id ? 'bg-panel text-text shadow-[0_1px_0_var(--color-shadow)]' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
             onClick={() => setTab(item.id)}
           >
             {item.id === 'users' && <Shield size={14} />}
@@ -303,33 +303,33 @@ export function DashboardPage() {
       ) : tab === 'password' ? (
         <ChangePasswordForm />
       ) : tab === 'users' ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="overflow-hidden rounded-md border border-border bg-surface">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="overflow-hidden rounded-lg border border-border bg-panel">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[680px] text-left text-sm">
-                  <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
+                  <thead className="border-b border-border text-xs font-medium text-text-muted">
                     <tr>
-                      <th className="px-4 py-3">User</th>
-                      <th className="px-4 py-3">Role</th>
-                      <th className="px-4 py-3">Created</th>
+                      <th className="px-3 py-2">User</th>
+                      <th className="px-3 py-2">Role</th>
+                      <th className="px-3 py-2">Created</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user) => (
-                      <tr key={user.id} className="border-b border-border/70 last:border-0">
-                        <td className="px-4 py-3">
+                      <tr key={user.id} className="h-9 border-b border-border/60 last:border-0 hover:bg-surface-hover/60">
+                        <td className="px-3 py-1.5">
                           <div className="font-medium text-text">{user.username}</div>
                           <div className="text-xs text-text-muted">{user.id}</div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-1.5">
                           <div className="flex items-center gap-2">
                             <span className={`rounded-full border px-2 py-0.5 text-xs capitalize ${roleBadgeClass(user.role)}`}>{user.role}</span>
                             <RoleSelect value={user.role} onChange={(nextRole) => void updateRole(user, nextRole)} options={allRoles} />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-text-muted">{formatDate(user.createdAt)}</td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-3 py-1.5 text-text-muted">{formatDate(user.createdAt)}</td>
+                        <td className="px-3 py-1.5 text-right">
                           <Button variant="danger" onClick={() => void deleteUser(user)}>
                             <Trash2 size={14} /> Delete
                           </Button>
@@ -338,7 +338,7 @@ export function DashboardPage() {
                     ))}
                     {!users.length && (
                       <tr>
-                        <td className="px-4 py-8 text-center text-text-muted" colSpan={4}>No users found.</td>
+                        <td className="px-3 py-6 text-center text-text-muted" colSpan={4}>No users found.</td>
                       </tr>
                     )}
                   </tbody>
@@ -346,7 +346,7 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <form onSubmit={createUser} className="rounded-md border border-border bg-surface p-4">
+            <form onSubmit={createUser} className="rounded-lg border border-border bg-panel p-4">
               <div className="mb-4 flex items-center gap-2 text-text">
                 <UserPlus size={17} /> <h3 className="font-semibold">Add user</h3>
               </div>
@@ -359,8 +359,8 @@ export function DashboardPage() {
             </form>
         </div>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-3">
             {createdKey && (
               <div className="rounded-md border border-success/40 bg-success/10 p-4">
                 <p className="mb-2 text-sm font-semibold text-success">Copy this key now. It will not be shown again.</p>
@@ -371,31 +371,31 @@ export function DashboardPage() {
               </div>
             )}
 
-            <div className="overflow-hidden rounded-md border border-border bg-surface">
+            <div className="overflow-hidden rounded-lg border border-border bg-panel">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px] text-left text-sm">
-                  <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
+                  <thead className="border-b border-border text-xs font-medium text-text-muted">
                     <tr>
-                      <th className="px-4 py-3">Key</th>
-                      {isAdmin && <th className="px-4 py-3">Owner</th>}
-                      <th className="px-4 py-3">Role</th>
-                      <th className="px-4 py-3">Last used</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3"></th>
+                      <th className="px-3 py-2">Key</th>
+                      {isAdmin && <th className="px-3 py-2">Owner</th>}
+                      <th className="px-3 py-2">Role</th>
+                      <th className="px-3 py-2">Last used</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {apiKeys.map((key) => (
-                      <tr key={key.id} className="border-b border-border/70 last:border-0">
-                        <td className="px-4 py-3">
+                      <tr key={key.id} className="h-9 border-b border-border/60 last:border-0 hover:bg-surface-hover/60">
+                        <td className="px-3 py-1.5">
                           <div className="font-medium text-text">{key.label}</div>
                           <div className="font-mono text-xs text-text-muted">{key.prefix}...</div>
                         </td>
-                        {isAdmin && <td className="px-4 py-3 text-text-muted">{userById.get(key.userId)?.username ?? key.userId}</td>}
-                        <td className="px-4 py-3"><span className={`rounded-full border px-2 py-0.5 text-xs capitalize ${roleBadgeClass(key.role)}`}>{key.role}</span></td>
-                        <td className="px-4 py-3 text-text-muted">{formatDate(key.lastUsedAt)}</td>
-                        <td className="px-4 py-3 text-text-muted">{key.revokedAt ? `Revoked ${formatDate(key.revokedAt)}` : 'Active'}</td>
-                        <td className="px-4 py-3 text-right">
+                        {isAdmin && <td className="px-3 py-1.5 text-text-muted">{userById.get(key.userId)?.username ?? key.userId}</td>}
+                        <td className="px-3 py-1.5"><span className={`rounded-full border px-2 py-0.5 text-xs capitalize ${roleBadgeClass(key.role)}`}>{key.role}</span></td>
+                        <td className="px-3 py-1.5 text-text-muted">{formatDate(key.lastUsedAt)}</td>
+                        <td className="px-3 py-1.5 text-text-muted">{key.revokedAt ? `Revoked ${formatDate(key.revokedAt)}` : 'Active'}</td>
+                        <td className="px-3 py-1.5 text-right">
                           {key.revokedAt ? (
                             <Button variant="ghost" onClick={() => void deleteKey(key)}>
                               <Trash2 size={14} /> Delete
@@ -410,7 +410,7 @@ export function DashboardPage() {
                     ))}
                     {!apiKeys.length && (
                       <tr>
-                        <td className="px-4 py-8 text-center text-text-muted" colSpan={isAdmin ? 6 : 5}>No API keys generated.</td>
+                        <td className="px-3 py-6 text-center text-text-muted" colSpan={isAdmin ? 6 : 5}>No API keys generated.</td>
                       </tr>
                     )}
                   </tbody>
@@ -419,7 +419,7 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <form onSubmit={generateKey} className="rounded-md border border-border bg-surface p-4">
+          <form onSubmit={generateKey} className="rounded-lg border border-border bg-panel p-4">
             <div className="mb-4 flex items-center gap-2 text-text">
               <KeyRound size={17} /> <h3 className="font-semibold">Generate API key</h3>
             </div>

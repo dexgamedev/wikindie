@@ -2,7 +2,7 @@ export function Input({ className = '', ...props }: React.InputHTMLAttributes<HT
   return (
     <input
       {...props}
-      className={`rounded-md border border-border bg-input px-3 py-2 text-text outline-none transition placeholder:text-text-muted focus:border-accent ${className}`}
+      className={`h-8 rounded-md border border-border bg-input px-2.5 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 ${className}`}
     />
   )
 }

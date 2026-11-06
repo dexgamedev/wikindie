@@ -56,7 +56,7 @@ export function LoginPage() {
 
         <form
           onSubmit={submit}
-          className="w-full max-w-md rounded-md border border-border bg-surface p-5 shadow-lg shadow-shadow sm:p-6"
+          className="w-full max-w-md rounded-lg border border-border bg-panel p-5 shadow-[0_1px_0_var(--color-shadow)] sm:p-6"
         >
           <div className="mb-5 text-center">
             <h2 className="text-xl font-bold text-text-heading">Sign in</h2>
@@ -86,9 +86,9 @@ export function LoginPage() {
           </div>
         </form>
 
-        <ul className="grid w-full max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid w-full max-w-4xl gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
-            <li key={feature.label} className="rounded-md border border-border bg-surface p-4 shadow-sm shadow-shadow">
+            <li key={feature.label} className="rounded-lg border border-border bg-panel p-4">
               <span className="text-2xl leading-none">{feature.icon}</span>
               <p className="mt-3 font-semibold text-text-heading">{feature.label}</p>
               <p className="mt-1 text-sm leading-5 text-text-muted">{feature.desc}</p>
