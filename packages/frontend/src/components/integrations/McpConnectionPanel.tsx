@@ -50,14 +50,14 @@ function defaultMcpUrl() {
 
 function Snippet({ title, value, onCopy }: { title: string; value: string; onCopy: (value: string) => void }) {
   return (
-    <div className="rounded-md border border-border bg-surface">
+    <div className="rounded-lg border border-border bg-panel">
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
         <Button onClick={() => onCopy(value)}>
           <Copy size={14} /> Copy
         </Button>
       </div>
-      <pre className="workspace-scroll max-h-[360px] overflow-auto p-4 text-xs leading-relaxed text-text"><code>{value}</code></pre>
+      <pre className="workspace-scroll max-h-[360px] overflow-auto p-3 font-mono text-xs leading-relaxed text-text"><code>{value}</code></pre>
     </div>
   )
 }
@@ -180,12 +180,12 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
   return (
     <div>
       {showHeader && (
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded border border-info/30 bg-info/10 px-3 py-1 text-sm text-info">
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded border border-info/30 bg-info/10 px-2 py-0.5 text-xs text-info">
               <PlugZap size={15} /> Connect to AI
             </div>
-            <h2 className="text-2xl font-semibold text-text">Wikindie MCP</h2>
+            <h2 className="text-xl font-semibold text-text-heading">Wikindie MCP</h2>
             <p className="mt-1 max-w-2xl text-sm text-text-muted">Generate a bearer key and connect local/dev agents through Streamable HTTP or the stdio bridge.</p>
           </div>
           <Button onClick={() => void refresh()} disabled={loading}>
@@ -194,7 +194,7 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
         </div>
       )}
       {!showHeader && (
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-surface p-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border bg-panel p-4">
           <div>
             <h3 className="font-semibold text-text">Your MCP connection</h3>
             <p className="mt-1 text-sm text-text-muted">Generate a personal key and copy local agent configuration snippets.</p>
@@ -208,9 +208,9 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
       {error && <div className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
       {copied && <div className="mb-4 rounded-md border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">Copied {copied}.</div>}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-5">
-          <form onSubmit={generate} className="rounded-md border border-border bg-surface p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-4">
+          <form onSubmit={generate} className="rounded-lg border border-border bg-panel p-4">
             <div className="mb-4 flex items-center gap-2 text-text">
               <KeyRound size={17} /> <h3 className="font-semibold">Generate MCP key</h3>
             </div>
@@ -233,9 +233,9 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
             </div>
           )}
 
-          <div className="rounded-md border border-border bg-surface">
+          <div className="rounded-lg border border-border bg-panel">
             <button
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-text transition hover:bg-accent/5"
+              className="flex h-9 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-text transition hover:bg-surface-hover"
               onClick={() => setShowActiveKeys(!showActiveKeys)}
             >
               <ChevronRight size={14} className={`text-text-muted transition ${showActiveKeys ? 'rotate-90' : ''}`} />
@@ -243,7 +243,7 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
               {activeKeys.length > 0 && <span className="font-normal text-text-muted">{activeKeys.length}</span>}
             </button>
             {showActiveKeys && (
-              <div className="space-y-3 border-t border-border p-4">
+              <div className="space-y-3 border-t border-border p-3">
                 {activeKeys.map((key) => (
                   <div key={key.id} className="rounded-md border border-border bg-input p-3">
                     <div className="flex items-start justify-between gap-3">
@@ -265,9 +265,9 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
           </div>
 
           {revokedKeys.length > 0 && (
-            <div className="rounded-md border border-border bg-surface">
+            <div className="rounded-lg border border-border bg-panel">
               <button
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-text-muted transition hover:text-text"
+                className="flex h-9 w-full items-center gap-3 px-3 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
                 onClick={() => setShowRevokedKeys(!showRevokedKeys)}
               >
                 <ChevronRight size={14} className={`transition ${showRevokedKeys ? 'rotate-90' : ''}`} />
@@ -275,7 +275,7 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
                 <span className="text-xs">{revokedKeys.length}</span>
               </button>
               {showRevokedKeys && (
-                <div className="space-y-3 border-t border-border p-4">
+                <div className="space-y-3 border-t border-border p-3">
                   {revokedKeys.map((key) => (
                     <div key={key.id} className="rounded-md border border-border bg-input p-3 opacity-60">
                       <div className="flex items-start justify-between gap-3">
@@ -303,9 +303,9 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
             const isOpen = selectedClient === client.id
             const snippetValue = client.snippet(mcpUrl, displayKey)
             return (
-              <div key={client.id} className="rounded-md border border-border bg-surface">
+              <div key={client.id} className="rounded-lg border border-border bg-panel">
                 <button
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-text transition hover:bg-accent/5"
+                  className="flex h-9 w-full items-center gap-3 px-3 text-left text-sm font-medium text-text transition hover:bg-surface-hover"
                   onClick={() => setSelectedClient(isOpen ? null : client.id)}
                 >
                   <ChevronRight size={14} className={`text-text-muted transition ${isOpen ? 'rotate-90' : ''}`} />
@@ -327,9 +327,9 @@ export function McpConnectionPanel({ showHeader = true }: { showHeader?: boolean
             )
           })}
 
-          <div className="rounded-md border border-border bg-surface">
+          <div className="rounded-lg border border-border bg-panel">
             <button
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-text-muted transition hover:text-text"
+              className="flex h-9 w-full items-center gap-3 px-3 text-left text-sm text-text-muted transition hover:bg-surface-hover hover:text-text"
               onClick={() => setSelectedClient(selectedClient === 'advanced' ? null : 'advanced')}
             >
               <ChevronRight size={14} className={`transition ${selectedClient === 'advanced' ? 'rotate-90' : ''}`} />

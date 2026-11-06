@@ -83,14 +83,15 @@ body > .bn-root:not(.bn-container) {
   height: 16px;
 }
 
-/* Floating toolbars / dropdowns: align surface with wikindie panels */
+/* Floating toolbars / dropdowns: align surface with wikindie popovers */
 .bn-suggestion-menu,
 .bn-grid-suggestion-menu,
 .bn-menu-dropdown,
 .bn-color-picker-dropdown,
 .bn-toolbar {
-  background: var(--color-card);
+  background: var(--color-popover);
   border-color: var(--color-border);
+  border-radius: 0.5rem;
   color: var(--color-text);
   box-shadow: 0 8px 24px var(--color-shadow-heavy);
 }
@@ -99,8 +100,11 @@ body > .bn-root:not(.bn-container) {
 .bn-suggestion-menu [data-slot="dropdown-menu-item"],
 .bn-menu-dropdown [data-slot="dropdown-menu-item"],
 .bn-grid-suggestion-menu [data-slot="dropdown-menu-item"] {
-  border-radius: 4px;
+  border-radius: 0.375rem;
   color: var(--color-text);
+  font-size: 0.8125rem;
+  min-height: 28px;
+  padding-block: 0.25rem;
 }
 
 .bn-suggestion-menu [data-slot="dropdown-menu-item"]:focus,
@@ -121,7 +125,7 @@ body > .bn-root:not(.bn-container) {
 /* Formatting toolbar layout */
 .bn-shadcn .bn-toolbar {
   gap: 0.125rem;
-  padding: 0.25rem;
+  padding: 0.1875rem;
 }
 
 /* Selects inside the toolbar (e.g. block type) */
@@ -136,9 +140,10 @@ body > .bn-root:not(.bn-container) {
   background: var(--color-surface-hover);
 }
 
-/* Tooltips: quiet, panel-colored */
+/* Tooltips: quiet, popover-colored */
 [data-slot="tooltip-content"] {
-  background: var(--color-card);
+  background: var(--color-popover);
+  border-radius: 0.375rem;
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }

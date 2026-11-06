@@ -56,7 +56,7 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
   if (!token && publicReadonly) {
     return (
       <button
-        className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text sm:text-sm"
+        className="flex h-7 shrink-0 items-center gap-2 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text-muted transition hover:border-text-muted/40 hover:text-text sm:text-sm"
         onClick={() => navigate('/login')}
         title="Guest · Read only"
         type="button"
@@ -71,7 +71,7 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
   return (
     <div ref={rootRef} className="relative">
       <button
-        className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-white transition hover:brightness-110"
+        className="grid size-7 shrink-0 place-items-center rounded-full bg-primary-fill text-xs font-bold text-white transition hover:bg-primary-fill-hover"
         onClick={() => setOpen((value) => !value)}
         title={username ?? 'Account'}
       >
@@ -79,9 +79,9 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
       </button>
 
       {open && (
-        <div className={`absolute ${popupPosition} right-0 z-50 w-[260px] rounded-md border border-border bg-input p-2 shadow-lg shadow-heavy`}>
-          <div className="mb-2 flex items-center gap-3 rounded-md bg-surface p-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-white">
+        <div className={`absolute ${popupPosition} right-0 z-50 w-[260px] rounded-lg border border-border bg-popover p-1 shadow-[0_8px_24px_var(--color-shadow-heavy)]`}>
+          <div className="mb-1.5 flex items-center gap-2 rounded-md bg-surface p-2">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-fill text-sm font-bold text-white">
               {initials}
             </span>
             <div className="min-w-0 flex-1">
@@ -91,7 +91,7 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
           </div>
 
           <button
-            className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
+            className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover"
             onClick={() => {
               setOpen(false)
               navigate('/dashboard')
@@ -100,13 +100,13 @@ export function AccountMenu({ direction = 'down' }: { direction?: 'up' | 'down' 
             <LayoutDashboard size={15} /> Dashboard
           </button>
           <button
-            className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-text hover:bg-accent/10"
+            className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover"
             onClick={toggleTheme}
           >
             <ThemeIcon size={15} /> {theme === 'dark' ? 'Light mode' : 'Dark mode'}
           </button>
           <div className="my-1 border-t border-border" />
-          <button className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-danger hover:bg-danger/10" onClick={signOut}>
+          <button className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-danger hover:bg-danger/10" onClick={signOut}>
             <LogOut size={15} /> Logout
           </button>
         </div>

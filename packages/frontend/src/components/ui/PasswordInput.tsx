@@ -44,12 +44,12 @@ export function PasswordInput({ className = '', disabled, ...props }: Omit<React
         ref={inputRef}
         disabled={disabled}
         type={visible ? 'text' : 'password'}
-        className="w-full rounded-md border border-border bg-input px-3 py-2 pr-10 text-text outline-none transition placeholder:text-text-muted focus:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-8 w-full rounded-md border border-border bg-input px-2.5 pr-10 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
       />
       <button
         aria-label={visible ? 'Hide password' : 'Show password'}
         aria-pressed={visible}
-        className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-md text-text-muted transition hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+        className="absolute inset-y-0 right-0 grid w-9 place-items-center rounded-r-md text-text-muted transition hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled}
         onClick={toggleVisible}
         onMouseDown={(event) => {

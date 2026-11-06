@@ -39,7 +39,7 @@ function HiddenAuthorBadge() {
   return (
     <span
       aria-label="Author hidden for guests"
-      className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-input text-[10px] font-bold text-text-muted shadow-sm shadow-shadow"
+      className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-input text-[10px] font-bold text-text-muted"
       title="Author hidden for guests"
     >
       <span aria-hidden className="select-none blur-[2px]">ID</span>
@@ -216,17 +216,17 @@ export function KanbanCardDialog({
     >
       <section
         aria-modal="true"
-        className="mx-auto mt-8 flex max-h-[calc(100dvh-4rem)] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-border bg-input shadow-lg shadow-heavy"
+        className="mx-auto mt-8 flex max-h-[calc(100dvh-4rem)] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-panel shadow-[0_8px_24px_var(--color-shadow-heavy)]"
         role="dialog"
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-panel px-4 py-3">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-panel px-3 py-2">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Task editor</p>
-            <h2 className="truncate text-lg font-semibold text-text">{card.id ? `[${card.id}] ` : ''}{card.title}</h2>
+            <p className="text-[11px] font-medium text-text-muted">Task editor</p>
+            <h2 className="truncate text-base font-semibold text-text-heading">{card.id ? `[${card.id}] ` : ''}{card.title}</h2>
           </div>
           <button
             aria-label="Close task editor"
-            className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
             onClick={onClose}
             type="button"
           >
@@ -234,8 +234,8 @@ export function KanbanCardDialog({
           </button>
         </header>
 
-        <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-4">
-          {card.id && <div className="mb-3 inline-flex rounded-full border border-accent/35 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">{card.id}</div>}
+        <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
+          {card.id && <div className="mb-3 inline-flex rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[11px] text-text-muted">{card.id}</div>}
 
           <label className="mb-4 grid gap-1.5 text-sm font-medium text-text">
             Name
@@ -431,7 +431,7 @@ export function KanbanCardDialog({
           </section>
         </div>
 
-        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-panel px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-panel px-3 py-2">
           <Button onClick={onClose}>{editable ? 'Cancel' : 'Close'}</Button>
           {editable && <Button onClick={save} variant="primary">Save task</Button>}
         </footer>

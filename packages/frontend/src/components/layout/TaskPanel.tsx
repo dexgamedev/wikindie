@@ -223,9 +223,9 @@ export function TaskPanel({
   }
 
   const collapsedPanel = (
-    <aside className="panel hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-3 transition-[width,padding] duration-200 xl:flex">
+    <aside className="hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-2.5 transition-[width,padding] duration-200 xl:flex">
       <button
-        className="grid size-9 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+        className="grid size-7 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
         onClick={onToggleCollapsed}
         title="Expand task panel"
         aria-label="Expand task panel"
@@ -234,8 +234,8 @@ export function TaskPanel({
         <PanelRightOpen size={18} />
       </button>
 
-      <div className="mt-4 flex flex-1 flex-col items-center gap-3">
-        <div className="grid size-9 place-items-center rounded-md border border-border bg-card text-text-muted" title="Task overview">
+      <div className="mt-3 flex flex-1 flex-col items-center gap-2.5">
+        <div className="grid size-7 place-items-center rounded-md border border-border bg-card text-text-muted" title="Task overview">
           <ListChecks size={17} />
         </div>
         {loading ? (
@@ -262,11 +262,11 @@ export function TaskPanel({
 
   const expandedPanel = (className: string, mobile = false) => (
     <aside className={className}>
-      <div className="border-b border-border p-3">
-        <div className="mb-2.5 flex items-start justify-between gap-3">
+      <div className="border-b border-border p-2.5">
+        <div className="mb-2 flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-2">
             <button
-              className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+              className="grid size-7 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
               onClick={mobile ? onCloseMobile : onToggleCollapsed}
               title={mobile ? 'Close task panel' : 'Collapse task panel'}
               aria-label={mobile ? 'Close task panel' : 'Collapse task panel'}
@@ -275,10 +275,10 @@ export function TaskPanel({
               {mobile ? <X size={18} /> : <PanelRightClose size={18} />}
             </button>
             <div className="min-w-0">
-              <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+              <p className="mb-0.5 flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
                 <ListChecks size={14} /> Task overview
               </p>
-              <h2 className="text-lg font-semibold text-text">{isBoardScope ? 'Current board' : 'Board health'}</h2>
+              <h2 className="text-sm font-semibold text-text-heading">{isBoardScope ? 'Current board' : 'Board health'}</h2>
             </div>
           </div>
           {loading && <RefreshCw size={16} className="mt-1 animate-spin text-text-muted" />}
@@ -294,16 +294,16 @@ export function TaskPanel({
           totalTasks={totals.totalTasks}
         />
 
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-3 gap-1.5 text-center">
           <Stat label={isBoardScope ? 'Board' : 'Boards'} value={visibleBoards.length} />
           <Stat label="Active" value={totals.totalTasks} />
           <Stat label="In Done" value={totals.doneTasks} />
         </div>
       </div>
 
-      {error && <div className="mx-3 mt-3 rounded-md border border-danger/40 bg-danger/10 p-2.5 text-sm text-danger">{error}</div>}
+      {error && <div className="mx-2.5 mt-2 rounded-md border border-danger/40 bg-danger/10 p-2 text-sm text-danger">{error}</div>}
 
-      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto p-2.5">
         {!pagePath ? (
           <PanelMessage title="Open a page" body="Task summaries appear when a workspace page is open." />
         ) : waitingForCurrentPath ? (
@@ -317,7 +317,7 @@ export function TaskPanel({
             onTitleChange={setNewBoardTitle}
           />
         ) : (
-          <div className={isBoardScope ? 'flex min-h-full flex-col justify-between gap-3' : 'space-y-3'}>
+          <div className={isBoardScope ? 'flex min-h-full flex-col justify-between gap-2' : 'space-y-2'}>
             <FilteringPanel
               assigneeFilter={assigneeFilter}
               assignees={assigneeOptions}
@@ -354,7 +354,7 @@ export function TaskPanel({
                   <span className="text-xs text-text-muted">{visibleBoards.length}/{boards.length}</span>
                 </div>
                 {visibleBoards.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {visibleBoards.map((board) => (
                       <BoardOverview
                         key={board.path}
@@ -386,7 +386,7 @@ export function TaskPanel({
           {expandedPanel('panel fixed right-0 top-0 z-40 flex h-dvh w-[min(340px,calc(100vw-1.5rem))] flex-col overflow-hidden xl:hidden', true)}
         </>
       )}
-      {collapsed ? collapsedPanel : expandedPanel('panel hidden w-[320px] shrink-0 flex-col overflow-hidden transition-[width,padding] duration-200 xl:flex')}
+      {collapsed ? collapsedPanel : expandedPanel('hidden w-[320px] shrink-0 flex-col overflow-hidden transition-[width,padding] duration-200 xl:flex')}
     </>
   )
 }
@@ -414,18 +414,18 @@ function HealthState({
   const boardCountLabel = scope === 'board' && boardCount === 1 ? '1 board' : `${boardCount.toLocaleString()} boards`
 
   return (
-    <section className="mb-2.5 rounded-md border border-border bg-card p-2">
+    <section className="mb-2 rounded-lg border border-border bg-card p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">State</p>
-          <p className="text-xl font-bold text-text">{clamped}%</p>
+          <p className="text-[10px] font-medium text-text-muted">State</p>
+          <p className="text-lg font-semibold text-text-heading">{clamped}%</p>
         </div>
         <div className="text-right text-xs text-text-muted">
           <p>{scopeLabel}</p>
           <p>{boardCountLabel}</p>
         </div>
       </div>
-      <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-input">
+      <div className="mb-1.5 h-1 overflow-hidden rounded-full bg-surface-hover">
         <div
           className="h-full rounded-full bg-accent-warm transition-[width] duration-500"
           style={{ width: `${clamped}%` }}
@@ -485,22 +485,22 @@ function FilteringPanel({
   scope: TaskOverviewScope
 }) {
   return (
-    <section className="rounded-md border border-border bg-card p-2">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-text">
-          <Filter size={15} className="text-accent" /> Filtering
+    <section className="rounded-lg border border-border bg-card p-2">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
+          <Filter size={15} className="text-accent-warm" /> Filtering
         </h3>
         {hasFilterInput && (
-          <button className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text" onClick={onClear} type="button">
+          <button className="flex h-7 items-center gap-1 rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text" onClick={onClear} type="button">
             <X size={13} /> Clear
           </button>
         )}
       </div>
-      <div className="grid gap-1.5">
-        <label className="grid gap-1 text-xs text-text-muted">
+      <div className="grid gap-1">
+        <label className="grid gap-0.5 text-[11px] text-text-muted">
           State
           <select
-            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="h-7 w-full rounded-md border border-border bg-input px-2 py-0 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             value={stateFilter}
             onChange={(event) => onStateChange(event.target.value as TaskFilterValues['stateFilter'])}
           >
@@ -509,10 +509,10 @@ function FilteringPanel({
             <option value="all">All cards</option>
           </select>
         </label>
-        <label className="grid gap-1 text-xs text-text-muted">
+        <label className="grid gap-0.5 text-[11px] text-text-muted">
           Priority
           <select
-            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="h-7 w-full rounded-md border border-border bg-input px-2 py-0 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             value={priorityFilter}
             onChange={(event) => onPriorityChange(event.target.value as TaskFilterValues['priorityFilter'])}
           >
@@ -523,10 +523,10 @@ function FilteringPanel({
             <option value="none">No priority</option>
           </select>
         </label>
-        <label className="grid gap-1 text-xs text-text-muted">
+        <label className="grid gap-0.5 text-[11px] text-text-muted">
           Type
           <select
-            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="h-7 w-full rounded-md border border-border bg-input px-2 py-0 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             value={typeFilter}
             onChange={(event) => onTypeChange(event.target.value as TaskFilterValues['typeFilter'])}
           >
@@ -536,10 +536,10 @@ function FilteringPanel({
           </select>
         </label>
         {showAssignees && (
-          <label className="grid gap-1 text-xs text-text-muted">
+          <label className="grid gap-0.5 text-[11px] text-text-muted">
             Assignee
             <select
-              className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+              className="h-7 w-full rounded-md border border-border bg-input px-2 py-0 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
               value={assigneeFilter}
               onChange={(event) => onAssigneeChange(event.target.value)}
             >
@@ -550,10 +550,10 @@ function FilteringPanel({
             </select>
           </label>
         )}
-        <label className="grid gap-1 text-xs text-text-muted">
+        <label className="grid gap-0.5 text-[11px] text-text-muted">
           Label / sprint
           <select
-            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="h-7 w-full rounded-md border border-border bg-input px-2 py-0 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             value={labelFilter}
             onChange={(event) => onLabelChange(event.target.value)}
           >
@@ -564,12 +564,12 @@ function FilteringPanel({
             ))}
           </select>
         </label>
-        <label className="grid gap-1 text-xs text-text-muted">
+        <label className="grid gap-0.5 text-[11px] text-text-muted">
           Search regex
           <div className="relative">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
-              className={`w-full rounded-md border bg-input py-1.5 pl-8 pr-2 text-sm text-text outline-none transition focus:border-accent ${searchError ? 'border-danger' : 'border-border'}`}
+              className={`h-7 w-full rounded-md border bg-input pl-8 pr-2 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 ${searchError ? 'border-danger' : 'border-border'}`}
               value={searchPattern}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder={scope === 'board' ? (showAssignees ? 'Card, column, assignee, label' : 'Card, column, label') : 'Board or card regex'}
@@ -621,10 +621,10 @@ function BoardColumnDistribution({
   const totalLabel = filtered ? `${filteredTasks.length.toLocaleString()}/${board.totalCards.toLocaleString()} shown` : `${board.activeCards.toLocaleString()} active`
 
   return (
-    <section className="rounded-md border border-border bg-card p-2">
+    <section className="rounded-lg border border-border bg-card p-2">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-text">Column distribution</h3>
+          <h3 className="text-[11px] font-medium text-text-muted">Column distribution</h3>
           <p className="mt-0.5 text-[11px] text-text-muted">Workload and progress across this board.</p>
         </div>
         <span className="shrink-0 rounded-full border border-border bg-input px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
@@ -653,10 +653,10 @@ function BoardColumnDistribution({
                   {filtered ? `${shown}/${column.total} shown` : `${shown} cards`}
                 </span>
               </div>
-              <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-input">
+              <div className="mb-1 h-1 overflow-hidden rounded-full bg-surface-hover">
                 <div className="h-full rounded-full bg-accent-warm transition-[width] duration-300" style={{ width }} />
               </div>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+              <div className="flex items-center justify-between gap-2 text-[10px] text-text-muted">
                 <span>{done}/{shown} in Done</span>
                 {highOpen > 0 ? (
                   <span className="text-danger">{highOpen} high</span>
@@ -698,7 +698,7 @@ function BoardOverview({
   const statusClass = totalCards === 0 ? 'text-text-muted' : doneCards === totalCards ? 'text-success' : highOpen > 0 ? 'text-danger' : 'text-accent'
 
   return (
-    <article className="rounded-md border border-border bg-surface p-2.5 shadow-sm shadow-shadow">
+    <article className="rounded-lg border border-border bg-card p-2.5">
       <div className="mb-2.5 flex min-w-0 items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
           <PageIcon icon={board.icon} fallback="board" className="mt-0.5 size-5 shrink-0" />
@@ -707,7 +707,7 @@ function BoardOverview({
             <p className="truncate text-xs text-text-muted">{board.path}</p>
           </div>
         </div>
-        <Link to={pageUrl(board.path)} className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-input text-text-muted transition hover:border-accent hover:text-text" title="Open board">
+        <Link to={pageUrl(board.path)} className="grid size-7 shrink-0 place-items-center rounded-md border border-border bg-input text-text-muted transition hover:border-text-muted/40 hover:text-text" title="Open board">
           <ArrowUpRight size={15} />
         </Link>
       </div>
@@ -718,12 +718,12 @@ function BoardOverview({
           {doneCards}/{totalCards} in Done
         </span>
       </div>
-      <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-input">
+      <div className="mb-2 h-1 overflow-hidden rounded-full bg-surface-hover">
         <div className="h-full rounded-full bg-accent-warm" style={{ width: `${percent}%` }} />
       </div>
 
-      <div className="mb-2.5 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide">
-        <span className="rounded-full border border-border bg-input px-2 py-1 text-text-muted">{openCount} outside Done</span>
+      <div className="mb-2 flex flex-wrap gap-1.5 text-[10px]">
+        <span className="rounded-full border border-border bg-input px-2 py-0.5 text-text-muted">{openCount} outside Done</span>
         <span className="rounded-full border border-border bg-input px-2 py-1 text-text-muted">{board.columns.length} columns</span>
         {highOpen > 0 && <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-1 text-danger">{highOpen} high</span>}
         {mediumOpen > 0 && <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-1 text-warning">{mediumOpen} medium</span>}
@@ -737,7 +737,7 @@ function BoardOverview({
                 <TaskPreview key={task.id ?? `${task.title}-${task.columnTitle}-${index}`} showAssignees={showAssignees} task={task} />
               ))}
               {matchingTasks.length > previewTasks.length && (
-                <Link to={pageUrl(board.path)} className="block rounded-md px-2 py-1 text-xs text-text-muted hover:bg-accent/10 hover:text-text">
+                <Link to={pageUrl(board.path)} className="block rounded-md px-2 py-1 text-xs text-text-muted hover:bg-surface-hover hover:text-text">
                   +{matchingTasks.length - previewTasks.length} more matching cards
                 </Link>
               )}
@@ -755,7 +755,7 @@ function TaskPreview({ showAssignees, task }: { showAssignees: boolean; task: Ta
   const assignees = showAssignees ? task.assignees ?? [] : []
 
   return (
-    <Link to={pageUrl(task.boardPath)} className={`relative block rounded-md px-2 pt-1 transition hover:bg-accent/10 ${assignees.length ? 'pb-7' : 'pb-1'}`}>
+    <Link to={pageUrl(task.boardPath)} className={`relative block rounded-md px-2 pt-1 transition hover:bg-surface-hover ${assignees.length ? 'pb-7' : 'pb-1'}`}>
       <div className="flex min-w-0 items-start gap-2">
         <span className={`${priorityDotClass} ${priorityColor(task.priority)}`} title={priorityLabel(task.priority)} />
         <div className="min-w-0 flex-1">
@@ -788,7 +788,7 @@ function EmptyBoardsState({
   onTitleChange: (value: string) => void
 }) {
   return (
-    <div className="rounded-md border border-dashed border-border bg-surface/60 p-3">
+    <div className="rounded-lg border border-dashed border-border bg-surface/60 p-2.5">
       <div className="mb-2.5 flex items-start gap-2.5">
         <PageIcon icon="board" fallback="board" className="size-8 shrink-0" />
         <div>
@@ -800,13 +800,13 @@ function EmptyBoardsState({
       {mayWrite ? (
         <form className="mt-3 space-y-1.5" onSubmit={onCreateBoard}>
           <input
-            className="w-full rounded-md border border-border bg-input px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+            className="h-7 w-full rounded-md border border-border bg-input px-2 text-sm text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             value={newBoardTitle}
             onChange={(event) => onTitleChange(event.target.value)}
             placeholder="Board title"
           />
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-control-border bg-control px-3 py-1.5 text-sm font-medium text-text transition hover:border-accent hover:bg-control-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-border bg-panel px-2.5 text-sm font-medium text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
             disabled={creating || !newBoardTitle.trim()}
             type="submit"
           >
@@ -815,7 +815,7 @@ function EmptyBoardsState({
           </button>
         </form>
       ) : (
-        <p className="mt-3 rounded-md border border-border bg-card p-2.5 text-sm text-text-muted">You have read-only access, so board creation is unavailable.</p>
+        <p className="mt-2 rounded-md border border-border bg-card p-2 text-sm text-text-muted">You have read-only access, so board creation is unavailable.</p>
       )}
     </div>
   )
@@ -825,7 +825,7 @@ function PanelSkeleton() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="animate-pulse rounded-md border border-border bg-surface p-2.5">
+        <div key={item} className="animate-pulse rounded-lg border border-border bg-surface p-2.5">
           <div className="mb-2 h-4 w-2/3 rounded bg-border" />
           <div className="mb-2 h-2 rounded-full bg-border" />
           <div className="h-3 w-1/2 rounded bg-border" />
@@ -837,8 +837,8 @@ function PanelSkeleton() {
 
 function PanelMessage({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-md border border-dashed border-border bg-surface/60 p-3">
-      <h3 className="text-base font-semibold text-text">{title}</h3>
+    <div className="rounded-lg border border-dashed border-border bg-surface/60 p-2.5">
+      <h3 className="text-sm font-semibold text-text-heading">{title}</h3>
       <p className="mt-1 text-sm text-text-muted">{body}</p>
     </div>
   )
@@ -847,8 +847,8 @@ function PanelMessage({ title, body }: { title: string; body: string }) {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-border bg-card px-2 py-1">
-      <div className="text-sm font-semibold text-text">{value}</div>
-      <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
+      <div className="text-sm font-semibold text-text-heading">{value}</div>
+      <div className="text-[10px] text-text-muted">{label}</div>
     </div>
   )
 }

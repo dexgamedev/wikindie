@@ -297,24 +297,24 @@ export function KanbanBoard({
 
   return (
     <section className="flex h-full min-h-0 flex-col" onDragEnter={acceptColumnDrag} onDragOver={acceptColumnDrag}>
-      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-panel px-3 md:px-4">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-panel px-2 md:px-3">
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <button
-            className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
             onClick={() => goBack(navigate)}
             title="Go back"
             aria-label="Go back"
           >
             <ArrowLeft size={16} />
           </button>
-          <PageIcon icon={icon} fallback="board" className="hidden size-5 shrink-0 sm:inline-flex" />
+          <PageIcon icon={icon} fallback="board" className="hidden size-4 shrink-0 sm:inline-flex" />
           <nav className="flex min-w-0 items-center gap-1 overflow-hidden text-sm text-text-muted" aria-label="Page breadcrumbs">
             {(showBreadcrumbs ? breadcrumbs : [{ label: displayTitle, path }]).map((crumb, index) => (
               <Fragment key={crumb.path}>
                 {showBreadcrumbs && breadcrumbs.length > 2 && index === breadcrumbs.length - 2 && <span className="shrink-0 rounded px-1 py-1 text-text-muted/70 sm:hidden">...</span>}
                 <span className={`flex min-w-0 items-center gap-1 ${showBreadcrumbs && breadcrumbs.length > 2 && index < breadcrumbs.length - 2 ? 'hidden sm:flex' : ''}`}>
                   {index > 0 && <span className="text-text-muted/50">/</span>}
-                  <Link className="max-w-[110px] truncate rounded px-1.5 py-1 hover:bg-accent/10 hover:text-text sm:max-w-[130px] md:max-w-[180px]" to={pageUrl(crumb.path)}>
+                  <Link className="max-w-[110px] truncate rounded px-1.5 py-1 hover:bg-surface-hover hover:text-text sm:max-w-[130px] md:max-w-[180px]" to={pageUrl(crumb.path)}>
                     {crumb.label}
                   </Link>
                 </span>
@@ -322,18 +322,18 @@ export function KanbanBoard({
             ))}
           </nav>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-text-muted sm:flex">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <span className="hidden h-6 items-center gap-1.5 rounded-full border border-border bg-card px-2 text-xs text-text-muted sm:flex">
             <span className={`size-1.5 rounded-full ${saving ? 'bg-warning' : 'bg-success'}`} />
             {mayWrite ? (saving ? 'Saving...' : 'Saved') : 'Read only'}
           </span>
-          <div className="hidden rounded-md border border-border bg-input p-0.5 sm:flex">
-            <button className={`rounded px-2 py-1 text-xs font-medium transition ${viewMode === 'board' ? 'bg-card text-text' : 'text-text-muted hover:text-text'}`} onClick={() => setViewMode('board')} type="button">Board</button>
-            <button className={`rounded px-2 py-1 text-xs font-medium transition ${viewMode === 'table' ? 'bg-card text-text' : 'text-text-muted hover:text-text'}`} onClick={() => setViewMode('table')} type="button">Table</button>
+          <div className="hidden h-7 items-center rounded-md border border-border bg-input p-0.5 text-xs sm:flex">
+            <button className={`h-full rounded px-2 font-medium transition ${viewMode === 'board' ? 'bg-surface-hover text-text shadow-[0_1px_0_var(--color-shadow)]' : 'text-text-muted hover:text-text'}`} onClick={() => setViewMode('board')} type="button">Board</button>
+            <button className={`h-full rounded px-2 font-medium transition ${viewMode === 'table' ? 'bg-surface-hover text-text shadow-[0_1px_0_var(--color-shadow)]' : 'text-text-muted hover:text-text'}`} onClick={() => setViewMode('table')} type="button">Table</button>
           </div>
-          {mayWrite && viewMode === 'board' && <Button className="hidden py-1.5 sm:inline-flex" onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
+          {mayWrite && viewMode === 'board' && <Button className="hidden sm:inline-flex" onClick={() => setAddingColumn((v) => !v)}>{addingColumn ? 'Close' : 'Add column'}</Button>}
           <button
-            className="grid size-9 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text xl:hidden"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text xl:hidden"
             onClick={openTasks}
             title="Task overview"
             aria-label="Open task overview"
@@ -342,7 +342,7 @@ export function KanbanBoard({
             <ListChecks size={16} />
           </button>
           <ActionMenu
-            buttonClassName="grid size-9 place-items-center rounded-md text-text-muted transition hover:bg-accent/10 hover:text-text"
+            buttonClassName="grid size-7 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
             iconSize={18}
             label="Board actions"
             menuClassName="w-48"
@@ -373,12 +373,12 @@ export function KanbanBoard({
         </div>
       </header>
 
-      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content p-3 sm:p-4 md:p-6 xl:p-8">
+      <div className="board-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-content p-3 md:p-4">
       {mayWrite && metaEditing && (
-        <article className="mb-4 max-w-5xl rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:p-5">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <article className="mb-4 max-w-5xl rounded-lg border border-border bg-card p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-semibold text-text">Board meta</h3>
+              <h3 className="text-sm font-semibold text-text-heading">Board meta</h3>
               <p className="text-xs text-text-muted">Title, icon, and task IDs.</p>
             </div>
           </div>
@@ -439,7 +439,7 @@ export function KanbanBoard({
             </div>
           </div>
 
-          <div className="mt-5 flex gap-2 border-t border-border pt-4">
+          <div className="mt-4 flex gap-2 border-t border-border pt-3">
             <Button variant="primary" onClick={() => void saveMeta()}>Save changes</Button>
             <Button onClick={() => setMetaEditing(false)}>Cancel</Button>
           </div>
@@ -447,7 +447,7 @@ export function KanbanBoard({
       )}
       {mayWrite && addingColumn && viewMode === 'board' && (
         <form
-          className="mb-4 flex max-w-md flex-col gap-3 rounded-md border border-border bg-card p-4 shadow-sm shadow-shadow sm:mb-6 sm:flex-row sm:items-center"
+          className="mb-4 flex max-w-md flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center"
           onSubmit={(event) => {
             event.preventDefault()
             addColumn()
@@ -465,7 +465,7 @@ export function KanbanBoard({
       )}
       {viewMode === 'board' ? (
         <div className="workspace-scroll min-h-0 flex-1 overflow-x-auto overflow-y-visible pb-2">
-          <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:w-max sm:grid-flow-col sm:auto-cols-[280px] sm:grid-cols-none sm:gap-4">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:w-max sm:grid-flow-col sm:auto-cols-[288px] sm:grid-cols-none">
             {visibleColumns.map(({ column, columnIndex, cards }) => (
               <KanbanColumn
                 key={`${column.id}-${columnIndex}`}
@@ -491,13 +491,13 @@ export function KanbanBoard({
         <KanbanTableView board={board} editable={mayWrite} availableLabels={labelOptions} rows={tableCards} showAssignees={showAssignees} users={users} onUpdate={update} onAddComment={addComment} onUpdateComment={updateComment} onDeleteComment={deleteComment} />
       )}
       {shownCardCount === 0 && (
-        <div className="mt-5 rounded-md border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-text-muted">
+        <div className="mt-4 rounded-lg border border-dashed border-border bg-surface/70 p-5 text-center text-sm text-text-muted">
           No cards match the current task filters.
         </div>
       )}
       </div>
 
-      <footer className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel px-3 text-xs text-text-muted md:px-4">
+      <footer className="flex h-8 shrink-0 items-center justify-between gap-3 border-t border-border bg-panel px-2 text-xs text-text-muted md:px-3">
         <div className="flex min-w-0 items-center gap-3">
           <span>{board.columns.length.toLocaleString()} columns</span>
           <span>{showFilteredCount ? `${shownCardCount.toLocaleString()}/${cardCount.toLocaleString()} shown` : `${cardCount.toLocaleString()} cards`}</span>
@@ -586,58 +586,58 @@ function KanbanTableView({
   }
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border bg-surface">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-panel">
       <div className="workspace-scroll min-h-0 flex-1 overflow-auto">
       <table className="min-w-[680px] w-full border-collapse text-left text-sm">
-        <thead className="sticky top-0 z-10 bg-panel text-xs uppercase tracking-wide text-text-muted">
-          <tr>
-            <th className="border-b border-border px-3 py-2 font-semibold">Task</th>
-            <th className="border-b border-border px-3 py-2 font-semibold">Column</th>
-            <th className="border-b border-border px-3 py-2 font-semibold">Priority</th>
-            {showAssignees && <th className="border-b border-border px-3 py-2 font-semibold">Assignees</th>}
-            <th className="border-b border-border px-3 py-2 font-semibold">State</th>
+        <thead className="sticky top-0 z-10 bg-panel text-xs font-medium text-text-muted">
+          <tr className="h-8">
+            <th className="border-b border-border px-3 font-medium">Task</th>
+            <th className="border-b border-border px-3 font-medium">Column</th>
+            <th className="border-b border-border px-3 font-medium">Priority</th>
+            {showAssignees && <th className="border-b border-border px-3 font-medium">Assignees</th>}
+            <th className="border-b border-border px-3 font-medium">State</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(({ card, cardIndex, column, columnIndex }) => (
             <tr
               key={`${column.id}-${card.id ?? `${card.title}-${cardIndex}`}`}
-              className="cursor-pointer border-b border-border/70 transition hover:bg-accent/8"
+              className="h-9 cursor-pointer border-b border-border/60 transition last:border-0 hover:bg-surface-hover/60"
               onClick={() => setEditing({ cardIndex, columnIndex })}
             >
-              <td className="max-w-[320px] px-3 py-2 align-middle">
-                <span className="mb-1 flex flex-wrap gap-1">
-                  {card.id && <span className="rounded-full border border-accent/35 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">{card.id}</span>}
-                  {card.labels?.map((label) => <span key={label} className="rounded-full border border-border bg-input px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">#{label}</span>)}
+              <td className="max-w-[320px] whitespace-nowrap px-3 py-1.5 align-middle">
+                <span className="mr-1.5 inline-flex max-w-[160px] flex-wrap items-center gap-1 overflow-hidden align-middle">
+                  {card.id && <span className="max-w-full shrink-0 truncate rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">{card.id}</span>}
+                  {card.labels?.map((label) => <span key={label} className="max-w-full min-w-0 truncate rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">#{label}</span>)}
                 </span>
-                <span className="flex min-w-0 items-start gap-1.5">
-                  <CardTypeIcon className="mt-[3px] size-3.5" title={`${cardTypeLabel(card.type)} card`} type={card.type} />
-                  <span className="block break-words text-text">{card.title}</span>
+                <span className="inline-flex max-w-[180px] items-center gap-1.5 align-middle">
+                  <CardTypeIcon className="size-3.5" title={`${cardTypeLabel(card.type)} card`} type={card.type} />
+                  <span className="min-w-0 truncate text-text">{card.title}</span>
                 </span>
                 {(card.description || card.comments?.length) && (
-                  <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-text-muted">
+                  <span className="ml-2 inline-flex items-center gap-2 align-middle text-xs text-text-muted">
                     {card.description && <span className="whitespace-nowrap">Details</span>}
                     {!!card.comments?.length && <span className="whitespace-nowrap">{card.comments.length} comment{card.comments.length === 1 ? '' : 's'}</span>}
                   </span>
                 )}
               </td>
-              <td className="px-3 py-2 align-middle text-text-muted">
+              <td className="px-3 py-1.5 align-middle text-text-muted">
                 <span className="inline-flex items-center gap-1.5">
                   <PageIcon icon={column.icon} fallback="column" className="size-4" /> {column.title}
                 </span>
               </td>
-              <td className="px-3 py-2 align-middle">
+              <td className="px-3 py-1.5 align-middle">
                 <span className="inline-flex items-center gap-1.5 text-text-muted">
                   <span className={`size-2 rounded-full ${priorityColor(card.priority)}`} /> {priorityLabel(card.priority)}
                 </span>
               </td>
-              {showAssignees && <td className="px-3 py-2 align-middle text-text-muted">{card.assignees?.length ? card.assignees.map((assignee) => `@${assignee}`).join(', ') : 'Unassigned'}</td>}
-              <td className="px-3 py-2 align-middle text-text-muted">{card.archived ? 'Archived' : 'Active'}</td>
+              {showAssignees && <td className="px-3 py-1.5 align-middle text-text-muted">{card.assignees?.length ? card.assignees.map((assignee) => `@${assignee}`).join(', ') : 'Unassigned'}</td>}
+              <td className="px-3 py-1.5 align-middle text-text-muted">{card.archived ? 'Archived' : 'Active'}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {rows.length === 0 && <div className="p-6 text-center text-sm text-text-muted">No cards match the current filters.</div>}
+      {rows.length === 0 && <div className="p-5 text-center text-sm text-text-muted">No cards match the current filters.</div>}
       </div>
       {editable && (
         <div className={`shrink-0 border-t border-border bg-panel ${adding ? 'max-h-[60%] overflow-y-auto p-3' : ''}`}>
@@ -732,7 +732,7 @@ function KanbanTableView({
             </form>
           ) : (
             <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-text-muted transition hover:bg-accent/8 hover:text-text"
+              className="flex h-7 w-full items-center gap-1.5 rounded-md px-2 text-left text-xs font-medium text-text-muted transition hover:bg-surface-hover hover:text-text"
               onClick={() => { setNewTaskColumn(defaultColumnIndex); setAdding(true) }}
               type="button"
             >
