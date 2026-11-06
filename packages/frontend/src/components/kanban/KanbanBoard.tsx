@@ -605,17 +605,17 @@ function KanbanTableView({
               className="h-9 cursor-pointer border-b border-border/60 transition last:border-0 hover:bg-surface-hover/60"
               onClick={() => setEditing({ cardIndex, columnIndex })}
             >
-              <td className="max-w-[320px] px-3 py-1.5 align-middle">
-                <span className="mb-1 flex flex-wrap gap-1">
-                  {card.id && <span className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-text-muted">{card.id}</span>}
-                  {card.labels?.map((label) => <span key={label} className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-text-muted">#{label}</span>)}
+              <td className="max-w-[320px] whitespace-nowrap px-3 py-1.5 align-middle">
+                <span className="mr-1.5 inline-flex max-w-[160px] flex-wrap items-center gap-1 align-middle">
+                  {card.id && <span className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">{card.id}</span>}
+                  {card.labels?.map((label) => <span key={label} className="rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-text-muted">#{label}</span>)}
                 </span>
-                <span className="flex min-w-0 items-start gap-1.5">
-                  <CardTypeIcon className="mt-[3px] size-3.5" title={`${cardTypeLabel(card.type)} card`} type={card.type} />
-                  <span className="block break-words text-text">{card.title}</span>
+                <span className="inline-flex max-w-[180px] items-center gap-1.5 align-middle">
+                  <CardTypeIcon className="size-3.5" title={`${cardTypeLabel(card.type)} card`} type={card.type} />
+                  <span className="min-w-0 truncate text-text">{card.title}</span>
                 </span>
                 {(card.description || card.comments?.length) && (
-                  <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-text-muted">
+                  <span className="ml-2 inline-flex items-center gap-2 align-middle text-xs text-text-muted">
                     {card.description && <span className="whitespace-nowrap">Details</span>}
                     {!!card.comments?.length && <span className="whitespace-nowrap">{card.comments.length} comment{card.comments.length === 1 ? '' : 's'}</span>}
                   </span>

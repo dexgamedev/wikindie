@@ -223,7 +223,7 @@ export function TaskPanel({
   }
 
   const collapsedPanel = (
-    <aside className="panel hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-2.5 transition-[width,padding] duration-200 xl:flex">
+    <aside className="hidden w-[72px] shrink-0 flex-col items-center overflow-hidden p-2.5 transition-[width,padding] duration-200 xl:flex">
       <button
         className="grid size-7 place-items-center rounded-md text-text-muted transition hover:bg-surface-hover hover:text-text"
         onClick={onToggleCollapsed}
@@ -386,7 +386,7 @@ export function TaskPanel({
           {expandedPanel('panel fixed right-0 top-0 z-40 flex h-dvh w-[min(340px,calc(100vw-1.5rem))] flex-col overflow-hidden xl:hidden', true)}
         </>
       )}
-      {collapsed ? collapsedPanel : expandedPanel('panel hidden w-[320px] shrink-0 flex-col overflow-hidden transition-[width,padding] duration-200 xl:flex')}
+      {collapsed ? collapsedPanel : expandedPanel('hidden w-[320px] shrink-0 flex-col overflow-hidden transition-[width,padding] duration-200 xl:flex')}
     </>
   )
 }

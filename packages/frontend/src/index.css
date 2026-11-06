@@ -21,6 +21,10 @@
   --color-surface-hover: #222226;
   --color-border: #26262a;
   --color-accent: #6a73f0;
+  /* Filled controls need 4.5:1 against white text, so they use a deeper fill
+     than the accent used for focus rings, links and tints. */
+  --color-primary-fill: #555ee8;
+  --color-primary-fill-hover: #5a63ec;
   --color-accent-warm: #e0a43a;
   --color-accent-soft: rgba(106, 115, 240, 0.10);
   --color-input: #121214;
@@ -51,7 +55,7 @@
   --color-muted: #1a1a1d;
   --color-muted-foreground: #8a8a93;
   --color-accent-foreground: #ffffff;
-  --color-primary: #6a73f0;
+  --color-primary: #555ee8;
   --color-primary-foreground: #ffffff;
   --color-secondary: #1a1a1d;
   --color-secondary-foreground: #d6d6da;
@@ -75,6 +79,8 @@
   --color-surface-hover: #ebeae6;
   --color-border: #e4e2dd;
   --color-accent: #4f58e0;
+  --color-primary-fill: #4f58e0;
+  --color-primary-fill-hover: #454dd6;
   --color-accent-warm: #b7801f;
   --color-accent-soft: rgba(79, 88, 224, 0.08);
   --color-input: #ffffff;
@@ -113,19 +119,34 @@
   --color-ring: #4f58e0;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-}
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
 
-body {
-  margin: 0;
-  background: var(--color-body);
-  color: var(--color-text);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  font-feature-settings: "cv11", "ss01";
-  letter-spacing: -0.005em;
+  /* One type scale: 13px body on a 20px line. The 20px line box keeps the 8px
+     priority dot (mt-1.5) vertically centred with card titles. */
+  body {
+    margin: 0;
+    background: var(--color-body);
+    color: var(--color-text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-feature-settings: "cv11", "ss01";
+    letter-spacing: -0.005em;
+  }
+
+  /* Control font reset lives in the base layer so explicit text-* utilities
+     still win. Unlayered here it would override every Tailwind size class. */
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
 /* The single raised surface. A hairline instead of a drop shadow. */
@@ -134,12 +155,6 @@ body {
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   box-shadow: 0 1px 0 var(--color-shadow);
-}
-
-button,
-input,
-textarea {
-  font: inherit;
 }
 
 .markdown-preview {
